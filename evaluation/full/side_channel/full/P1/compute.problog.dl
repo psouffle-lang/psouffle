@@ -1,0 +1,175 @@
+% Generated from: side_channel/full/P1/compute.souffle.dl
+% Domain: side_channel    Case: P1
+
+0.982402::key_number(1, 12).
+0.900803::key_sensitive(15).
+0.951716::key_sensitive(17).
+0.947523::rand(11).
+0.857062::rand(13).
+0.931339::rand_number(1, 3).
+0.865374::rec_all_inc(11, 1, 1).
+0.881398::rec_all_inc(13, 1, 2).
+0.803886::rec_all_inc(15, 1, 4).
+0.807109::rec_all_inc(17, 1, 8).
+0.817988::rec_rand_var(11, 1, 1).
+0.839546::rec_rand_var(13, 1, 2).
+0.85513::rec_rand_var(15, 1, 0).
+0.942283::rec_rand_var(17, 1, 0).
+0.802862::time(1).
+0.973788::assign(73, 69).
+0.978621::assign(73, 72).
+0.902914::binary_constant(42, 41).
+0.975475::binary_constant(49, 48).
+0.929988::binary_constant(56, 55).
+0.949634::binary_constant(63, 62).
+0.996731::icmp_assign(26, 25).
+0.839184::icmp_assign(36, 35).
+0.839815::icmp_assign(43, 42).
+0.902597::icmp_assign(50, 49).
+0.926105::icmp_assign(57, 56).
+0.87983::icmp_assign(64, 63).
+0.860973::icmp_assign(74, 73).
+load_assign(19, 4).
+load_assign(22, 1).
+load_assign(29, 3).
+load_assign(32, 1).
+load_assign(39, 7).
+load_assign(46, 9).
+load_assign(53, 5).
+load_assign(60, 6).
+load_assign(67, 8).
+load_assign(70, 10).
+0.992483::share(4, 9).
+0.888557::share(9, 3).
+0.953628::share(3, 7).
+0.9649::share(7, 6).
+0.979402::share(6, 9).
+0.888909::share(9, 5).
+0.831603::share(5, 8).
+0.902161::share(8, 6).
+0.805594::share(6, 10).
+0.924655::share(4, 8).
+store_assign(1, 11).
+store_assign(2, 13).
+store_assign(3, 15).
+store_assign(4, 17).
+store_assign(9, 27).
+store_assign(7, 37).
+store_assign(6, 44).
+store_assign(5, 51).
+store_assign(8, 58).
+store_assign(10, 65).
+0.875395::trunc_assign(20, 19).
+0.94485::trunc_assign(23, 22).
+0.856693::trunc_assign(30, 29).
+0.862655::trunc_assign(33, 32).
+0.854382::trunc_assign(40, 39).
+0.962655::trunc_assign(47, 46).
+0.821445::trunc_assign(54, 53).
+0.865194::trunc_assign(61, 60).
+0.817927::trunc_assign(68, 67).
+0.983063::trunc_assign(71, 70).
+xor_assign_left(25, 21).
+xor_assign_left(35, 31).
+xor_assign_right(25, 24).
+xor_assign_right(35, 34).
+0.932187::zext_assign(21, 20).
+0.817622::zext_assign(24, 23).
+0.987199::zext_assign(27, 26).
+0.871926::zext_assign(31, 30).
+0.83361::zext_assign(34, 33).
+0.952347::zext_assign(37, 36).
+0.861998::zext_assign(41, 40).
+0.935113::zext_assign(44, 43).
+0.948813::zext_assign(48, 47).
+0.904082::zext_assign(51, 50).
+0.861291::zext_assign(55, 54).
+0.899095::zext_assign(58, 57).
+0.875018::zext_assign(62, 61).
+0.897161::zext_assign(65, 64).
+0.928198::zext_assign(69, 68).
+0.904511::zext_assign(72, 71).
+
+rec_rand_var(VAR_Z,Times,TMP) :- rec_rand_var(VAR_X,Times,X), rec_rand_var(VAR_Y,Times,Y), bvand_rec(VAR_X,VAR_Y,VAR_Z,Times), (TMP = band(X,Y)).
+0.94983::rec_rand_var(VAR_Z,Times,XY) :- rec_rand_var(VAR_X,Times,X), rec_rand_var(VAR_Y,Times,Y), bvor_rand_rec(VAR_X,VAR_Y,VAR_Z,Times), bvor(X,Y,XY).
+0.865147::rec_all_inc(VAR_Z,Times,XY) :- rec_all_inc(VAR_X,Times,X), rec_all_inc(VAR_Y,Times,Y), bvor_all_rec(VAR_X,VAR_Y,VAR_Z,Times), bvor(X,Y,XY).
+0.829006::rec_rand_var(VAR_Z,Times,XY) :- rec_rand_var(VAR_X,Times,X), rec_rand_var(VAR_Y,Times,Y), set_sum_rec(VAR_X,VAR_Y,VAR_Z,Times), set_sum(X,Y,XY).
+set_sum_rec(VAR_X,VAR_Y,VAR_Z,Times_New) :- set_sum_rec(VAR_X,VAR_Y,VAR_Z,Times), \+((Times_New = 0)), (Times_New = (Times - 1)).
+0.992228::rec_all_inc(VAR_Z,Times,XY) :- rec_rand_var(VAR_X,Times,X_R), rec_rand_var(VAR_Y,Times,Y_R), rec_all_inc(VAR_X,Times,X_A), rec_all_inc(VAR_Y,Times,Y_A), rand_number(Times,RAND_NUM), xor_rud1_all_inc(X_A,Y_A,X_R,Y_R,RAND_NUM,XY), xor_rud1_all_inc_rec(VAR_X,VAR_Y,VAR_Z,Times).
+xor_rud1_all_inc_rec(VAR_X,VAR_Y,VAR_Z,Times_New) :- xor_rud1_all_inc_rec(VAR_X,VAR_Y,VAR_Z,Times), (Times_New = (Times - 1)), \+((Times_New = 0)).
+0.887132::rec_rand_var(VAR_Y,Times,X) :- rec_rand_var(VAR_X,Times,X), bv_equal_rand_rec(VAR_X,VAR_Y,Times).
+0.896241::rec_all_inc(VAR_Y,Times,X) :- rec_all_inc(VAR_X,Times,X), bv_equal_all_rec(VAR_X,VAR_Y,Times).
+0.964874::rec_rand_var(VAR_Y,Times,XY) :- rec_rand_var(VAR_X,Times,X), bv_zero_rec(VAR_X,VAR_Y,Times), (XY = 0).
+0.935524::tdep(TO,FROM) :- assign(TO,FROM).
+assign(TO,FROM) :- load_assign(TO,FROM).
+assign(TO,FROM) :- store_assign(TO,FROM).
+0.862479::tdep(TO,PREV) :- assign(TO,FROM), tdep(FROM,PREV).
+0.876238::diff_label(FROM1,FROM2) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1).
+0.876238::diff_label(FROM2,FROM1) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2).
+0.942278::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1), bv_diff_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.942278::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2), bv_diff_rec(FROM2,FROM1,Times,INT_RES1), \+((INT_RES1 = 0)).
+0.883253::check_same(FROM1,FROM2) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1), bv_diff_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0), rand(FROM2), bv_diff_rec(FROM2,FROM1,Times,INT_RES1), (INT_RES1 = 0).
+0.892536::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1), bv_same_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.892536::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2), bv_same_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.853012::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1), bv_same_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.853012::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2), bv_same_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.968166::set_sum_rec(FROM1,FROM2,TO,Times) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1), bv_diff_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.968166::set_sum_rec(FROM1,FROM2,TO,Times) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2), bv_diff_rec(FROM2,FROM1,Times,INT_RES1), \+((INT_RES1 = 0)).
+0.895278::xor_rud1_all_inc_rec(FROM1,FROM2,TO,Times) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM1).
+0.895278::xor_rud1_all_inc_rec(FROM1,FROM2,TO,Times) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), time(Times), rand(FROM2).
+0.898989::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_sensitive(FROM1), key_sensitive(FROM2).
+0.872231::intersect_label(FROM1,FROM2) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2).
+0.837703::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.915452::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.904372::intersect_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2).
+intersect_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2).
+0.948042::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.830059::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.919733::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM2), rand(FROM1).
+0.904372::intersect_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM2), key_ind(FROM1).
+intersect_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM2), rand(FROM1).
+0.948042::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), rand(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.948042::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), rand(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.919733::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM2), key_sensitive(FROM1).
+0.913775::diff_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2).
+0.984688::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), time(Times), bv_diff_rec(FROM1,FROM2,Times,INT_RES0), bv_diff_rec(FROM2,FROM1,Times,INT_RES1), bvor(INT_RES0,INT_RES1,INT_RES2), \+((INT_RES2 = 0)).
+0.873822::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), time(Times), bv_diff_rec(FROM1,FROM2,Times,INT_RES0), bv_diff_rec(FROM2,FROM1,Times,INT_RES1), bvor(INT_RES0,INT_RES1,INT_RES2), (INT_RES2 = 0).
+0.928299::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM1), key_sensitive(FROM2).
+0.895169::intersect_label(FROM1,FROM2) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2).
+0.850686::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), (INT_RES0 = 0).
+0.88543::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), time(Times), bv_intersect_rec(FROM1,FROM2,Times,INT_RES0), \+((INT_RES0 = 0)).
+0.836958::rand(TO) :- not_assign(TO,FROM1), rand(FROM1).
+0.929951::key_ind(TO) :- not_assign(TO,FROM1), key_ind(FROM1).
+0.957184::key_sensitive(TO) :- not_assign(TO,FROM1), key_sensitive(FROM1).
+key_ind(FROM1) :- constant(FROM1).
+key_sensitive(TO) :- load_assign(TO,FROM1), key_sensitive(FROM1).
+key_ind(TO) :- load_assign(TO,FROM1), key_ind(FROM1).
+rand(TO) :- load_assign(TO,FROM1), rand(FROM1).
+key_sensitive(TO) :- store_assign(TO,FROM1), key_sensitive(FROM1).
+key_ind(TO) :- store_assign(TO,FROM1), key_ind(FROM1).
+rand(TO) :- store_assign(TO,FROM1), rand(FROM1).
+rand(TO) :- equal_assign(TO,FROM1), rand(FROM1).
+key_ind(TO) :- equal_assign(TO,FROM1), key_ind(FROM1).
+key_sensitive(TO) :- equal_assign(TO,FROM1), key_sensitive(FROM1).
+key_sensitive(TO) :- binary_constant(TO,FROM1), key_sensitive(FROM1).
+key_ind(TO) :- binary_constant(TO,FROM1), key_ind(FROM1).
+rand(TO) :- binary_constant(TO,FROM1), rand(FROM1).
+load_assign(TO,FROM1) :- zext_assign(TO,FROM1).
+load_assign(TO,FROM1) :- trunc_assign(TO,FROM1).
+0.858916::load_assign(TO,FROM1) :- icmp_assign(TO,FROM1).
+assign(TO,FROM1) :- load_assign(TO,FROM1).
+assign(TO,FROM1) :- store_assign(TO,FROM1).
+assign(TO,FROM2) :- assign(TO,FROM1), assign(FROM1,FROM2).
+equal_assign(TO,FROM1) :- assign(TO,FROM1).
+equal_assign(TO,FROM1) :- binary_constant(TO,FROM1).
+equal_assign(FROM2,FROM1) :- equal_assign(FROM1,FROM2).
+equal_assign(FROM1,TO) :- equal_assign(FROM1,FROM2), equal_assign(FROM2,TO).
+0.966565::share(FROM2,FROM1) :- share(FROM1,FROM2).
+0.961918::q1(TO) :- hd_sensitive(FROM1,FROM2), assign(TO,FROM1).
+
+query(key_ind(_)).
+query(key_sensitive(_)).
+query(hd_sensitive(_,_)).

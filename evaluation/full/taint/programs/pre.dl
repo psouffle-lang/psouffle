@@ -1,0 +1,94 @@
+.type Z = number
+.type M = number
+.type V = number
+.type U = number
+.type I = number
+.type L = number
+.type CL = number
+
+.decl ci_IM(i:I, m:M)
+.input ci_IM
+
+.decl IinvkRet(i:I, n:Z, v:V)
+.input IinvkRet
+
+.decl IinvkArg(i:I, n:Z, v:V)
+.input IinvkArg
+
+.decl IinvkPrimRet(i:I, n:Z, v:U)
+.input IinvkPrimRet
+
+.decl IinvkPrimArg(i:I, n:Z, v:U)
+.input IinvkPrimArg
+
+.decl MmethArg(m:M, z:Z, v:V)
+.input MmethArg
+
+.decl MmethRet(m:M, z:Z, v:V)
+.input MmethRet
+
+.decl MmethPrimArg(m:M, z:Z, v:U)
+.input MmethPrimArg
+
+.decl MmethPrimRet(m:M, z:Z, v:U)
+.input MmethPrimRet
+
+.decl SrcLabel(l:L)
+.input SrcLabel
+
+.decl SinkLabel(l:L)
+.input SinkLabel
+
+.decl LCL(l:L, cl:CL)
+.input LCL
+
+.decl param(u:V, v:V, i:I)
+.output param
+
+.decl return(u:V, v:V, i:I)
+.output return
+
+.decl paramPrim(u:U, v:U, i:I)
+.output paramPrim
+
+.decl returnPrim(u:U, v:U, i:I)
+.output returnPrim
+
+.decl srcCtxtLabel(l:CL)
+.output srcCtxtLabel
+
+.decl sinkCtxtLabel(l:CL)
+.output sinkCtxtLabel
+
+// ##################
+// Pre analysis
+// ##################
+
+// name=pre
+
+// .include "Z.dom"
+// .include "M.dom"
+// .include "V.dom"
+// .include "U.dom"
+// .include "I.dom"
+// .include "L.dom"
+// .include "CL.dom"
+
+// .bddvarorder L0_Z0_I0xM0_CL0_V0xV1_U0xU1
+
+
+
+// u is the formal parameter, v is actual arg, i is invocation stmt
+// u is the lhs at callsite, v is the return var, i is invocation stmt
+// u is the formal parameter, v is actual arg, i is invocation stmt
+// u is the lhs at callsite, v is the return var, i is invocation stmt
+
+
+0.999000::param(u,v,i) :- ci_IM(i,m), MmethArg(m,z,u), IinvkArg(i,z,v).
+0.999000::return(u,v,i) :- ci_IM(i,m), MmethRet(m,z,v), IinvkRet(i,z,u).
+
+0.999000::paramPrim(u,v,i) :- ci_IM(i,m), MmethPrimArg(m,z,u), IinvkPrimArg(i,z,v).
+0.999000::returnPrim(u,v,i) :- ci_IM(i,m), MmethPrimRet(m,z,v), IinvkPrimRet(i,z,u).
+
+0.999000::srcCtxtLabel(cl) :- LCL(l,cl), SrcLabel(l).
+0.999000::sinkCtxtLabel(cl) :- LCL(l,cl), SinkLabel(l).

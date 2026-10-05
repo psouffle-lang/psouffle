@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "fraction": 0.65,
+      "kept_facts": 119326,
+      "offset": 0,
+      "selected_s_ids": 52689,
+      "source": "P19",
+      "source_facts": 183186,
+      "source_s_ids": 81060
+    }
+  ],
+  "target": "A11",
+  "template_source": "P19"
+}

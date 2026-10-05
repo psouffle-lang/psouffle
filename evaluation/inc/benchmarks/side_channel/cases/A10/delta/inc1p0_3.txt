@@ -1,0 +1,302 @@
+delete store_assign(20479, 43377)
+delete xor_assign_right(35458, 35457)
+insert load_assign(41024, 19926) 1.0
+insert share(14124, 19021) 0.852321
+delete binary_constant(31789, 54115)
+insert share(17954, 14517) 0.869358
+insert andor_assign_left(42933, 42931) 1.0
+delete andor_assign_left(43881, 43879)
+delete BV_DIFF_REC(43447, 43448, 1)
+insert share(14517, 17968) 0.816794
+insert store_assign(20445, 43221) 1.0
+delete load_assign(41533, 13221)
+delete share(20479, 13592)
+insert store_assign(978, 3307) 1.0
+insert BV_DIFF_REC(37272, 37273, 1) 0.876027
+insert share(17968, 17969) 0.957644
+delete share(16752, 14987)
+insert binary_constant(39291, 55442) 1.0
+delete share(19883, 19884)
+delete share(13221, 13223)
+delete xor_assign_left(27326, 27324)
+delete load_assign(42201, 20105)
+insert share(14124, 14125) 0.84564
+insert binary_constant(1755, 12234) 1.0
+delete store_assign(20105, 41997)
+delete share(18571, 18530)
+delete RAND(51807)
+delete xor_assign_left(37575, 37573)
+insert BV_DIFF_REC(37152, 37153, 1) 0.825303
+insert xor_assign_left(41510, 41508) 1.0
+insert binary_constant(41377, 53326) 1.0
+insert andor_assign_left(37274, 37272) 1.0
+insert share(1755, 1426) 0.838047
+delete andor_assign_right(31790, 31789)
+insert load_assign(32756, 17982) 1.0
+delete share(19595, 19596)
+insert share(978, 851) 0.913371
+insert xor_assign_right(41510, 41509) 1.0
+insert load_assign(3655, 978) 1.0
+insert store_assign(19031, 37274) 1.0
+delete store_assign(18571, 35426)
+delete share(20805, 20837)
+delete load_assign(34839, 14333)
+insert share(14517, 17970) 0.943894
+insert load_assign(37273, 14117) 1.0
+delete load_assign(35457, 18571)
+delete share(20479, 20234)
+insert binary_constant(41377, 50931) 1.0
+delete share(19924, 20105)
+delete share(20479, 20480)
+insert share(978, 1052) 0.921995
+insert BV_DIFF_REC(42931, 42932, 1) 0.994779
+insert share(1765, 1766) 0.940818
+delete share(16752, 16737)
+insert share(1766, 438) 0.995961
+insert store_assign(19586, 39774) 1.0
+insert load_assign(42931, 13652) 1.0
+insert BV_DIFF_REC(41297, 41296, 1) 0.802269
+delete share(19824, 19883)
+insert store_assign(1755, 6768) 1.0
+delete share(19595, 19297)
+delete share(19883, 19682)
+insert share(1755, 430) 0.8727
+delete binary_constant(40164, 56736)
+delete share(19595, 19733)
+delete share(1568, 511)
+delete binary_constant(43881, 51807)
+insert share(974, 978) 0.929068
+insert share(1786, 1755) 0.828239
+insert xor_assign_right(41378, 41377) 1.0
+delete share(20837, 20806)
+delete store_assign(1568, 5854)
+delete load_assign(28460, 16752)
+insert share(13751, 20046) 0.932532
+insert binary_constant(32758, 47601) 1.0
+insert store_assign(14517, 32660) 1.0
+delete load_assign(40588, 13853)
+delete share(1402, 1568)
+delete share(1568, 1569)
+insert share(17969, 17970) 0.939699
+delete xor_assign_right(37575, 37574)
+delete binary_constant(31730, 54535)
+insert share(17951, 14517) 0.851575
+insert binary_constant(39291, 51606) 1.0
+delete store_assign(17791, 31790)
+delete xor_assign_left(31730, 31728)
+insert BV_DIFF_REC(41376, 41377, 1) 0.869755
+delete binary_constant(40580, 52991)
+insert RAND(53326) 0.906594
+insert binary_constant(41510, 52843) 1.0
+delete load_assign(35441, 18571)
+delete share(16752, 16811)
+insert load_assign(7263, 1766) 1.0
+insert share(1058, 978) 0.852515
+delete share(20125, 19883)
+delete xor_assign_right(44804, 44803)
+insert binary_constant(37153, 50154) 1.0
+delete load_assign(35465, 18571)
+insert share(13750, 13751) 0.92861
+delete share(20160, 20105)
+delete load_assign(40580, 13853)
+delete share(510, 1568)
+delete share(13853, 19847)
+insert andor_assign_right(39291, 39290) 1.0
+insert share(13751, 20022) 0.96356
+insert binary_constant(14124, 51978) 1.0
+delete store_assign(20576, 43881)
+insert binary_constant(17969, 56794) 1.0
+delete load_assign(43447, 20479)
+delete share(20479, 13596)
+delete xor_assign_right(41849, 41848)
+insert xor_assign_left(32758, 32756) 1.0
+delete share(19681, 19883)
+insert load_assign(7084, 1766) 1.0
+insert share(978, 1109) 0.908659
+insert store_assign(1766, 6826) 1.0
+delete share(1568, 516)
+insert share(14517, 17952) 0.976284
+insert share(14123, 14124) 0.889226
+insert load_assign(32684, 17969) 1.0
+delete xor_assign_right(27326, 27325)
+delete share(20104, 20105)
+delete share(20105, 20106)
+insert andor_assign_right(37274, 37273) 1.0
+delete share(13832, 19883)
+delete andor_assign_left(31790, 31788)
+delete share(13852, 13853)
+insert share(20044, 13751) 0.809584
+delete share(13853, 19845)
+delete store_assign(19883, 40786)
+delete load_assign(35449, 18571)
+insert store_assign(20032, 41510) 1.0
+insert binary_constant(1766, 9672) 1.0
+delete BV_DIFF_REC(31729, 31728, 1)
+delete share(13220, 13221)
+delete share(19594, 19595)
+insert xor_assign_right(41298, 41297) 1.0
+delete binary_constant(40164, 54464)
+insert load_assign(32680, 14517) 1.0
+insert load_assign(32672, 14517) 1.0
+insert RAND(52156) 0.991906
+insert share(1755, 426) 0.800928
+delete BV_DIFF_REC(40580, 40581, 1)
+delete share(18529, 18571)
+insert BV_DIFF_REC(37224, 37225, 1) 0.951915
+insert xor_assign_right(39774, 39773) 1.0
+insert binary_constant(1766, 11604) 1.0
+insert share(1486, 1755) 0.894379
+delete RAND(52949)
+delete binary_constant(20479, 50965)
+delete binary_constant(16752, 52224)
+insert binary_constant(1766, 11538) 1.0
+delete store_assign(20837, 44804)
+delete store_assign(511, 6098)
+insert binary_constant(42931, 49782) 1.0
+insert share(18982, 14124) 0.900772
+delete load_assign(6098, 1568)
+insert binary_constant(13751, 54446) 1.0
+insert share(1766, 1829) 0.831985
+delete store_assign(19595, 39814)
+delete share(16752, 16989)
+insert xor_assign_right(34561, 34560) 1.0
+insert binary_constant(32756, 58100) 1.0
+insert store_assign(17984, 32758) 1.0
+delete share(13853, 19848)
+delete binary_constant(18571, 48197)
+delete share(13591, 20479)
+delete share(20175, 20479)
+delete RAND(13221)
+delete andor_assign_left(34841, 34839)
+insert xor_assign_left(34561, 34559) 1.0
+insert xor_assign_left(43221, 43219) 1.0
+insert share(978, 1059) 0.961072
+delete binary_constant(42201, 58386)
+delete andor_assign_left(40582, 40580)
+insert share(20046, 13751) 0.97756
+delete load_assign(31789, 14605)
+delete share(13853, 19846)
+insert share(17966, 14517) 0.937808
+insert share(14517, 17969) 0.929067
+delete share(13494, 20837)
+insert load_assign(37225, 14124) 1.0
+insert share(1754, 1755) 0.967622
+insert load_assign(41377, 20001) 1.0
+delete xor_assign_left(43449, 43447)
+insert share(20021, 13751) 0.810929
+delete share(20837, 20838)
+delete share(16568, 16752)
+insert share(1755, 1756) 0.971096
+insert load_assign(3933, 978) 1.0
+insert share(433, 1755) 0.885605
+delete store_assign(19733, 40164)
+insert share(1828, 1766) 0.889671
+delete share(13221, 13222)
+insert store_assign(19514, 39291) 1.0
+insert share(20045, 13751) 0.836011
+delete share(1568, 515)
+delete store_assign(13853, 40568)
+delete share(20478, 20479)
+delete load_assign(40164, 19595)
+insert load_assign(41592, 13751) 1.0
+insert store_assign(18421, 34561) 1.0
+delete share(1568, 1497)
+delete share(19837, 13853)
+delete share(13219, 13221)
+delete xor_assign_left(44804, 44802)
+delete binary_constant(1568, 10902)
+delete load_assign(6048, 1568)
+insert share(13751, 20047) 0.840633
+delete share(18571, 18572)
+insert load_assign(37153, 13123) 1.0
+insert BV_DIFF_REC(32756, 32757, 1) 0.889801
+insert xor_assign_right(32758, 32757) 1.0
+insert binary_constant(41377, 48695) 1.0
+insert share(14517, 14518) 0.994047
+insert BV_DIFF_REC(34559, 34560, 1) 0.9193
+insert load_assign(41600, 13751) 1.0
+delete share(14268, 18571)
+insert binary_constant(41024, 50360) 1.0
+insert andor_assign_left(32682, 32680) 1.0
+delete binary_constant(34839, 51560)
+insert share(14516, 14517) 0.896773
+insert share(17969, 14518) 0.817718
+delete store_assign(17780, 31730)
+delete share(19844, 13853)
+delete share(19840, 13853)
+delete load_assign(28639, 16752)
+delete share(20479, 13597)
+insert store_assign(13807, 41024) 1.0
+delete share(19728, 19595)
+delete share(19732, 19595)
+insert xor_assign_left(39774, 39772) 1.0
+delete load_assign(42087, 19883)
+delete share(16988, 16752)
+insert share(13751, 13752) 0.957046
+insert share(17968, 14517) 0.920832
+delete share(19845, 13853)
+insert binary_constant(978, 10200) 1.0
+delete share(514, 1568)
+insert xor_assign_right(43221, 43220) 1.0
+insert andor_assign_left(39291, 39289) 1.0
+insert share(13751, 20048) 0.979456
+insert share(14517, 17967) 0.87548
+delete RAND(51560)
+delete BV_DIFF_REC(34839, 34840, 1)
+insert share(20024, 13751) 0.822693
+insert xor_assign_right(37154, 37153) 1.0
+insert binary_constant(41510, 52524) 1.0
+delete load_assign(31728, 17779)
+insert share(1425, 1755) 0.955595
+delete xor_assign_right(31730, 31729)
+delete BV_DIFF_REC(37573, 37574, 1)
+delete load_assign(41529, 13221)
+insert share(1766, 1812) 0.984266
+delete andor_assign_right(43881, 43880)
+delete BV_DIFF_REC(31788, 31789, 1)
+delete share(19883, 20126)
+delete store_assign(19073, 37575)
+insert load_assign(6888, 1755) 1.0
+delete load_assign(37573, 18950)
+delete share(16751, 16752)
+insert share(1766, 1751) 0.837212
+delete share(1567, 1568)
+delete load_assign(35433, 18571)
+delete share(13853, 19838)
+insert binary_constant(41024, 54097) 1.0
+insert share(17967, 14517) 0.99492
+insert share(1474, 1766) 0.801495
+delete store_assign(20161, 42201)
+delete BV_DIFF_REC(41847, 41848, 1)
+insert share(13751, 20045) 0.834952
+insert binary_constant(14124, 56500) 1.0
+insert store_assign(17969, 32682) 1.0
+insert store_assign(1059, 3655) 1.0
+delete share(13853, 13854)
+delete share(20105, 20158)
+insert share(1108, 978) 0.842959
+delete share(20105, 19983)
+delete load_assign(41848, 19883)
+insert share(977, 978) 0.941336
+insert binary_constant(14124, 51395) 1.0
+insert binary_constant(13751, 52156) 1.0
+insert load_assign(37241, 14124) 1.0
+insert store_assign(19986, 41298) 1.0
+delete BV_DIFF_REC(35456, 35457, 1)
+delete share(19846, 13853)
+insert binary_constant(32756, 47159) 1.0
+insert store_assign(14124, 37214) 1.0
+delete store_assign(16752, 27326)
+insert andor_assign_right(37226, 37225) 1.0
+insert load_assign(6940, 1755) 1.0
+insert store_assign(13751, 41580) 1.0
+insert load_assign(41296, 19985) 1.0
+insert share(978, 979) 0.945762
+delete binary_constant(20479, 55711)
+insert xor_assign_left(41298, 41296) 1.0
+delete share(13595, 20479)
+delete share(20105, 20161)
+delete binary_constant(13221, 52949)
+insert share(978, 975) 0.934931
+commit
+q

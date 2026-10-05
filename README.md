@@ -19,8 +19,10 @@ Both approaches share one compiler/runtime. The FMCAD 2026 paper is
 *PSOUFFLE: Towards Scalable Probabilistic Logic Inference for Program Analysis*.
 The imported branches, tags, and paper/artifact correspondence are recorded in
 [docs/PROVENANCE.md](docs/PROVENANCE.md). Benchmark inputs and paper experiment
-drivers live in the companion
-[problog-benchmark](https://github.com/Hughshine/problog-benchmark) repository.
+drivers from [problog-benchmark](https://github.com/Hughshine/problog-benchmark)
+are bundled under [evaluation/](evaluation/README.md):
+[incremental experiments](evaluation/inc/README.md) and
+[full/rewrite experiments](evaluation/full/README.md).
 Lifted inference is excluded.
 
 The compiler generates both execution paths by default. A generated binary

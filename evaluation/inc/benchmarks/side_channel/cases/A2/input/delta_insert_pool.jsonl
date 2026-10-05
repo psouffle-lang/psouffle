@@ -1,0 +1,420 @@
+{"rel": "BV_DIFF_REC", "fact": ["2685", "2686", "1"], "prob": 0.990391}
+{"rel": "BV_DIFF_REC", "fact": ["2761", "2762", "1"], "prob": 0.872923}
+{"rel": "BV_DIFF_REC", "fact": ["2825", "2826", "1"], "prob": 0.809178}
+{"rel": "BV_DIFF_REC", "fact": ["3021", "3022", "1"], "prob": 0.970001}
+{"rel": "BV_DIFF_REC", "fact": ["3365", "3366", "1"], "prob": 0.881526}
+{"rel": "BV_DIFF_REC", "fact": ["3466", "3465", "1"], "prob": 0.982638}
+{"rel": "BV_DIFF_REC", "fact": ["3473", "3474", "1"], "prob": 0.882731}
+{"rel": "BV_DIFF_REC", "fact": ["3589", "3590", "1"], "prob": 0.800816}
+{"rel": "BV_DIFF_REC", "fact": ["3621", "3622", "1"], "prob": 0.820752}
+{"rel": "BV_DIFF_REC", "fact": ["3753", "3754", "1"], "prob": 0.884872}
+{"rel": "BV_DIFF_REC", "fact": ["3989", "3990", "1"], "prob": 0.854033}
+{"rel": "BV_DIFF_REC", "fact": ["4621", "4622", "1"], "prob": 0.898295}
+{"rel": "BV_DIFF_REC", "fact": ["4920", "4921", "1"], "prob": 0.959117}
+{"rel": "BV_DIFF_REC", "fact": ["5128", "5129", "1"], "prob": 0.886341}
+{"rel": "BV_DIFF_REC", "fact": ["5584", "5585", "1"], "prob": 0.881565}
+{"rel": "BV_DIFF_REC", "fact": ["6256", "6257", "1"], "prob": 0.908196}
+{"rel": "BV_DIFF_REC", "fact": ["6965", "6964", "1"], "prob": 0.896905}
+{"rel": "BV_DIFF_REC", "fact": ["6992", "6993", "1"], "prob": 0.814018}
+{"rel": "BV_DIFF_REC", "fact": ["7048", "7049", "1"], "prob": 0.990782}
+{"rel": "BV_DIFF_REC", "fact": ["7203", "7204", "1"], "prob": 0.958518}
+{"rel": "BV_DIFF_REC", "fact": ["7275", "7276", "1"], "prob": 0.892284}
+{"rel": "BV_DIFF_REC", "fact": ["17054", "17055", "1"], "prob": 0.862925}
+{"rel": "RAND", "fact": ["33"], "prob": 0.931805}
+{"rel": "RAND", "fact": ["51"], "prob": 0.862897}
+{"rel": "RAND", "fact": ["148"], "prob": 0.888933}
+{"rel": "RAND", "fact": ["9277"], "prob": 0.884152}
+{"rel": "RAND", "fact": ["9752"], "prob": 0.851037}
+{"rel": "RAND", "fact": ["10055"], "prob": 0.885063}
+{"rel": "RAND", "fact": ["10228"], "prob": 0.950093}
+{"rel": "RAND", "fact": ["10391"], "prob": 0.921846}
+{"rel": "RAND", "fact": ["10425"], "prob": 0.838417}
+{"rel": "RAND", "fact": ["10480"], "prob": 0.860447}
+{"rel": "RAND", "fact": ["11138"], "prob": 0.973022}
+{"rel": "RAND", "fact": ["11281"], "prob": 0.99265}
+{"rel": "RAND", "fact": ["11800"], "prob": 0.896709}
+{"rel": "RAND", "fact": ["11837"], "prob": 0.801193}
+{"rel": "RAND", "fact": ["11930"], "prob": 0.988235}
+{"rel": "RAND", "fact": ["12285"], "prob": 0.999905}
+{"rel": "RAND", "fact": ["12463"], "prob": 0.85488}
+{"rel": "RAND", "fact": ["12765"], "prob": 0.859584}
+{"rel": "RAND", "fact": ["19331"], "prob": 0.885262}
+{"rel": "RAND", "fact": ["20575"], "prob": 0.932453}
+{"rel": "andor_assign_left", "fact": ["3903", "3901"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["5586", "5584"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["5834", "5832"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["6258", "6256"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["3903", "3902"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["5834", "5833"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["6258", "6257"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5129", "9277"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2685", "9404"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1981", "9468"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["7681", "9667"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5850", "9752"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4622", "9908"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4921", "10019"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4921", "10055"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1167", "10228"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4623", "10313"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["7277", "10349"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4921", "10381"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1030", "10391"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5574", "10425"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3022", "10480"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1504", "10485"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["971", "10851"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5574", "10976"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5129", "11025"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1598", "11087"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["695", "11138"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3474", "11176"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3754", "11281"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3022", "11311"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1046", "11339"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2826", "11363"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["5574", "11419"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1981", "11421"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["6630", "11461"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4622", "11477"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3293", "11517"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2826", "11521"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2762", "11800"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3474", "11837"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["7681", "11929"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1894", "11930"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3466", "12035"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1102", "12142"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["51", "12160"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2826", "12193"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2687", "12245"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["3851", "12285"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["7275", "12315"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["6506", "12350"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2826", "12463"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1030", "12532"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["7275", "12588"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14825", "19331"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14825", "20048"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["13404", "20575"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2590", "33"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2678", "33"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2685", "785"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2762", "215"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2826", "797"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2877", "33"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3022", "840"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3135", "33"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3293", "967"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3362", "51"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3366", "51"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3466", "745"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3474", "55"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3541", "1030"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3589", "996"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3622", "1046"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3754", "1076"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3905", "1102"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3985", "695"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3989", "1123"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3993", "695"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4227", "1167"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4545", "971"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4622", "93"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4717", "971"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4921", "1208"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5129", "1326"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5346", "1400"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5354", "1404"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5558", "1504"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5574", "1510"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5584", "564"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5592", "564"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5680", "1504"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["5837", "1563"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6028", "1598"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6257", "496"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6330", "1664"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6512", "1702"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6630", "1724"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6637", "459"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6957", "148"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6965", "148"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["6992", "1444"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7049", "417"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7204", "1746"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7275", "1809"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7463", "1746"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7681", "1977"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["7689", "1981"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["8371", "1894"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["8491", "1894"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["14524", "12765"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["14696", "12765"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["14955", "12765"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["15111", "13404"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["15141", "12765"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["15861", "13341"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["15931", "13341"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["16835", "13637"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["17054", "13637"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["17246", "13828"], "prob": 1.0}
+{"rel": "share", "fact": ["31", "33"], "prob": 0.841885}
+{"rel": "share", "fact": ["32", "33"], "prob": 0.996153}
+{"rel": "share", "fact": ["33", "34"], "prob": 0.887497}
+{"rel": "share", "fact": ["33", "35"], "prob": 0.990514}
+{"rel": "share", "fact": ["33", "889"], "prob": 0.82196}
+{"rel": "share", "fact": ["33", "892"], "prob": 0.816826}
+{"rel": "share", "fact": ["49", "51"], "prob": 0.883592}
+{"rel": "share", "fact": ["50", "51"], "prob": 0.967509}
+{"rel": "share", "fact": ["51", "52"], "prob": 0.841522}
+{"rel": "share", "fact": ["51", "53"], "prob": 0.878105}
+{"rel": "share", "fact": ["146", "148"], "prob": 0.822394}
+{"rel": "share", "fact": ["147", "148"], "prob": 0.92742}
+{"rel": "share", "fact": ["148", "149"], "prob": 0.819149}
+{"rel": "share", "fact": ["148", "150"], "prob": 0.981342}
+{"rel": "share", "fact": ["305", "1894"], "prob": 0.925555}
+{"rel": "share", "fact": ["416", "417"], "prob": 0.935715}
+{"rel": "share", "fact": ["417", "1425"], "prob": 0.832776}
+{"rel": "share", "fact": ["417", "1805"], "prob": 0.877072}
+{"rel": "share", "fact": ["458", "459"], "prob": 0.976776}
+{"rel": "share", "fact": ["459", "1383"], "prob": 0.916148}
+{"rel": "share", "fact": ["459", "1725"], "prob": 0.91076}
+{"rel": "share", "fact": ["475", "1702"], "prob": 0.977102}
+{"rel": "share", "fact": ["488", "1664"], "prob": 0.932669}
+{"rel": "share", "fact": ["493", "1664"], "prob": 0.814649}
+{"rel": "share", "fact": ["522", "1598"], "prob": 0.953679}
+{"rel": "share", "fact": ["541", "1563"], "prob": 0.974822}
+{"rel": "share", "fact": ["563", "564"], "prob": 0.988123}
+{"rel": "share", "fact": ["564", "565"], "prob": 0.952148}
+{"rel": "share", "fact": ["564", "1510"], "prob": 0.886074}
+{"rel": "share", "fact": ["564", "1517"], "prob": 0.923296}
+{"rel": "share", "fact": ["564", "1518"], "prob": 0.990326}
+{"rel": "share", "fact": ["564", "1519"], "prob": 0.856567}
+{"rel": "share", "fact": ["564", "1520"], "prob": 0.872781}
+{"rel": "share", "fact": ["619", "971"], "prob": 0.867515}
+{"rel": "share", "fact": ["666", "1167"], "prob": 0.947737}
+{"rel": "share", "fact": ["671", "1167"], "prob": 0.860994}
+{"rel": "share", "fact": ["694", "695"], "prob": 0.868764}
+{"rel": "share", "fact": ["695", "692"], "prob": 0.910308}
+{"rel": "share", "fact": ["695", "1114"], "prob": 0.818692}
+{"rel": "share", "fact": ["695", "1124"], "prob": 0.917098}
+{"rel": "share", "fact": ["695", "1125"], "prob": 0.818237}
+{"rel": "share", "fact": ["695", "1126"], "prob": 0.825003}
+{"rel": "share", "fact": ["695", "1127"], "prob": 0.846308}
+{"rel": "share", "fact": ["700", "1102"], "prob": 0.901421}
+{"rel": "share", "fact": ["731", "1046"], "prob": 0.982397}
+{"rel": "share", "fact": ["735", "1030"], "prob": 0.92009}
+{"rel": "share", "fact": ["736", "1030"], "prob": 0.858076}
+{"rel": "share", "fact": ["824", "33"], "prob": 0.982324}
+{"rel": "share", "fact": ["891", "33"], "prob": 0.916164}
+{"rel": "share", "fact": ["906", "971"], "prob": 0.864039}
+{"rel": "share", "fact": ["967", "971"], "prob": 0.940304}
+{"rel": "share", "fact": ["970", "971"], "prob": 0.927222}
+{"rel": "share", "fact": ["971", "968"], "prob": 0.826158}
+{"rel": "share", "fact": ["971", "972"], "prob": 0.843435}
+{"rel": "share", "fact": ["971", "1234"], "prob": 0.959184}
+{"rel": "share", "fact": ["971", "1268"], "prob": 0.947176}
+{"rel": "share", "fact": ["1030", "736"], "prob": 0.837982}
+{"rel": "share", "fact": ["1030", "1031"], "prob": 0.922669}
+{"rel": "share", "fact": ["1045", "1046"], "prob": 0.815185}
+{"rel": "share", "fact": ["1046", "1041"], "prob": 0.839744}
+{"rel": "share", "fact": ["1046", "1047"], "prob": 0.822559}
+{"rel": "share", "fact": ["1101", "1102"], "prob": 0.993811}
+{"rel": "share", "fact": ["1102", "701"], "prob": 0.947579}
+{"rel": "share", "fact": ["1102", "1103"], "prob": 0.887539}
+{"rel": "share", "fact": ["1113", "695"], "prob": 0.954634}
+{"rel": "share", "fact": ["1122", "695"], "prob": 0.857261}
+{"rel": "share", "fact": ["1123", "695"], "prob": 0.80079}
+{"rel": "share", "fact": ["1124", "695"], "prob": 0.95618}
+{"rel": "share", "fact": ["1125", "695"], "prob": 0.884182}
+{"rel": "share", "fact": ["1161", "1167"], "prob": 0.996703}
+{"rel": "share", "fact": ["1166", "1167"], "prob": 0.919279}
+{"rel": "share", "fact": ["1167", "666"], "prob": 0.971285}
+{"rel": "share", "fact": ["1167", "667"], "prob": 0.827447}
+{"rel": "share", "fact": ["1167", "965"], "prob": 0.963857}
+{"rel": "share", "fact": ["1167", "1161"], "prob": 0.856926}
+{"rel": "share", "fact": ["1233", "971"], "prob": 0.86593}
+{"rel": "share", "fact": ["1267", "971"], "prob": 0.969822}
+{"rel": "share", "fact": ["1400", "1404"], "prob": 0.836678}
+{"rel": "share", "fact": ["1403", "1404"], "prob": 0.991037}
+{"rel": "share", "fact": ["1404", "1321"], "prob": 0.855015}
+{"rel": "share", "fact": ["1404", "1405"], "prob": 0.822638}
+{"rel": "share", "fact": ["1404", "1408"], "prob": 0.873481}
+{"rel": "share", "fact": ["1407", "1404"], "prob": 0.971301}
+{"rel": "share", "fact": ["1450", "1746"], "prob": 0.810091}
+{"rel": "share", "fact": ["1500", "1504"], "prob": 0.901023}
+{"rel": "share", "fact": ["1503", "1504"], "prob": 0.823848}
+{"rel": "share", "fact": ["1504", "1467"], "prob": 0.881907}
+{"rel": "share", "fact": ["1504", "1501"], "prob": 0.956469}
+{"rel": "share", "fact": ["1504", "1505"], "prob": 0.997626}
+{"rel": "share", "fact": ["1504", "1510"], "prob": 0.970055}
+{"rel": "share", "fact": ["1504", "1513"], "prob": 0.893361}
+{"rel": "share", "fact": ["1504", "1536"], "prob": 0.924108}
+{"rel": "share", "fact": ["1509", "564"], "prob": 0.903503}
+{"rel": "share", "fact": ["1509", "1504"], "prob": 0.967388}
+{"rel": "share", "fact": ["1512", "564"], "prob": 0.972015}
+{"rel": "share", "fact": ["1516", "564"], "prob": 0.846093}
+{"rel": "share", "fact": ["1517", "564"], "prob": 0.85715}
+{"rel": "share", "fact": ["1518", "564"], "prob": 0.902276}
+{"rel": "share", "fact": ["1535", "1504"], "prob": 0.929588}
+{"rel": "share", "fact": ["1562", "1563"], "prob": 0.982384}
+{"rel": "share", "fact": ["1563", "1558"], "prob": 0.901242}
+{"rel": "share", "fact": ["1563", "1564"], "prob": 0.875164}
+{"rel": "share", "fact": ["1597", "1598"], "prob": 0.899646}
+{"rel": "share", "fact": ["1598", "518"], "prob": 0.912008}
+{"rel": "share", "fact": ["1598", "522"], "prob": 0.993384}
+{"rel": "share", "fact": ["1598", "1599"], "prob": 0.911282}
+{"rel": "share", "fact": ["1598", "1604"], "prob": 0.853772}
+{"rel": "share", "fact": ["1603", "1598"], "prob": 0.818812}
+{"rel": "share", "fact": ["1604", "1598"], "prob": 0.859737}
+{"rel": "share", "fact": ["1658", "1664"], "prob": 0.981934}
+{"rel": "share", "fact": ["1663", "1664"], "prob": 0.882198}
+{"rel": "share", "fact": ["1664", "488"], "prob": 0.846678}
+{"rel": "share", "fact": ["1664", "489"], "prob": 0.855468}
+{"rel": "share", "fact": ["1664", "1461"], "prob": 0.968248}
+{"rel": "share", "fact": ["1664", "1658"], "prob": 0.80878}
+{"rel": "share", "fact": ["1701", "1702"], "prob": 0.999967}
+{"rel": "share", "fact": ["1702", "475"], "prob": 0.986336}
+{"rel": "share", "fact": ["1702", "1703"], "prob": 0.897325}
+{"rel": "share", "fact": ["1724", "459"], "prob": 0.911237}
+{"rel": "share", "fact": ["1745", "1746"], "prob": 0.950733}
+{"rel": "share", "fact": ["1746", "1473"], "prob": 0.944061}
+{"rel": "share", "fact": ["1746", "1747"], "prob": 0.859753}
+{"rel": "share", "fact": ["1746", "1805"], "prob": 0.804037}
+{"rel": "share", "fact": ["1746", "1875"], "prob": 0.836061}
+{"rel": "share", "fact": ["1804", "417"], "prob": 0.838558}
+{"rel": "share", "fact": ["1874", "1746"], "prob": 0.947401}
+{"rel": "share", "fact": ["1883", "1894"], "prob": 0.879717}
+{"rel": "share", "fact": ["1890", "1894"], "prob": 0.896148}
+{"rel": "share", "fact": ["1893", "1894"], "prob": 0.979956}
+{"rel": "share", "fact": ["1894", "1891"], "prob": 0.881757}
+{"rel": "share", "fact": ["1894", "1895"], "prob": 0.868775}
+{"rel": "share", "fact": ["1894", "2146"], "prob": 0.854167}
+{"rel": "share", "fact": ["1894", "2172"], "prob": 0.921918}
+{"rel": "share", "fact": ["1977", "1981"], "prob": 0.803531}
+{"rel": "share", "fact": ["1980", "1981"], "prob": 0.897286}
+{"rel": "share", "fact": ["1981", "1844"], "prob": 0.964928}
+{"rel": "share", "fact": ["1981", "1982"], "prob": 0.837057}
+{"rel": "share", "fact": ["1981", "1985"], "prob": 0.965055}
+{"rel": "share", "fact": ["1984", "1981"], "prob": 0.945873}
+{"rel": "share", "fact": ["2145", "1894"], "prob": 0.997096}
+{"rel": "share", "fact": ["2171", "1894"], "prob": 0.857987}
+{"rel": "share", "fact": ["12763", "12765"], "prob": 0.908154}
+{"rel": "share", "fact": ["12764", "12765"], "prob": 0.91474}
+{"rel": "share", "fact": ["12765", "12766"], "prob": 0.859591}
+{"rel": "share", "fact": ["12765", "12767"], "prob": 0.833984}
+{"rel": "share", "fact": ["12765", "13420"], "prob": 0.917128}
+{"rel": "share", "fact": ["12765", "13423"], "prob": 0.962752}
+{"rel": "share", "fact": ["13168", "13637"], "prob": 0.88566}
+{"rel": "share", "fact": ["13331", "13404"], "prob": 0.920635}
+{"rel": "share", "fact": ["13334", "12765"], "prob": 0.895863}
+{"rel": "share", "fact": ["13337", "13341"], "prob": 0.987842}
+{"rel": "share", "fact": ["13340", "13341"], "prob": 0.949389}
+{"rel": "share", "fact": ["13341", "13338"], "prob": 0.949786}
+{"rel": "share", "fact": ["13341", "13342"], "prob": 0.950686}
+{"rel": "share", "fact": ["13341", "13352"], "prob": 0.832972}
+{"rel": "share", "fact": ["13341", "13600"], "prob": 0.900448}
+{"rel": "share", "fact": ["13341", "13603"], "prob": 0.911577}
+{"rel": "share", "fact": ["13341", "13618"], "prob": 0.84135}
+{"rel": "share", "fact": ["13403", "13404"], "prob": 0.964683}
+{"rel": "share", "fact": ["13404", "12774"], "prob": 0.87153}
+{"rel": "share", "fact": ["13404", "13405"], "prob": 0.963404}
+{"rel": "share", "fact": ["13404", "13408"], "prob": 0.837539}
+{"rel": "share", "fact": ["13407", "13404"], "prob": 0.973032}
+{"rel": "share", "fact": ["13422", "12765"], "prob": 0.95984}
+{"rel": "share", "fact": ["13436", "13637"], "prob": 0.939853}
+{"rel": "share", "fact": ["13527", "13828"], "prob": 0.923773}
+{"rel": "share", "fact": ["13578", "13637"], "prob": 0.973993}
+{"rel": "share", "fact": ["13599", "13341"], "prob": 0.874035}
+{"rel": "share", "fact": ["13617", "13341"], "prob": 0.863206}
+{"rel": "share", "fact": ["13637", "13437"], "prob": 0.816358}
+{"rel": "share", "fact": ["13637", "13638"], "prob": 0.966107}
+{"rel": "share", "fact": ["13637", "13820"], "prob": 0.973599}
+{"rel": "share", "fact": ["13819", "13637"], "prob": 0.813753}
+{"rel": "share", "fact": ["13827", "13828"], "prob": 0.964299}
+{"rel": "share", "fact": ["13828", "13528"], "prob": 0.832575}
+{"rel": "share", "fact": ["13828", "13829"], "prob": 0.893212}
+{"rel": "share", "fact": ["13828", "13882"], "prob": 0.816927}
+{"rel": "share", "fact": ["13877", "13828"], "prob": 0.940475}
+{"rel": "share", "fact": ["13881", "13828"], "prob": 0.984697}
+{"rel": "store_assign", "fact": ["801", "2687"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["33", "2879"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["971", "3293"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1019", "3467"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1030", "3539"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["729", "3591"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1046", "3619"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1093", "3851"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1102", "3903"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["695", "3959"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1125", "3991"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1167", "4223"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["627", "4623"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1404", "5346"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1504", "5546"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1510", "5558"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["564", "5572"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["565", "5574"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1563", "5834"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1566", "5850"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1598", "6002"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1651", "6258"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1664", "6326"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1702", "6506"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["459", "6630"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1746", "6750"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1796", "6994"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["417", "7042"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1831", "7277"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1894", "7507"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1981", "7681"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13317", "14825"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["12765", "14957"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13341", "14977"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13404", "15103"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13600", "15861"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13637", "16041"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13828", "17092"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13882", "17246"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["2687", "2685"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["2879", "2877"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["3467", "3465"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["3591", "3589"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["3851", "3849"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["3991", "3989"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["4623", "4621"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["5850", "5848"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["6002", "6000"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["6326", "6324"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["6506", "6504"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["6994", "6992"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["7277", "7275"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["14825", "14823"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["17056", "17054"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2687", "2686"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2763", "2762"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2827", "2826"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2879", "2878"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3023", "3022"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3367", "3366"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3467", "3466"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3475", "3474"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3591", "3590"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3623", "3622"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3755", "3754"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3851", "3850"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["3991", "3990"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["4623", "4622"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["4922", "4921"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["5130", "5129"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["5850", "5849"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["6002", "6001"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["6326", "6325"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["6506", "6505"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["6966", "6965"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["6994", "6993"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["7050", "7049"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["7205", "7204"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["7277", "7276"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["14825", "14824"], "prob": 1.0}

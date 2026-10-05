@@ -43,6 +43,21 @@ within absolute tolerance `1e-8`; its logs contained no rewrite stage. These
 are correctness smoke checks, not a reproduction of paper timings. The input
 revisions are described in [PROVENANCE.md](PROVENANCE.md#paper-and-benchmark-records).
 
+The bundled [evaluation workspace](../evaluation/README.md) was checked using
+the incremental P13 smoke profile (all six modes and all ten probability
+comparisons), its thirteen table/figure collectors, and the full P1 RQ2/RQ3
+PSouffle runs. Plain/rewrite P1 probabilities agree within `1e-8`. The full
+RQ1 runner also completed all five taint stages for app-018 and the readelf
+symbolization case, and both graph-size collectors produced reduction rates.
+Python CLI entry points and shell syntax were checked, and the VProbLog
+bridge/native conversion was exercised on P1. These checks cover runner
+integration; full paper experiments and external-engine timings are separate
+evaluation runs.
+
+The full P1/P3 engine smoke run completed both PSouffle cases. The locally
+installed ProbLog completed P3; P1 reached the configured 300-second timeout.
+VProbLog and Scallop timing runs were not performed in these integration checks.
+
 The incremental suite compares
 incremental modes against `full` on small programs covering:
 

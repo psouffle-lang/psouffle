@@ -1,0 +1,5 @@
+# Writable experiment workspaces; benchmark input CSV/JSON/delta files are tracked.
+/full/artifact/
+/full/out/
+/inc/benchmarks/side_channel/runs/*
+!/inc/benchmarks/side_channel/runs/README.md

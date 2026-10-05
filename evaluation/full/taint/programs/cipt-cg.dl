@@ -1,0 +1,197 @@
+.type M = number
+.type V = number
+.type H = number
+.type F = number
+.type I = number
+.type S = number
+.type T = number
+.type Z = number
+.type T0 = number
+.type T1 = number
+
+.decl Assign(v:V, u:V)
+.input Assign
+
+.decl Alloc(v:V, h:H)
+.input Alloc
+
+.decl GlobalAlloc(v:V, h:H)
+.input GlobalAlloc
+
+.decl Load(y:V, x:V, f:F)
+.input Load
+
+.decl Store(u:V, f:F, v:V)
+.input Store
+
+.decl LoadStat(y:V, f:F)
+.input LoadStat
+
+.decl StoreStat(f:F, v:V)
+.input StoreStat
+
+.decl IinvkArg(i:I, n:Z, v:V)
+.input IinvkArg
+
+.decl IinvkRet(i:I, n:Z, v:V)
+.input IinvkRet
+
+.decl MmethArg(m:M, z:Z, v:V)
+.input MmethArg
+
+.decl MmethRet(m:M, z:Z, v:V)
+.input MmethRet
+
+.decl VT(v:V, t:T)
+.input VT
+
+.decl HTFilter(h:H, t:T)
+.input HTFilter
+
+.decl MV(m:M, v:V)
+.input MV
+
+.decl HT(h:H, t:T)
+.input HT
+
+.decl MI(m:M, i:I)
+.input MI
+
+.decl StatIM(i:I, m:M)
+.input StatIM
+
+.decl SpecIM(i:I, m:M)
+.input SpecIM
+
+.decl VirtIM(i:I, s:S)
+.input VirtIM
+
+.decl ClassT(t:T)
+.input ClassT
+
+.decl StaticTM(t:T, m:M)
+.input StaticTM
+
+.decl StaticTF(t:T, f:F)
+.input StaticTF
+
+.decl ClinitTM(t:T, m:M)
+.input ClinitTM
+
+.decl Subtype(t1:T0, t2:T1)
+.input Subtype
+
+.decl SubSig(m:M, s:S)
+.input SubSig
+
+.decl Dispatch(t:T, s:S, m:M)
+.input Dispatch
+
+.decl ci_reachableT(t:T)
+
+.decl interprocAssign(u:V, v:V)
+
+.decl ci_reachableI(i:I)
+
+.decl IHM(i:I, h:H, m:M)
+
+.decl ci_fpt(o1:H, f:F, o2:H)
+
+.decl ci_fptStat(f:F, o:H)
+
+.decl ci_typeFilter(v:V, o:H)
+
+.decl ci_reachableM(m:M)
+.output ci_reachableM
+
+.decl ci_IM(i:I, m:M)
+.output ci_IM
+
+.decl ci_pt(v:V, o:H)
+.output ci_pt
+
+// #################
+// Context-insensitive Points-to analysis with on-the-fly callgraph construction
+// #################
+
+// name=cipt-cg
+
+// .include "M.dom"
+// .include "V.dom"
+// .include "H.dom"
+// .include "F.dom"
+// .include "I.dom"
+// .include "S.dom"
+// .include "T.dom"
+// .include "Z.dom"
+
+// .bddvarorder I0xM0xM1_S0_T0_V0xV1_T1_H0_F0_H1_Z0
+
+// v = u
+// v is the lhs in the new stmt h
+// v is the lhs in the new stmt h
+// y = x.f
+// u.f = v
+// y = f
+// f = v
+
+// v is a variable in method m
+// heap h point to Type t.
+// stmt i belongs to method m.
+
+// i statically invokes m.
+// i special invoke m.
+// i virtually invokes m.
+// t is concrete or abstract
+// m is a static method in t.
+// f is a static field in t.
+// m is the class initializer in m.
+// t1 is a subtype of t2.
+
+// s is subsignature of m.
+// t.m has subsig s.
+
+// ##################
+// OUTPUT
+// ##################
+// type wise, v can point-to o
+
+// i calls method m
+// v points-to h
+
+// ##################
+// RULES
+// ##################
+
+0.999000::ci_typeFilter(v,h) :- VT(v,t), HTFilter(h,t).
+
+0.999000::ci_reachableM(0).
+0.999000::ci_reachableM(m) :- ClinitTM(t,m), ci_reachableT(t).
+0.999000::ci_reachableM(m) :- ci_IM(t1,m).
+
+0.999000::ci_reachableI(i) :- MI(m,i), ci_reachableM(m).
+
+0.999000::IHM(i,h,m2) :- VirtIM(i,s), Dispatch(t,s,m2), HT(h,t).
+
+0.999000::ci_IM(i,m) :- ci_reachableI(i), IinvkArg(i,0,v), ci_pt(v,o), IHM(i,o,m).
+0.999000::ci_IM(i,m) :- ci_reachableI(i), StatIM(i,m).
+0.999000::ci_IM(i,m) :- ci_reachableI(i), IinvkArg(i,0,v), ci_pt(v,t1), SpecIM(i,m).
+
+0.999000::interprocAssign(u,v) :- ci_IM(i,m), IinvkArg(i,z,v), MmethArg(m,z,u).
+0.999000::interprocAssign(u,v) :- ci_IM(i,m), IinvkRet(i,z,u), MmethRet(m,z,v).
+
+0.999000::ci_pt(u,o) :- interprocAssign(u,v), ci_pt(v,o), ci_typeFilter(u,o).
+
+0.999000::ci_pt(v,h) :- GlobalAlloc(v,h), MV(m,v), ci_reachableM(m).
+0.999000::ci_pt(v,h) :- Alloc(v,h), MV(m,v), ci_reachableM(m).
+0.999000::ci_pt(v,o) :- ci_pt(u,o), Assign(v,u), ci_typeFilter(v,o).
+0.999000::ci_fpt(o1,f,o2) :- ci_pt(v,o2), Store(u,f,v), ci_pt(u,o1).
+0.999000::ci_pt(y,o2) :- ci_pt(x,o1), Load(y,x,f), ci_fpt(o1,f,o2).
+0.999000::ci_fptStat(f,o) :- ci_pt(v,o), StoreStat(f,v).
+0.999000::ci_pt(y,o) :- LoadStat(y,f), ci_fptStat(f,o), MV(m,y), ci_reachableM(m).
+
+0.999000::ci_reachableT(t) :- ci_reachableM(m), MV(m,v), Alloc(v,h), HT(h,t).
+0.999000::ci_reachableT(t) :- ci_reachableM(m), StaticTM(t,m).
+0.999000::ci_reachableT(t) :- ci_reachableM(m), MV(m,v), StoreStat(f,v), StaticTF(t,f).
+0.999000::ci_reachableT(t) :- ci_reachableM(m), MV(m,v), LoadStat(v,f), StaticTF(t,f).
+0.999000::ci_reachableT(t) :- ClassT(t), ci_reachableT(s), Subtype(s,t).

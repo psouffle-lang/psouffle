@@ -1,0 +1,100 @@
+% Generated from: side_channel/full/P4/compute.souffle.dl
+% Domain: side_channel    Case: P4
+
+0.884047::bv_diff_rec(16, 15, 1).
+0.821503::bv_diff_rec(19, 20, 1).
+0.925483::bv_diff_rec(23, 24, 1).
+0.849971::bv_diff_rec(28, 27, 0).
+0.893982::bv_diff_rec(27, 28, 0).
+0.908147::bv_diff_rec(31, 32, 1).
+0.824933::bv_diff_rec(36, 35, 1).
+0.952505::bv_diff_rec(40, 39, 1).
+0.926629::bv_diff_rec(43, 44, 1).
+0.848582::bv_same_rec(27, 28, 0).
+0.956491::key_sensitive(2).
+0.947444::rand(1).
+0.87441::rand(3).
+load_assign(15, 2).
+load_assign(16, 3).
+load_assign(19, 11).
+load_assign(20, 1).
+load_assign(23, 4).
+load_assign(24, 1).
+load_assign(27, 5).
+load_assign(28, 11).
+load_assign(31, 1).
+load_assign(32, 3).
+load_assign(35, 11).
+load_assign(36, 7).
+load_assign(39, 8).
+load_assign(40, 7).
+load_assign(43, 9).
+load_assign(44, 6).
+load_assign(47, 10).
+store_assign(11, 17).
+store_assign(4, 21).
+store_assign(5, 25).
+store_assign(6, 29).
+store_assign(7, 33).
+store_assign(8, 37).
+store_assign(9, 41).
+store_assign(10, 45).
+xor_assign_left(17, 15).
+xor_assign_left(21, 19).
+xor_assign_left(25, 23).
+xor_assign_left(29, 27).
+xor_assign_left(33, 31).
+xor_assign_left(37, 35).
+xor_assign_left(41, 39).
+xor_assign_left(45, 43).
+xor_assign_right(17, 16).
+xor_assign_right(21, 20).
+xor_assign_right(25, 24).
+xor_assign_right(29, 28).
+xor_assign_right(33, 32).
+xor_assign_right(37, 36).
+xor_assign_right(41, 40).
+xor_assign_right(45, 44).
+
+0.891981::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.891981::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), \+((INT_RES1 = 0)).
+0.835284::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.897294::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.862463::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_sensitive(FROM1), key_sensitive(FROM2).
+0.96419::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.823868::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.91703::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_sensitive(FROM2).
+0.91703::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM2), key_sensitive(FROM1).
+0.882515::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.882515::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM2), key_ind(FROM1), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.954797::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.832398::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.832398::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), \+((INT_RES1 = 0)).
+0.875048::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.891244::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.927923::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM1).
+0.927923::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM2).
+0.829162::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.895609::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- binary_constant(FROM1,FROM2).
+assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+key_sensitive(FROM2) :- key_sensitive(FROM1), assign(FROM2,FROM1).
+key_ind(FROM2) :- key_ind(FROM1), assign(FROM2,FROM1).
+rand(FROM2) :- rand(FROM1), assign(FROM2,FROM1).
+equal_assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM3) :- equal_assign(FROM1,FROM2), equal_assign(FROM2,FROM3).
+equal_assign(FROM2,FROM1) :- equal_assign(FROM1,FROM2).
+key_ind(FROM1) :- constant(FROM1).
+
+query(key_ind(_)).
+query(key_sensitive(_)).
+query(hd_sensitive(_,_)).
+query(hd_sensitive_2(_,_)).

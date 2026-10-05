@@ -1,0 +1,266 @@
+.type M = number
+.type C = number
+.type V = number
+.type H = number
+.type F = number
+.type I = number
+.type S = number
+.type T = number
+.type Z = number
+
+.decl Assign(v:V, u:V)
+.input Assign
+
+.decl Alloc(v:V, h:H)
+.input Alloc
+
+.decl GlobalAlloc(v:V, h:H)
+.input GlobalAlloc
+
+.decl Load(y:V, x:V, f:F)
+.input Load
+
+.decl Store(u:V, f:F, v:V)
+.input Store
+
+.decl LoadStat(y:V, f:F)
+.input LoadStat
+
+.decl StoreStat(f:F, v:V)
+.input StoreStat
+
+.decl param(u:V, v:V, i:I)
+.input param
+
+.decl return(u:V, v:V, i:I)
+.input return
+
+.decl typeFilter(v:V, o:C)
+.input typeFilter
+
+.decl IinvkArg(i:I, n:Z, v:V)
+.input IinvkArg
+
+.decl MmethArg(m:M, i:Z, v:V)
+.input MmethArg
+
+.decl IinvkRet(i:I, j:Z, v:V)
+.input IinvkRet
+
+.decl MV(m:M, v:V)
+.input MV
+
+.decl CH(o:C, h:H)
+.input CH
+
+.decl CC(c:C, d:C)
+.input CC
+
+.decl HT(h:H, t:T)
+.input HT
+
+.decl MI(m:M, i:I)
+.input MI
+
+.decl CI(c:C, i:I)
+.input CI
+
+.decl CMap(c:C, d:C)
+.input CMap
+
+.decl StatIM(i:I, m:M)
+.input StatIM
+
+.decl SpecIM(i:I, m:M)
+.input SpecIM
+
+.decl VirtIM(i:I, s:S)
+.input VirtIM
+
+.decl ClassT(t:T)
+.input ClassT
+
+.decl StaticTM(t:T, m:M)
+.input StaticTM
+
+.decl StaticTF(t:T, f:F)
+.input StaticTF
+
+.decl ClinitTM(t:T, m:M)
+.input ClinitTM
+
+.decl Subtype(t1:T, t2:T)
+.input Subtype
+
+.decl Dispatch(t:T, s:S, m:M)
+.input Dispatch
+
+.decl CIC(c:C, i:I, d:C)
+.output CIC
+
+.decl reachableT(t:T)
+.output reachableT
+
+.decl DIC(c:C, i:I, c_2:C)
+.output DIC
+
+.decl DVDV(c:C, u:V, d:C, v:V)
+.output DVDV
+
+.decl reachableCI(c:C, i:I)
+.output reachableCI
+
+.decl reachableCM(c:C, m:M)
+.output reachableCM
+
+.decl CICM(d:C, i:I, c:C, m:M)
+.output CICM
+
+.decl pt(c:C, v:V, o:C)
+.output pt
+
+.decl fpt(o1:C, f:F, o2:C)
+.output fpt
+
+.decl fptStat(f:F, o:C)
+.output fptStat
+
+.decl ICM(i:I, c:C, m:M)
+.output ICM
+
+.decl Ctx(c:C)
+
+.decl staticM(m:M)
+
+.decl ipArgNonZeroVar(v:V)
+
+.decl ipArgStatic0Var(v:V)
+
+.decl ipRetVar(v:V)
+
+.decl ipGlobalVar(v:V)
+
+.decl ipLocalVar(v:V)
+
+.decl ipGlobalPair(v:V, o:C)
+
+.decl ipLocalPair(v:V, o:C)
+
+// #################
+// K-obj Points-to analysis
+// #################
+
+// name=pt-obj
+
+// .include "M.dom"
+// .include "C.dom"
+// .include "V.dom"
+// .include "H.dom"
+// .include "F.dom"
+// .include "I.dom"
+// .include "S.dom"
+// .include "T.dom"
+// .include "Z.dom"
+
+// .bddvarorder C0xC1_V0xV1_H0_F0_I0_T0_T1_M0_S0_M1_Z0
+// .bddvarorder F0_I0xM0_S0_T0_V0xV1_T1_H0_C0xC1xC2_Z0
+// .bddvarorder S0_T0_V0xV1_T1_H0_C0xC1xC2_F0xI0xM0_Z0
+
+// v = u
+// v is the lhs in the new stmt h
+// v is the lhs in the new stmt h
+// y = x.f
+// u.f = v
+// y = f
+// f = v
+// u is the formal parameter, v is actual arg, i is invocation stmt
+// u is the lhs at callsite, v is the return var, i is invocation stmt
+// type wise, v can point-to o
+
+// v is a variable in method m
+// CM(c:C,m:M) input         # c is a context of method m
+// context’ified abstract location o corresponds to new stmt h
+// there exists i s.t. c++[i] = d
+// heap h point to Type t.
+// stmt i belongs to method m.
+// stmt i is on the top of c.
+
+// i statically invokes m.
+// i special invoke m.
+// i virtually invokes m.
+// t is concrete or abstract
+// m is a static method in t.
+// f is a static field in t.
+// m is the class initializer in m.
+// t1 is a subtype of t2.
+// CtxtInsMeth(m:M) input
+
+// SubSig(m:M,s:S) input     # s is subsignature of m.
+// t.m has subsig s.
+
+// CICMtmp(d:C,i:I,c:C,m:M) output
+
+// ##################
+// OUTPUT
+// ##################
+// d = [i, c]
+// i in cotext d calls method m in context c.
+// (c,v) points-to o
+
+
+// ##################
+// RULES
+// ##################
+
+0.999000::pt(c,v,o) :- Assign(v,u), pt(c,u,o), typeFilter(v,o).
+
+0.999000::reachableCI(c,i) :- MI(m,i), reachableCM(c,m).
+
+0.999000::CIC(c,i,d) :- CC(c,d), CI(d,i).
+
+0.852324::DIC(c,i,d) :- IinvkArg(i,0,v), pt(c,v,o), CMap(o,d).
+0.800090::CICM(c,i,o,m) :- reachableCI(c,i), DIC(c,i,o), ICM(i,o,m).
+0.932564::CICM(c,i,d,m) :- reachableCI(c,i), StatIM(i,m), CIC(c,i,d).
+0.894051::CICM(c,i,o,m) :- reachableCI(c,i), SpecIM(i,m), DIC(c,i,o).
+// CICM(c,i,d,m) :- CICMtmp(c,i,d,m), !CtxtInsMeth(m).
+// CICM(c,i,0,m) :- CICMtmp(c,i,t1,m), CtxtInsMeth(m).
+
+0.951946::DVDV(d,u,c,v) :- CICM(c,i,d,m), MV(m,u), param(u,v,i).
+0.874632::DVDV(c,u,d,v) :- CICM(c,i,d,m), MV(m,v), return(u,v,i).
+
+0.999000::Ctx(c) :- CMap(t1,c).
+0.999000::staticM(m) :- StaticTM(t,m).
+0.999000::ipArgNonZeroVar(v) :- MmethArg(m,i,v), i != 0.
+0.999000::ipArgStatic0Var(v) :- MmethArg(m,0,v), staticM(m).
+0.999000::ipRetVar(v) :- IinvkRet(i,j,v).
+0.999000::ipGlobalVar(v) :- ipArgNonZeroVar(v).
+0.999000::ipGlobalVar(v) :- ipArgStatic0Var(v).
+0.999000::ipGlobalVar(v) :- ipRetVar(v).
+0.999000::ipLocalVar(v) :- MmethArg(m,0,v), !staticM(m).
+0.999000::ipGlobalPair(v,o) :- ipGlobalVar(v), typeFilter(v,o).
+0.999000::ipLocalPair(v,o) :- ipLocalVar(v), typeFilter(v,o).
+
+0.999000::pt(c,u,o) :- DVDV(c,u,d,v), pt(d,v,o), ipGlobalPair(u,o), Ctx(c).
+0.999000::pt(c,u,o) :- DVDV(c,u,d,v), pt(d,v,o), ipLocalPair(u,o), CMap(o,c).
+// pt(c,u,o) :- DVDV(c,u,d,v), pt(d,v,o), typeFilter(u,o).
+
+0.999000::pt(c,v,o) :- Alloc(v,h), MV(m,v), reachableCM(c,m), CC(c,o), CH(o,h).
+0.999000::pt(c,v,o) :- GlobalAlloc(v,h), MV(m,v), reachableCM(c,m), CH(o,h).
+
+0.999000::fpt(o1,f,o2) :- pt(c,v,o2), Store(u,f,v), pt(c,u,o1).
+0.999000::pt(c,y,o2) :- pt(c,x,o1), Load(y,x,f), fpt(o1,f,o2).
+
+0.999000::fptStat(f,o) :- pt(t1,v,o), StoreStat(f,v).
+0.999000::pt(c,y,o) :- LoadStat(y,f), fptStat(f,o), MV(m,y), reachableCM(c,m).
+
+0.999000::reachableT(t) :- reachableCM(t1,m), MV(m,v), Alloc(v,h), HT(h,t).
+0.999000::reachableT(t) :- reachableCM(t1,m), StaticTM(t,m).
+0.999000::reachableT(t) :- reachableCM(t1,m), MV(m,v), StoreStat(f,v), StaticTF(t,f).
+0.999000::reachableT(t) :- reachableCM(t1,m), MV(m,v), LoadStat(v,f), StaticTF(t,f).
+0.999000::reachableT(t) :- ClassT(t), reachableT(s), Subtype(s,t).
+
+0.999000::reachableCM(0,0).
+0.999000::reachableCM(0,m) :- ClinitTM(t,m), reachableT(t).
+0.999000::reachableCM(c,m) :- CICM(t1,t2,c,m).
+
+0.867116::ICM(i,d,m2) :- VirtIM(i,s), Dispatch(t,s,m2), HT(h,t), CH(o,h), CMap(o,d).

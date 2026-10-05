@@ -1,0 +1,154 @@
+.type address <: unsigned
+.type size_t <: unsigned
+.type objkind = symbol
+
+.decl address_in_data_refined(ea:address, val:address)
+.input address_in_data_refined
+
+.decl address_array(ea:address, stride:size_t, initial:address)
+.input address_array
+
+.decl preferred_data_access(ea:address, size:size_t, ref:address)
+.input preferred_data_access
+
+.decl string_candidate_refined(ea:address, end:address, encoding:symbol)
+.input string_candidate_refined
+
+.decl subsequent_string_candidate(left:address, right:address)
+.input subsequent_string_candidate
+
+.decl may_have_symbolic_immediate(ref:address, target:address)
+.input may_have_symbolic_immediate
+
+.decl data_limit(ea:address)
+.input data_limit
+
+.decl pointer_size(size:size_t)
+.input pointer_size
+
+.decl has_address_in_data_refined(ea:address)
+
+.decl data_object_candidate(ea:address, size:size_t, type:objkind)
+.decl data_object_point(ea:address, size:size_t, type:objkind, points:number, why:symbol)
+.decl data_object_total_points(ea:address, size:size_t, type:objkind, points:number)
+.decl data_object_conflict(ea1:address, size1:size_t, type1:objkind, ea2:address, size2:size_t, type2:objkind)
+.decl discarded_data_object(ea:address, size:size_t, type:objkind)
+.decl data_object(ea:address, size:size_t, type:objkind)
+
+.output data_object
+
+.decl symbolic_data(ea:address, size:size_t, val:address)
+.output symbolic_data
+
+.decl labeled_ea(ea:address)
+.output labeled_ea
+
+// Real symbol candidates come directly from DDisasm's refined data pointers.
+data_object_candidate(EA, PtrSize, "symbol") :-
+    address_in_data_refined(EA, _),
+    pointer_size(PtrSize).
+
+has_address_in_data_refined(EA) :-
+    address_in_data_refined(EA, _).
+
+// Use refined string candidates instead of raw ascii spans so we stay aligned
+// with DDisasm's string slicing semantics.
+data_object_candidate(EA, End - EA, "string") :-
+    string_candidate_refined(EA, End, _).
+
+// "other" remains the catch-all small accessed datum that is not already a
+// pointer candidate.
+data_object_candidate(EA, Size, "other") :-
+    preferred_data_access(EA, Size, _),
+    Size < 16,
+    !has_address_in_data_refined(EA).
+
+// Keep a small prior against any data object so positive evidence is explicit.
+data_object_point(EA, Size, Type, -2, "data object bias") :-
+    data_object_candidate(EA, Size, Type).
+
+data_object_point(EA, PtrSize, "symbol", 5, "data access") :-
+    data_object_candidate(EA, PtrSize, "symbol"),
+    preferred_data_access(EA, PtrSize, _).
+
+data_object_point(EA, PtrSize, "symbol", 3, "pointer array") :-
+    data_object_candidate(EA, PtrSize, "symbol"),
+    address_array(EA, _, _).
+
+data_object_point(EA, PtrSize, "symbol", 2, "aligned") :-
+    data_object_candidate(EA, PtrSize, "symbol"),
+    EA % PtrSize = 0.
+
+data_object_point(EA, PtrSize, "symbol", -1, "overlaps string") :-
+    data_object_candidate(EA, PtrSize, "symbol"),
+    string_candidate_refined(StrBeg, StrEnd, _),
+    StrBeg <= EA,
+    EA < StrEnd.
+
+data_object_point(EA, Size, "string", 2, "string basic point") :-
+    data_object_candidate(EA, Size, "string").
+
+data_object_point(EA, Size, "string", 3, "long string") :-
+    data_object_candidate(EA, Size, "string"),
+    Size > 5.
+
+data_object_point(EA, Size, "string", 1, "string that has reference") :-
+    data_object_candidate(EA, Size, "string"),
+    may_have_symbolic_immediate(_, EA),
+    data_limit(EA).
+
+data_object_point(EA, Size, "string", 1, "string has string neighbors") :-
+    data_object_candidate(EA, Size, "string"),
+    subsequent_string_candidate(EA, _),
+    subsequent_string_candidate(_, EA).
+
+data_object_point(EA, Size, "other", 4, "data access") :-
+    data_object_candidate(EA, Size, "other"),
+    Size < 16.
+
+data_object_conflict(EA, Size, Type, EA2, Size2, Type2) :-
+    data_object_candidate(EA, Size, Type),
+    data_object_candidate(EA2, Size2, Type2),
+    EA2 > EA,
+    EA2 < EA + Size.
+
+data_object_conflict(EA, Size, Type, EA, Size2, Type2) :-
+    data_object_candidate(EA, Size, Type),
+    data_object_candidate(EA, Size2, Type2),
+    Size2 > Size.
+
+data_object_conflict(EA, Size, Type, EA, Size, Type2) :-
+    data_object_candidate(EA, Size, Type),
+    data_object_candidate(EA, Size, Type2),
+    Type != Type2.
+
+data_object_total_points(EA, Size, Type, Points) :-
+    data_object_candidate(EA, Size, Type),
+    Points = sum X : { data_object_point(EA, Size, Type, X, _) }.
+
+discarded_data_object(EA, Size, Type) :-
+    data_object_conflict(EA, Size, Type, EA2, Size2, Type2),
+    data_object_total_points(EA, Size, Type, Points1),
+    data_object_total_points(EA2, Size2, Type2, Points2),
+    Points1 < Points2.
+
+discarded_data_object(EA, Size, Type) :-
+    data_object_conflict(EA2, Size2, Type2, EA, Size, Type),
+    data_object_total_points(EA, Size, Type, Points1),
+    data_object_total_points(EA2, Size2, Type2, Points2),
+    Points1 < Points2.
+
+data_object(EA, Size, Type) :-
+    data_object_total_points(EA, Size, Type, Points),
+    !discarded_data_object(EA, Size, Type),
+    Points >= 0.
+
+symbolic_data(EA, Size, Val) :-
+    data_object(EA, Size, "symbol"),
+    address_in_data_refined(EA, Val).
+
+labeled_ea(EA) :-
+    symbolic_data(_, _, EA).
+
+labeled_ea(EA) :-
+    data_object(EA, _, "string").

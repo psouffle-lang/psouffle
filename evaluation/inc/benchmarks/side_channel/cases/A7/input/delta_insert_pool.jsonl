@@ -1,0 +1,814 @@
+{"rel": "BV_DIFF_REC", "fact": ["1807", "1806", "1"], "prob": 0.827968}
+{"rel": "BV_DIFF_REC", "fact": ["1826", "1827", "1"], "prob": 0.905627}
+{"rel": "BV_DIFF_REC", "fact": ["2042", "2043", "1"], "prob": 0.959615}
+{"rel": "BV_DIFF_REC", "fact": ["2827", "2826", "1"], "prob": 0.995446}
+{"rel": "BV_DIFF_REC", "fact": ["4105", "4106", "1"], "prob": 0.846479}
+{"rel": "BV_DIFF_REC", "fact": ["4249", "4250", "1"], "prob": 0.930651}
+{"rel": "BV_DIFF_REC", "fact": ["29017", "29018", "1"], "prob": 0.992785}
+{"rel": "BV_DIFF_REC", "fact": ["29637", "29638", "1"], "prob": 0.879419}
+{"rel": "BV_DIFF_REC", "fact": ["29913", "29914", "1"], "prob": 0.859928}
+{"rel": "BV_DIFF_REC", "fact": ["30197", "30198", "1"], "prob": 0.856134}
+{"rel": "BV_DIFF_REC", "fact": ["30593", "30594", "1"], "prob": 0.975969}
+{"rel": "BV_DIFF_REC", "fact": ["30749", "30750", "1"], "prob": 0.812916}
+{"rel": "BV_DIFF_REC", "fact": ["30994", "30995", "1"], "prob": 0.966802}
+{"rel": "BV_DIFF_REC", "fact": ["31018", "31019", "1"], "prob": 0.919091}
+{"rel": "BV_DIFF_REC", "fact": ["31822", "31823", "1"], "prob": 0.954118}
+{"rel": "BV_DIFF_REC", "fact": ["31958", "31959", "1"], "prob": 0.896495}
+{"rel": "BV_DIFF_REC", "fact": ["32334", "32335", "1"], "prob": 0.877263}
+{"rel": "BV_DIFF_REC", "fact": ["32414", "32415", "1"], "prob": 0.84975}
+{"rel": "BV_DIFF_REC", "fact": ["32422", "32423", "1"], "prob": 0.899824}
+{"rel": "BV_DIFF_REC", "fact": ["32886", "32887", "1"], "prob": 0.978369}
+{"rel": "BV_DIFF_REC", "fact": ["33183", "33184", "1"], "prob": 0.951966}
+{"rel": "BV_DIFF_REC", "fact": ["33515", "33516", "1"], "prob": 0.993957}
+{"rel": "BV_DIFF_REC", "fact": ["34775", "34776", "1"], "prob": 0.917716}
+{"rel": "BV_DIFF_REC", "fact": ["34872", "34871", "1"], "prob": 0.867228}
+{"rel": "BV_DIFF_REC", "fact": ["35071", "35072", "1"], "prob": 0.865332}
+{"rel": "BV_DIFF_REC", "fact": ["35147", "35148", "1"], "prob": 0.840302}
+{"rel": "BV_DIFF_REC", "fact": ["35343", "35344", "1"], "prob": 0.802105}
+{"rel": "BV_DIFF_REC", "fact": ["36350", "36351", "1"], "prob": 0.92412}
+{"rel": "BV_DIFF_REC", "fact": ["36958", "36959", "1"], "prob": 0.830601}
+{"rel": "BV_DIFF_REC", "fact": ["37278", "37279", "1"], "prob": 0.886493}
+{"rel": "BV_DIFF_REC", "fact": ["37925", "37926", "1"], "prob": 0.82649}
+{"rel": "BV_DIFF_REC", "fact": ["38449", "38450", "1"], "prob": 0.923426}
+{"rel": "BV_DIFF_REC", "fact": ["38717", "38718", "1"], "prob": 0.957852}
+{"rel": "BV_DIFF_REC", "fact": ["38801", "38802", "1"], "prob": 0.993389}
+{"rel": "BV_DIFF_REC", "fact": ["38865", "38866", "1"], "prob": 0.839727}
+{"rel": "BV_DIFF_REC", "fact": ["39101", "39102", "1"], "prob": 0.818929}
+{"rel": "BV_DIFF_REC", "fact": ["39129", "39130", "1"], "prob": 0.86612}
+{"rel": "BV_DIFF_REC", "fact": ["39201", "39202", "1"], "prob": 0.954326}
+{"rel": "BV_DIFF_REC", "fact": ["39310", "39309", "1"], "prob": 0.895181}
+{"rel": "BV_DIFF_REC", "fact": ["39345", "39346", "1"], "prob": 0.896818}
+{"rel": "BV_DIFF_REC", "fact": ["39649", "39650", "1"], "prob": 0.83703}
+{"rel": "BV_DIFF_REC", "fact": ["40112", "40113", "1"], "prob": 0.804235}
+{"rel": "BV_DIFF_REC", "fact": ["40212", "40213", "1"], "prob": 0.874566}
+{"rel": "BV_DIFF_REC", "fact": ["40848", "40849", "1"], "prob": 0.856845}
+{"rel": "BV_DIFF_REC", "fact": ["41716", "41717", "1"], "prob": 0.908858}
+{"rel": "KEY_SENSITIVE", "fact": ["23"], "prob": 0.868438}
+{"rel": "RAND", "fact": ["6317"], "prob": 0.869375}
+{"rel": "RAND", "fact": ["6332"], "prob": 0.906268}
+{"rel": "RAND", "fact": ["6767"], "prob": 0.938807}
+{"rel": "RAND", "fact": ["7086"], "prob": 0.895878}
+{"rel": "RAND", "fact": ["8439"], "prob": 0.883857}
+{"rel": "RAND", "fact": ["8881"], "prob": 0.903966}
+{"rel": "RAND", "fact": ["9079"], "prob": 0.995103}
+{"rel": "RAND", "fact": ["9109"], "prob": 0.842629}
+{"rel": "RAND", "fact": ["9119"], "prob": 0.948284}
+{"rel": "RAND", "fact": ["44221"], "prob": 0.928332}
+{"rel": "RAND", "fact": ["44431"], "prob": 0.879273}
+{"rel": "RAND", "fact": ["44500"], "prob": 0.826308}
+{"rel": "RAND", "fact": ["44979"], "prob": 0.829484}
+{"rel": "RAND", "fact": ["45215"], "prob": 0.828772}
+{"rel": "RAND", "fact": ["45252"], "prob": 0.853647}
+{"rel": "RAND", "fact": ["45394"], "prob": 0.960541}
+{"rel": "RAND", "fact": ["47625"], "prob": 0.925142}
+{"rel": "RAND", "fact": ["47721"], "prob": 0.876746}
+{"rel": "RAND", "fact": ["48619"], "prob": 0.803406}
+{"rel": "RAND", "fact": ["48753"], "prob": 0.858062}
+{"rel": "RAND", "fact": ["49401"], "prob": 0.834767}
+{"rel": "RAND", "fact": ["50356"], "prob": 0.989878}
+{"rel": "RAND", "fact": ["50513"], "prob": 0.818865}
+{"rel": "RAND", "fact": ["50730"], "prob": 0.819702}
+{"rel": "RAND", "fact": ["50789"], "prob": 0.990226}
+{"rel": "RAND", "fact": ["50921"], "prob": 0.908476}
+{"rel": "RAND", "fact": ["51588"], "prob": 0.809216}
+{"rel": "RAND", "fact": ["52080"], "prob": 0.842862}
+{"rel": "RAND", "fact": ["52350"], "prob": 0.884369}
+{"rel": "RAND", "fact": ["53086"], "prob": 0.862126}
+{"rel": "RAND", "fact": ["53136"], "prob": 0.854419}
+{"rel": "RAND", "fact": ["53971"], "prob": 0.826438}
+{"rel": "RAND", "fact": ["54090"], "prob": 0.836982}
+{"rel": "RAND", "fact": ["54158"], "prob": 0.881912}
+{"rel": "RAND", "fact": ["54242"], "prob": 0.81707}
+{"rel": "andor_assign_left", "fact": ["29615", "29613"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["29915", "29913"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["30199", "30197"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["30751", "30749"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["32416", "32414"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["35345", "35343"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["36352", "36350"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["36960", "36958"], "prob": 1.0}
+{"rel": "andor_assign_left", "fact": ["38867", "38865"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["29615", "29614"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["30199", "30198"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["30751", "30750"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["31824", "31823"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["32424", "32423"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["35345", "35344"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["36352", "36351"], "prob": 1.0}
+{"rel": "andor_assign_right", "fact": ["38867", "38866"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["579", "6287"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["727", "6290"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["484", "6317"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["807", "6332"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["1828", "6370"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2506", "6464"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["592", "6538"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["693", "6767"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["4251", "7017"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["560", "7048"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["578", "7086"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["901", "7735"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["352", "7745"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2828", "7822"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2506", "7893"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["560", "8439"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["2828", "8541"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["34873", "42347"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["15226", "42431"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["40848", "42528"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["10258", "42773"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["15226", "42785"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["29131", "42863"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["36352", "42902"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30995", "42915"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30211", "43354"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14402", "43541"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["13973", "43742"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["36351", "43950"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["16431", "44221"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14106", "44373"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["27364", "44431"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32944", "44500"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["35149", "44507"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14959", "44979"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["38231", "45215"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["38802", "45252"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["15038", "45394"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["35804", "45567"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37280", "45722"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14642", "45731"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14038", "45859"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30751", "46051"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["31959", "46086"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14038", "46606"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["40213", "46665"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14402", "46695"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["29389", "47168"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["9119", "47578"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["13973", "47625"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["13932", "47721"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32414", "47942"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["9119", "48389"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14019", "48619"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30594", "48753"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["35148", "48777"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37278", "49401"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["16597", "49516"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32944", "49539"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["16597", "49574"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["29913", "49613"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["35345", "49633"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["31959", "49757"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["39695", "50040"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["31960", "50075"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14642", "50094"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32414", "50183"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["29131", "50356"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14219", "50385"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["15226", "50513"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32335", "50578"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["9079", "50597"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["29615", "50600"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14239", "50730"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["15038", "50752"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["39695", "50789"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["39129", "50921"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["16597", "50964"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37278", "51068"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["39129", "51388"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37280", "51588"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14642", "52080"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["36958", "52350"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30751", "52651"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["39103", "52839"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["34873", "52970"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["31960", "53052"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30211", "53086"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["9873", "53136"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37278", "53187"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["10037", "53220"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["30995", "53375"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14642", "53382"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["35345", "53415"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14642", "53479"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["37278", "53756"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["13888", "53875"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["10013", "53893"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["40213", "53971"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14896", "54070"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14546", "54090"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32335", "54134"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["32632", "54158"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["16718", "54242"], "prob": 1.0}
+{"rel": "binary_constant", "fact": ["14219", "54385"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["1806", "23"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["1826", "554"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["1978", "560"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2043", "579"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2051", "579"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2059", "579"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2067", "579"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2075", "579"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2086", "560"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2418", "693"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2458", "578"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2482", "592"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2486", "727"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2506", "582"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2820", "807"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2827", "487"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2862", "484"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["2870", "484"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3064", "857"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["3306", "901"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4105", "352"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["4250", "332"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["26942", "13353"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["27364", "13560"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29010", "13888"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29018", "13888"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29026", "13888"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29034", "13888"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29042", "13888"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29177", "13932"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29259", "13973"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29389", "14038"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29618", "14106"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29638", "8881"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29642", "8881"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29905", "10258"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["29913", "10258"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30059", "14019"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30197", "10227"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30285", "14019"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30594", "8913"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30750", "10171"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["30995", "14219"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31018", "14109"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31059", "14239"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31194", "14219"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31230", "14109"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31298", "14239"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31460", "14402"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31588", "14546"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31807", "10095"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31823", "10095"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31946", "14642"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["31959", "10082"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32335", "10046"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32406", "10037"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32407", "10035"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32414", "10037"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32423", "10035"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32638", "14771"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32650", "10013"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32658", "10013"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["32886", "14831"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33183", "9957"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33331", "14896"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33483", "14896"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33515", "14756"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33597", "14959"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["33755", "15038"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["34360", "9873"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["34499", "15226"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["34727", "15226"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["34775", "15077"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["34871", "15304"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35072", "9801"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35148", "9795"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35344", "9774"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35363", "15399"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35804", "15430"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["35966", "15553"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["36084", "15430"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["36286", "15621"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["36338", "15621"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["36351", "9703"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["36958", "9645"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["37278", "15856"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["37306", "15557"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["37530", "15557"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["37926", "15968"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38231", "16095"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38446", "9079"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38450", "9079"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38718", "16222"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38802", "9091"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38865", "9485"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["38925", "16110"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39102", "9101"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39129", "16301"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39201", "16110"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39310", "9108"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39346", "9109"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39350", "9109"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39646", "9119"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39650", "9119"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["39785", "16431"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["40112", "16356"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["40213", "16498"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["40846", "16718"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["40848", "16719"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["41076", "16718"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["41440", "16597"], "prob": 1.0}
+{"rel": "load_assign", "fact": ["41716", "16597"], "prob": 1.0}
+{"rel": "share", "fact": ["21", "23"], "prob": 0.885797}
+{"rel": "share", "fact": ["22", "23"], "prob": 0.978143}
+{"rel": "share", "fact": ["23", "24"], "prob": 0.821102}
+{"rel": "share", "fact": ["23", "25"], "prob": 0.968931}
+{"rel": "share", "fact": ["23", "173"], "prob": 0.924895}
+{"rel": "share", "fact": ["40", "727"], "prob": 0.822231}
+{"rel": "share", "fact": ["157", "582"], "prob": 0.888532}
+{"rel": "share", "fact": ["171", "578"], "prob": 0.934209}
+{"rel": "share", "fact": ["172", "23"], "prob": 0.804243}
+{"rel": "share", "fact": ["173", "592"], "prob": 0.828664}
+{"rel": "share", "fact": ["352", "350"], "prob": 0.92522}
+{"rel": "share", "fact": ["352", "353"], "prob": 0.811616}
+{"rel": "share", "fact": ["352", "789"], "prob": 0.964782}
+{"rel": "share", "fact": ["353", "352"], "prob": 0.826299}
+{"rel": "share", "fact": ["442", "901"], "prob": 0.92318}
+{"rel": "share", "fact": ["462", "857"], "prob": 0.910299}
+{"rel": "share", "fact": ["467", "857"], "prob": 0.876127}
+{"rel": "share", "fact": ["483", "484"], "prob": 0.903776}
+{"rel": "share", "fact": ["484", "485"], "prob": 0.927329}
+{"rel": "share", "fact": ["484", "813"], "prob": 0.93556}
+{"rel": "share", "fact": ["484", "820"], "prob": 0.90024}
+{"rel": "share", "fact": ["484", "821"], "prob": 0.816621}
+{"rel": "share", "fact": ["484", "822"], "prob": 0.909289}
+{"rel": "share", "fact": ["484", "823"], "prob": 0.873069}
+{"rel": "share", "fact": ["486", "807"], "prob": 0.971394}
+{"rel": "share", "fact": ["491", "807"], "prob": 0.887274}
+{"rel": "share", "fact": ["521", "560"], "prob": 0.984704}
+{"rel": "share", "fact": ["523", "579"], "prob": 0.931364}
+{"rel": "share", "fact": ["527", "560"], "prob": 0.807434}
+{"rel": "share", "fact": ["544", "560"], "prob": 0.906755}
+{"rel": "share", "fact": ["545", "560"], "prob": 0.898667}
+{"rel": "share", "fact": ["557", "578"], "prob": 0.92759}
+{"rel": "share", "fact": ["558", "579"], "prob": 0.839018}
+{"rel": "share", "fact": ["560", "524"], "prob": 0.865466}
+{"rel": "share", "fact": ["560", "545"], "prob": 0.996193}
+{"rel": "share", "fact": ["560", "561"], "prob": 0.84704}
+{"rel": "share", "fact": ["560", "586"], "prob": 0.927589}
+{"rel": "share", "fact": ["565", "560"], "prob": 0.982767}
+{"rel": "share", "fact": ["567", "560"], "prob": 0.837725}
+{"rel": "share", "fact": ["578", "38"], "prob": 0.851082}
+{"rel": "share", "fact": ["578", "557"], "prob": 0.877114}
+{"rel": "share", "fact": ["578", "562"], "prob": 0.989533}
+{"rel": "share", "fact": ["578", "717"], "prob": 0.845389}
+{"rel": "share", "fact": ["579", "559"], "prob": 0.954164}
+{"rel": "share", "fact": ["579", "580"], "prob": 0.836601}
+{"rel": "share", "fact": ["580", "582"], "prob": 0.922291}
+{"rel": "share", "fact": ["582", "47"], "prob": 0.815536}
+{"rel": "share", "fact": ["582", "162"], "prob": 0.86719}
+{"rel": "share", "fact": ["582", "580"], "prob": 0.912258}
+{"rel": "share", "fact": ["582", "741"], "prob": 0.808405}
+{"rel": "share", "fact": ["587", "592"], "prob": 0.946679}
+{"rel": "share", "fact": ["592", "40"], "prob": 0.910866}
+{"rel": "share", "fact": ["592", "566"], "prob": 0.896911}
+{"rel": "share", "fact": ["592", "587"], "prob": 0.924004}
+{"rel": "share", "fact": ["592", "729"], "prob": 0.829469}
+{"rel": "share", "fact": ["605", "693"], "prob": 0.974758}
+{"rel": "share", "fact": ["692", "693"], "prob": 0.951401}
+{"rel": "share", "fact": ["693", "36"], "prob": 0.95984}
+{"rel": "share", "fact": ["693", "694"], "prob": 0.841827}
+{"rel": "share", "fact": ["693", "697"], "prob": 0.860728}
+{"rel": "share", "fact": ["696", "693"], "prob": 0.861328}
+{"rel": "share", "fact": ["712", "578"], "prob": 0.857279}
+{"rel": "share", "fact": ["716", "578"], "prob": 0.820133}
+{"rel": "share", "fact": ["723", "727"], "prob": 0.839483}
+{"rel": "share", "fact": ["724", "592"], "prob": 0.880206}
+{"rel": "share", "fact": ["726", "727"], "prob": 0.868768}
+{"rel": "share", "fact": ["727", "724"], "prob": 0.835527}
+{"rel": "share", "fact": ["727", "728"], "prob": 0.830221}
+{"rel": "share", "fact": ["727", "731"], "prob": 0.946918}
+{"rel": "share", "fact": ["728", "592"], "prob": 0.838152}
+{"rel": "share", "fact": ["730", "727"], "prob": 0.935079}
+{"rel": "share", "fact": ["736", "582"], "prob": 0.887954}
+{"rel": "share", "fact": ["740", "582"], "prob": 0.83854}
+{"rel": "share", "fact": ["788", "352"], "prob": 0.878485}
+{"rel": "share", "fact": ["789", "352"], "prob": 0.928436}
+{"rel": "share", "fact": ["801", "807"], "prob": 0.983543}
+{"rel": "share", "fact": ["806", "807"], "prob": 0.899003}
+{"rel": "share", "fact": ["807", "486"], "prob": 0.978646}
+{"rel": "share", "fact": ["807", "487"], "prob": 0.828854}
+{"rel": "share", "fact": ["807", "677"], "prob": 0.814892}
+{"rel": "share", "fact": ["807", "801"], "prob": 0.878082}
+{"rel": "share", "fact": ["812", "484"], "prob": 0.895862}
+{"rel": "share", "fact": ["815", "484"], "prob": 0.961471}
+{"rel": "share", "fact": ["819", "484"], "prob": 0.981887}
+{"rel": "share", "fact": ["820", "484"], "prob": 0.989255}
+{"rel": "share", "fact": ["821", "484"], "prob": 0.893383}
+{"rel": "share", "fact": ["851", "857"], "prob": 0.891668}
+{"rel": "share", "fact": ["856", "857"], "prob": 0.802935}
+{"rel": "share", "fact": ["857", "462"], "prob": 0.997905}
+{"rel": "share", "fact": ["857", "463"], "prob": 0.846569}
+{"rel": "share", "fact": ["857", "659"], "prob": 0.968798}
+{"rel": "share", "fact": ["857", "851"], "prob": 0.888114}
+{"rel": "share", "fact": ["900", "901"], "prob": 0.864356}
+{"rel": "share", "fact": ["901", "438"], "prob": 0.988106}
+{"rel": "share", "fact": ["901", "442"], "prob": 0.908096}
+{"rel": "share", "fact": ["901", "902"], "prob": 0.893151}
+{"rel": "share", "fact": ["901", "907"], "prob": 0.902445}
+{"rel": "share", "fact": ["906", "901"], "prob": 0.847019}
+{"rel": "share", "fact": ["907", "901"], "prob": 0.880866}
+{"rel": "share", "fact": ["1054", "352"], "prob": 0.881928}
+{"rel": "share", "fact": ["8879", "8881"], "prob": 0.903814}
+{"rel": "share", "fact": ["8880", "8881"], "prob": 0.984294}
+{"rel": "share", "fact": ["8881", "8882"], "prob": 0.825065}
+{"rel": "share", "fact": ["8881", "8883"], "prob": 0.860953}
+{"rel": "share", "fact": ["9077", "9079"], "prob": 0.928371}
+{"rel": "share", "fact": ["9078", "9079"], "prob": 0.883279}
+{"rel": "share", "fact": ["9079", "9080"], "prob": 0.810275}
+{"rel": "share", "fact": ["9079", "9081"], "prob": 0.910304}
+{"rel": "share", "fact": ["9107", "9109"], "prob": 0.802377}
+{"rel": "share", "fact": ["9108", "9109"], "prob": 0.828974}
+{"rel": "share", "fact": ["9109", "9110"], "prob": 0.879317}
+{"rel": "share", "fact": ["9109", "9111"], "prob": 0.931681}
+{"rel": "share", "fact": ["9117", "9119"], "prob": 0.995857}
+{"rel": "share", "fact": ["9118", "9119"], "prob": 0.874865}
+{"rel": "share", "fact": ["9119", "9120"], "prob": 0.923742}
+{"rel": "share", "fact": ["9119", "9121"], "prob": 0.958154}
+{"rel": "share", "fact": ["9232", "16597"], "prob": 0.939391}
+{"rel": "share", "fact": ["9293", "16718"], "prob": 0.970864}
+{"rel": "share", "fact": ["9319", "16718"], "prob": 0.804784}
+{"rel": "share", "fact": ["9395", "16431"], "prob": 0.879931}
+{"rel": "share", "fact": ["9452", "16110"], "prob": 0.897757}
+{"rel": "share", "fact": ["9588", "15557"], "prob": 0.910498}
+{"rel": "share", "fact": ["9712", "15621"], "prob": 0.995349}
+{"rel": "share", "fact": ["9776", "15399"], "prob": 0.933152}
+{"rel": "share", "fact": ["9801", "9802"], "prob": 0.975108}
+{"rel": "share", "fact": ["9801", "15341"], "prob": 0.910961}
+{"rel": "share", "fact": ["9836", "15226"], "prob": 0.874201}
+{"rel": "share", "fact": ["9873", "9874"], "prob": 0.815103}
+{"rel": "share", "fact": ["9873", "15201"], "prob": 0.923916}
+{"rel": "share", "fact": ["9930", "14896"], "prob": 0.810363}
+{"rel": "share", "fact": ["9931", "14896"], "prob": 0.804189}
+{"rel": "share", "fact": ["9932", "14896"], "prob": 0.839309}
+{"rel": "share", "fact": ["10012", "10013"], "prob": 0.859138}
+{"rel": "share", "fact": ["10013", "10014"], "prob": 0.827261}
+{"rel": "share", "fact": ["10013", "14772"], "prob": 0.824806}
+{"rel": "share", "fact": ["10013", "14787"], "prob": 0.910168}
+{"rel": "share", "fact": ["10013", "14788"], "prob": 0.801334}
+{"rel": "share", "fact": ["10013", "14789"], "prob": 0.97728}
+{"rel": "share", "fact": ["10013", "14790"], "prob": 0.905536}
+{"rel": "share", "fact": ["10035", "10036"], "prob": 0.968222}
+{"rel": "share", "fact": ["10035", "14716"], "prob": 0.95085}
+{"rel": "share", "fact": ["10036", "10037"], "prob": 0.942379}
+{"rel": "share", "fact": ["10037", "10038"], "prob": 0.949364}
+{"rel": "share", "fact": ["10037", "14714"], "prob": 0.963988}
+{"rel": "share", "fact": ["10037", "14737"], "prob": 0.89682}
+{"rel": "share", "fact": ["10037", "14738"], "prob": 0.979474}
+{"rel": "share", "fact": ["10037", "14739"], "prob": 0.981012}
+{"rel": "share", "fact": ["10037", "14740"], "prob": 0.879074}
+{"rel": "share", "fact": ["10038", "10035"], "prob": 0.883385}
+{"rel": "share", "fact": ["10086", "14642"], "prob": 0.85188}
+{"rel": "share", "fact": ["10095", "10096"], "prob": 0.927202}
+{"rel": "share", "fact": ["10095", "14596"], "prob": 0.971943}
+{"rel": "share", "fact": ["10098", "10095"], "prob": 0.845117}
+{"rel": "share", "fact": ["10137", "14109"], "prob": 0.98908}
+{"rel": "share", "fact": ["10257", "10258"], "prob": 0.980934}
+{"rel": "share", "fact": ["10258", "10255"], "prob": 0.949955}
+{"rel": "share", "fact": ["10258", "14138"], "prob": 0.839676}
+{"rel": "share", "fact": ["10258", "14164"], "prob": 0.980962}
+{"rel": "share", "fact": ["10258", "14165"], "prob": 0.837746}
+{"rel": "share", "fact": ["10258", "14166"], "prob": 0.998646}
+{"rel": "share", "fact": ["10258", "14167"], "prob": 0.805457}
+{"rel": "share", "fact": ["10288", "14106"], "prob": 0.911005}
+{"rel": "share", "fact": ["10306", "13888"], "prob": 0.903266}
+{"rel": "share", "fact": ["13174", "13353"], "prob": 0.889566}
+{"rel": "share", "fact": ["13352", "13353"], "prob": 0.846857}
+{"rel": "share", "fact": ["13353", "13354"], "prob": 0.886283}
+{"rel": "share", "fact": ["13353", "13409"], "prob": 0.939565}
+{"rel": "share", "fact": ["13362", "13353"], "prob": 0.904896}
+{"rel": "share", "fact": ["13408", "13353"], "prob": 0.916617}
+{"rel": "share", "fact": ["13856", "13888"], "prob": 0.862997}
+{"rel": "share", "fact": ["13888", "13857"], "prob": 0.827355}
+{"rel": "share", "fact": ["13888", "13889"], "prob": 0.999457}
+{"rel": "share", "fact": ["13892", "13932"], "prob": 0.859415}
+{"rel": "share", "fact": ["13919", "14038"], "prob": 0.912108}
+{"rel": "share", "fact": ["13931", "13932"], "prob": 0.851186}
+{"rel": "share", "fact": ["13932", "13893"], "prob": 0.895359}
+{"rel": "share", "fact": ["13932", "13933"], "prob": 0.929921}
+{"rel": "share", "fact": ["13932", "13936"], "prob": 0.880831}
+{"rel": "share", "fact": ["13935", "13932"], "prob": 0.810885}
+{"rel": "share", "fact": ["13941", "14219"], "prob": 0.930396}
+{"rel": "share", "fact": ["13969", "13973"], "prob": 0.841011}
+{"rel": "share", "fact": ["13972", "13973"], "prob": 0.900372}
+{"rel": "share", "fact": ["13973", "13904"], "prob": 0.940964}
+{"rel": "share", "fact": ["13973", "13974"], "prob": 0.905973}
+{"rel": "share", "fact": ["13973", "13977"], "prob": 0.944633}
+{"rel": "share", "fact": ["13976", "13973"], "prob": 0.936384}
+{"rel": "share", "fact": ["14015", "14019"], "prob": 0.87135}
+{"rel": "share", "fact": ["14018", "14019"], "prob": 0.805931}
+{"rel": "share", "fact": ["14019", "14016"], "prob": 0.999225}
+{"rel": "share", "fact": ["14019", "14020"], "prob": 0.977241}
+{"rel": "share", "fact": ["14019", "14042"], "prob": 0.80364}
+{"rel": "share", "fact": ["14019", "14190"], "prob": 0.84429}
+{"rel": "share", "fact": ["14019", "14197"], "prob": 0.832608}
+{"rel": "share", "fact": ["14019", "14239"], "prob": 0.909198}
+{"rel": "share", "fact": ["14031", "14109"], "prob": 0.971168}
+{"rel": "share", "fact": ["14034", "14038"], "prob": 0.919723}
+{"rel": "share", "fact": ["14037", "14038"], "prob": 0.802357}
+{"rel": "share", "fact": ["14038", "14035"], "prob": 0.93429}
+{"rel": "share", "fact": ["14038", "14039"], "prob": 0.873613}
+{"rel": "share", "fact": ["14038", "14042"], "prob": 0.857746}
+{"rel": "share", "fact": ["14041", "14038"], "prob": 0.814556}
+{"rel": "share", "fact": ["14105", "14106"], "prob": 0.85243}
+{"rel": "share", "fact": ["14106", "14101"], "prob": 0.960388}
+{"rel": "share", "fact": ["14106", "14107"], "prob": 0.835489}
+{"rel": "share", "fact": ["14108", "14109"], "prob": 0.883405}
+{"rel": "share", "fact": ["14109", "10137"], "prob": 0.975865}
+{"rel": "share", "fact": ["14109", "10138"], "prob": 0.989846}
+{"rel": "share", "fact": ["14109", "10281"], "prob": 0.907116}
+{"rel": "share", "fact": ["14109", "14078"], "prob": 0.873588}
+{"rel": "share", "fact": ["14109", "14168"], "prob": 0.962321}
+{"rel": "share", "fact": ["14109", "14408"], "prob": 0.852067}
+{"rel": "share", "fact": ["14137", "10258"], "prob": 0.896472}
+{"rel": "share", "fact": ["14162", "10258"], "prob": 0.941893}
+{"rel": "share", "fact": ["14163", "10258"], "prob": 0.989309}
+{"rel": "share", "fact": ["14164", "10258"], "prob": 0.804492}
+{"rel": "share", "fact": ["14165", "10258"], "prob": 0.996904}
+{"rel": "share", "fact": ["14196", "14019"], "prob": 0.81424}
+{"rel": "share", "fact": ["14218", "14219"], "prob": 0.864591}
+{"rel": "share", "fact": ["14219", "10227"], "prob": 0.877322}
+{"rel": "share", "fact": ["14219", "14196"], "prob": 0.832725}
+{"rel": "share", "fact": ["14219", "14278"], "prob": 0.807019}
+{"rel": "share", "fact": ["14219", "14400"], "prob": 0.921072}
+{"rel": "share", "fact": ["14238", "14019"], "prob": 0.848801}
+{"rel": "share", "fact": ["14238", "14239"], "prob": 0.851087}
+{"rel": "share", "fact": ["14239", "10215"], "prob": 0.940946}
+{"rel": "share", "fact": ["14239", "14190"], "prob": 0.913091}
+{"rel": "share", "fact": ["14239", "14298"], "prob": 0.867361}
+{"rel": "share", "fact": ["14239", "14424"], "prob": 0.983978}
+{"rel": "share", "fact": ["14279", "14402"], "prob": 0.893395}
+{"rel": "share", "fact": ["14399", "14219"], "prob": 0.99245}
+{"rel": "share", "fact": ["14401", "14402"], "prob": 0.876344}
+{"rel": "share", "fact": ["14402", "14338"], "prob": 0.872646}
+{"rel": "share", "fact": ["14402", "14403"], "prob": 0.839836}
+{"rel": "share", "fact": ["14402", "14483"], "prob": 0.840112}
+{"rel": "share", "fact": ["14402", "14486"], "prob": 0.802452}
+{"rel": "share", "fact": ["14407", "14109"], "prob": 0.852545}
+{"rel": "share", "fact": ["14408", "14546"], "prob": 0.836061}
+{"rel": "share", "fact": ["14423", "14239"], "prob": 0.831519}
+{"rel": "share", "fact": ["14485", "14402"], "prob": 0.931913}
+{"rel": "share", "fact": ["14545", "14546"], "prob": 0.890413}
+{"rel": "share", "fact": ["14546", "14391"], "prob": 0.819456}
+{"rel": "share", "fact": ["14546", "14543"], "prob": 0.879699}
+{"rel": "share", "fact": ["14546", "14547"], "prob": 0.943541}
+{"rel": "share", "fact": ["14546", "14550"], "prob": 0.956723}
+{"rel": "share", "fact": ["14549", "14546"], "prob": 0.889387}
+{"rel": "share", "fact": ["14595", "10095"], "prob": 0.96399}
+{"rel": "share", "fact": ["14641", "14642"], "prob": 0.818037}
+{"rel": "share", "fact": ["14642", "10086"], "prob": 0.904771}
+{"rel": "share", "fact": ["14642", "14643"], "prob": 0.962837}
+{"rel": "share", "fact": ["14713", "10037"], "prob": 0.911582}
+{"rel": "share", "fact": ["14715", "10035"], "prob": 0.864928}
+{"rel": "share", "fact": ["14716", "10037"], "prob": 0.985719}
+{"rel": "share", "fact": ["14736", "10037"], "prob": 0.969989}
+{"rel": "share", "fact": ["14737", "10037"], "prob": 0.991116}
+{"rel": "share", "fact": ["14738", "10037"], "prob": 0.803622}
+{"rel": "share", "fact": ["14771", "10013"], "prob": 0.956056}
+{"rel": "share", "fact": ["14774", "10013"], "prob": 0.843994}
+{"rel": "share", "fact": ["14786", "10013"], "prob": 0.903991}
+{"rel": "share", "fact": ["14787", "10013"], "prob": 0.819464}
+{"rel": "share", "fact": ["14788", "10013"], "prob": 0.93586}
+{"rel": "share", "fact": ["14866", "14896"], "prob": 0.908039}
+{"rel": "share", "fact": ["14891", "14896"], "prob": 0.836379}
+{"rel": "share", "fact": ["14896", "9923"], "prob": 0.995994}
+{"rel": "share", "fact": ["14896", "9932"], "prob": 0.810918}
+{"rel": "share", "fact": ["14896", "14897"], "prob": 0.979339}
+{"rel": "share", "fact": ["14896", "14898"], "prob": 0.887407}
+{"rel": "share", "fact": ["14913", "14959"], "prob": 0.94753}
+{"rel": "share", "fact": ["14933", "14896"], "prob": 0.951347}
+{"rel": "share", "fact": ["14944", "15038"], "prob": 0.890558}
+{"rel": "share", "fact": ["14958", "14959"], "prob": 0.840352}
+{"rel": "share", "fact": ["14959", "14904"], "prob": 0.934202}
+{"rel": "share", "fact": ["14959", "14960"], "prob": 0.834149}
+{"rel": "share", "fact": ["14959", "14963"], "prob": 0.849819}
+{"rel": "share", "fact": ["14962", "14959"], "prob": 0.946224}
+{"rel": "share", "fact": ["14974", "15226"], "prob": 0.916518}
+{"rel": "share", "fact": ["15037", "15038"], "prob": 0.929487}
+{"rel": "share", "fact": ["15038", "14945"], "prob": 0.969901}
+{"rel": "share", "fact": ["15038", "15039"], "prob": 0.868869}
+{"rel": "share", "fact": ["15038", "15042"], "prob": 0.98866}
+{"rel": "share", "fact": ["15041", "15038"], "prob": 0.917198}
+{"rel": "share", "fact": ["15077", "15226"], "prob": 0.946746}
+{"rel": "share", "fact": ["15133", "15430"], "prob": 0.958695}
+{"rel": "share", "fact": ["15195", "9873"], "prob": 0.888383}
+{"rel": "share", "fact": ["15201", "9873"], "prob": 0.849893}
+{"rel": "share", "fact": ["15225", "15226"], "prob": 0.816961}
+{"rel": "share", "fact": ["15226", "9833"], "prob": 0.858325}
+{"rel": "share", "fact": ["15226", "9859"], "prob": 0.884072}
+{"rel": "share", "fact": ["15226", "14975"], "prob": 0.86527}
+{"rel": "share", "fact": ["15226", "15227"], "prob": 0.995467}
+{"rel": "share", "fact": ["15233", "15226"], "prob": 0.812657}
+{"rel": "share", "fact": ["15335", "9801"], "prob": 0.81304}
+{"rel": "share", "fact": ["15341", "9801"], "prob": 0.881048}
+{"rel": "share", "fact": ["15398", "15399"], "prob": 0.894438}
+{"rel": "share", "fact": ["15399", "9776"], "prob": 0.908875}
+{"rel": "share", "fact": ["15399", "15400"], "prob": 0.934779}
+{"rel": "share", "fact": ["15417", "15621"], "prob": 0.91813}
+{"rel": "share", "fact": ["15429", "15430"], "prob": 0.970262}
+{"rel": "share", "fact": ["15430", "15192"], "prob": 0.85401}
+{"rel": "share", "fact": ["15430", "15421"], "prob": 0.887223}
+{"rel": "share", "fact": ["15430", "15431"], "prob": 0.825742}
+{"rel": "share", "fact": ["15430", "15476"], "prob": 0.945683}
+{"rel": "share", "fact": ["15430", "15613"], "prob": 0.983993}
+{"rel": "share", "fact": ["15430", "15616"], "prob": 0.964576}
+{"rel": "share", "fact": ["15475", "15430"], "prob": 0.926944}
+{"rel": "share", "fact": ["15510", "15621"], "prob": 0.878863}
+{"rel": "share", "fact": ["15553", "15557"], "prob": 0.840292}
+{"rel": "share", "fact": ["15556", "15557"], "prob": 0.806469}
+{"rel": "share", "fact": ["15557", "15554"], "prob": 0.951475}
+{"rel": "share", "fact": ["15557", "15558"], "prob": 0.982162}
+{"rel": "share", "fact": ["15557", "15867"], "prob": 0.815575}
+{"rel": "share", "fact": ["15557", "15909"], "prob": 0.925065}
+{"rel": "share", "fact": ["15600", "15557"], "prob": 0.950188}
+{"rel": "share", "fact": ["15615", "15430"], "prob": 0.874372}
+{"rel": "share", "fact": ["15620", "15621"], "prob": 0.905029}
+{"rel": "share", "fact": ["15621", "9705"], "prob": 0.808989}
+{"rel": "share", "fact": ["15621", "9709"], "prob": 0.852192}
+{"rel": "share", "fact": ["15621", "15418"], "prob": 0.882445}
+{"rel": "share", "fact": ["15621", "15622"], "prob": 0.991169}
+{"rel": "share", "fact": ["15630", "15621"], "prob": 0.994208}
+{"rel": "share", "fact": ["15670", "15621"], "prob": 0.938571}
+{"rel": "share", "fact": ["15866", "15557"], "prob": 0.851885}
+{"rel": "share", "fact": ["15908", "15557"], "prob": 0.919306}
+{"rel": "share", "fact": ["16087", "16110"], "prob": 0.872508}
+{"rel": "share", "fact": ["16106", "16110"], "prob": 0.821875}
+{"rel": "share", "fact": ["16109", "16110"], "prob": 0.998438}
+{"rel": "share", "fact": ["16110", "16107"], "prob": 0.94446}
+{"rel": "share", "fact": ["16110", "16111"], "prob": 0.879549}
+{"rel": "share", "fact": ["16110", "16266"], "prob": 0.83616}
+{"rel": "share", "fact": ["16110", "16316"], "prob": 0.966376}
+{"rel": "share", "fact": ["16265", "16110"], "prob": 0.924545}
+{"rel": "share", "fact": ["16315", "16110"], "prob": 0.974582}
+{"rel": "share", "fact": ["16430", "16431"], "prob": 0.832836}
+{"rel": "share", "fact": ["16431", "9396"], "prob": 0.823317}
+{"rel": "share", "fact": ["16431", "16432"], "prob": 0.878874}
+{"rel": "share", "fact": ["16538", "16597"], "prob": 0.848429}
+{"rel": "share", "fact": ["16593", "16597"], "prob": 0.869823}
+{"rel": "share", "fact": ["16596", "16597"], "prob": 0.937108}
+{"rel": "share", "fact": ["16597", "16594"], "prob": 0.975157}
+{"rel": "share", "fact": ["16597", "16598"], "prob": 0.863814}
+{"rel": "share", "fact": ["16597", "16843"], "prob": 0.991651}
+{"rel": "share", "fact": ["16597", "16893"], "prob": 0.842708}
+{"rel": "share", "fact": ["16646", "16718"], "prob": 0.875147}
+{"rel": "share", "fact": ["16717", "16718"], "prob": 0.961647}
+{"rel": "share", "fact": ["16718", "9294"], "prob": 0.88671}
+{"rel": "share", "fact": ["16718", "9295"], "prob": 0.934285}
+{"rel": "share", "fact": ["16718", "9320"], "prob": 0.824329}
+{"rel": "share", "fact": ["16718", "16519"], "prob": 0.848121}
+{"rel": "share", "fact": ["16718", "16719"], "prob": 0.842598}
+{"rel": "share", "fact": ["16842", "16597"], "prob": 0.811689}
+{"rel": "share", "fact": ["16892", "16597"], "prob": 0.877274}
+{"rel": "store_assign", "fact": ["552", "1828"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["560", "1876"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["578", "2024"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["579", "2036"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["582", "2052"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["592", "2128"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["693", "2410"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["727", "2478"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["729", "2482"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["731", "2486"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["741", "2506"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["807", "2816"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["809", "2828"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["484", "2850"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["857", "3060"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["463", "3064"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["901", "3280"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["438", "3306"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["352", "4099"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["1073", "4251"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13409", "26942"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10478", "27364"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13888", "29003"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13918", "29131"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13932", "29169"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["13973", "29251"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14019", "29343"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14038", "29381"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14042", "29389"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14106", "29615"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14109", "29631"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10258", "29879"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14219", "30175"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14222", "30199"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14225", "30211"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14239", "30287"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14334", "30751"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14402", "31204"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14486", "31460"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14546", "31580"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10095", "31800"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14642", "31940"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14646", "31960"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14726", "32336"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10037", "32394"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10035", "32400"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14785", "32632"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["10013", "32638"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9987", "32888"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9981", "32944"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9955", "33185"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14896", "33321"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9923", "33483"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14941", "33517"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["14959", "33589"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15038", "33747"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9873", "34355"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15226", "34483"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15283", "34777"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15305", "34873"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9801", "35067"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15362", "35149"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15396", "35345"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15399", "35357"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15430", "35612"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15476", "35804"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15557", "35966"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15621", "36094"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9705", "36338"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15671", "36352"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15858", "37280"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["15970", "37927"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16099", "38231"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16110", "38253"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16223", "38719"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16248", "38867"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9459", "39103"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16341", "39311"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16417", "39695"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16431", "39779"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16481", "40114"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16597", "40408"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["16718", "40830"], "prob": 1.0}
+{"rel": "store_assign", "fact": ["9317", "40850"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["1808", "1806"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["1828", "1826"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["2828", "2826"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["4107", "4105"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["4251", "4249"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["29131", "29129"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["30211", "30209"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["31020", "31018"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["31960", "31958"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["32336", "32334"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["32632", "32630"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["32888", "32886"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["32944", "32942"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["33185", "33183"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["33517", "33515"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["34777", "34775"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["34873", "34871"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["35149", "35147"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["35357", "35355"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["37280", "37278"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["37927", "37925"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["38719", "38717"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["39103", "39101"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["39131", "39129"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["39203", "39201"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["39311", "39309"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["39695", "39693"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["40114", "40112"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["40850", "40848"], "prob": 1.0}
+{"rel": "xor_assign_left", "fact": ["41718", "41716"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["1828", "1827"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2044", "2043"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["2828", "2827"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["4251", "4250"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["29019", "29018"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["29131", "29130"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["29639", "29638"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["30211", "30210"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["30595", "30594"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["30996", "30995"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["31960", "31959"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["32336", "32335"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["32632", "32631"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["32888", "32887"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["32944", "32943"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["33185", "33184"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["33517", "33516"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["34777", "34776"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["34873", "34872"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["35073", "35072"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["35149", "35148"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["35357", "35356"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["37280", "37279"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["37927", "37926"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["38451", "38450"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["38719", "38718"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["38803", "38802"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["39103", "39102"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["39311", "39310"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["39347", "39346"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["39651", "39650"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["39695", "39694"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["40114", "40113"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["40214", "40213"], "prob": 1.0}
+{"rel": "xor_assign_right", "fact": ["40850", "40849"], "prob": 1.0}

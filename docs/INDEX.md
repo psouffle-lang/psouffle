@@ -2,6 +2,16 @@
 
 - [PROVENANCE.md](PROVENANCE.md): imported artifact revisions and branch audit.
 - [USAGE.md](USAGE.md): full/online selectors and rewrite interaction contract.
+- [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
+  and experiment automation.
+- [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental
+  experiment profiles and table/figure collection.
+- [../evaluation/inc/benchmarks/side_channel/docs/INDEX.md](../evaluation/inc/benchmarks/side_channel/docs/INDEX.md): incremental benchmark documentation index.
+- [../evaluation/full/README.md](../evaluation/full/README.md): full/rewrite
+  experiments, competitor inputs, and conversion/analysis scripts.
+- Full benchmark descriptions: [side-channel](../evaluation/full/side_channel/README.md),
+  [taint](../evaluation/full/taint/README.md), and
+  [symbolization](../evaluation/full/symbolization/README.md).
 
 Read these documents in order when evaluating or modifying the unified
 probabilistic Souffle compiler/runtime.

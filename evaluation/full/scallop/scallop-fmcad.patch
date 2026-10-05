@@ -1,0 +1,137 @@
+diff --git a/core/src/common/foreign_function.rs b/core/src/common/foreign_function.rs
+index 6068bf7..c146357 100644
+--- a/core/src/common/foreign_function.rs
++++ b/core/src/common/foreign_function.rs
+@@ -535,6 +535,7 @@ impl ForeignFunctionRegistry {
+     registry.register(ffs::Atan).unwrap();
+     registry.register(ffs::Atan2).unwrap();
+     registry.register(ffs::Sign).unwrap();
++    registry.register(ffs::Band).unwrap();
+ 
+     // Min/Max
+     registry.register(ffs::Max).unwrap();
+diff --git a/core/src/common/foreign_functions/band.rs b/core/src/common/foreign_functions/band.rs
+new file mode 100644
+index 0000000..9beab1d
+--- /dev/null
++++ b/core/src/common/foreign_functions/band.rs
+@@ -0,0 +1,58 @@
++use super::*;
++
++/// Bitwise-and foreign function (x & y)
++///
++/// ``` scl
++/// extern fn $band<T: Integer>(x: T, y: T) -> T
++/// ```
++#[derive(Clone)]
++pub struct Band;
++
++impl ForeignFunction for Band {
++  fn name(&self) -> String {
++    "band".to_string()
++  }
++
++  fn num_generic_types(&self) -> usize {
++    1
++  }
++
++  fn generic_type_family(&self, i: usize) -> TypeFamily {
++    assert_eq!(i, 0);
++    TypeFamily::Integer
++  }
++
++  fn num_static_arguments(&self) -> usize {
++    2
++  }
++
++  fn static_argument_type(&self, i: usize) -> ForeignFunctionParameterType {
++    match i {
++      0 => ForeignFunctionParameterType::Generic(0),
++      1 => ForeignFunctionParameterType::Generic(0),
++      _ => panic!("No argument {}", i),
++    }
++  }
++
++  fn return_type(&self) -> ForeignFunctionParameterType {
++    ForeignFunctionParameterType::Generic(0)
++  }
++
++  fn execute(&self, args: Vec<Value>) -> Option<Value> {
++    match (&args[0], &args[1]) {
++      (Value::I8(x), Value::I8(y)) => Some(Value::I8(x & y)),
++      (Value::I16(x), Value::I16(y)) => Some(Value::I16(x & y)),
++      (Value::I32(x), Value::I32(y)) => Some(Value::I32(x & y)),
++      (Value::I64(x), Value::I64(y)) => Some(Value::I64(x & y)),
++      (Value::I128(x), Value::I128(y)) => Some(Value::I128(x & y)),
++      (Value::ISize(x), Value::ISize(y)) => Some(Value::ISize(x & y)),
++      (Value::U8(x), Value::U8(y)) => Some(Value::U8(x & y)),
++      (Value::U16(x), Value::U16(y)) => Some(Value::U16(x & y)),
++      (Value::U32(x), Value::U32(y)) => Some(Value::U32(x & y)),
++      (Value::U64(x), Value::U64(y)) => Some(Value::U64(x & y)),
++      (Value::U128(x), Value::U128(y)) => Some(Value::U128(x & y)),
++      (Value::USize(x), Value::USize(y)) => Some(Value::USize(x & y)),
++      _ => panic!("Invalid arguments"),
++    }
++  }
++}
+diff --git a/core/src/common/foreign_functions/mod.rs b/core/src/common/foreign_functions/mod.rs
+index 1044c8c..bd18d3a 100644
+--- a/core/src/common/foreign_functions/mod.rs
++++ b/core/src/common/foreign_functions/mod.rs
+@@ -12,6 +12,7 @@ mod acos;
+ mod asin;
+ mod atan;
+ mod atan2;
++mod band;
+ mod ceil;
+ mod cos;
+ mod datetime_day;
+@@ -50,6 +51,7 @@ pub use acos::*;
+ pub use asin::*;
+ pub use atan::*;
+ pub use atan2::*;
++pub use band::*;
+ pub use ceil::*;
+ pub use cos::*;
+ pub use datetime_day::*;
+diff --git a/core/src/runtime/provenance/probabilistic/prob_proofs.rs b/core/src/runtime/provenance/probabilistic/prob_proofs.rs
+index c14dcab..1fb06f4 100644
+--- a/core/src/runtime/provenance/probabilistic/prob_proofs.rs
++++ b/core/src/runtime/provenance/probabilistic/prob_proofs.rs
+@@ -101,12 +101,20 @@ impl std::fmt::Display for ProbProofs {
+ 
+ impl Tag for ProbProofs {}
+ 
+-#[derive(Default)]
+ pub struct ProbProofsProvenance<P: PointerFamily = RcFamily> {
+   probs: P::Cell<Vec<f64>>,
+   disjunctions: P::Cell<Disjunctions>,
+ }
+ 
++impl<P: PointerFamily> Default for ProbProofsProvenance<P> {
++  fn default() -> Self {
++    Self {
++      probs: P::new_cell(Vec::new()),
++      disjunctions: P::new_cell(Disjunctions::new()),
++    }
++  }
++}
++
+ impl<P: PointerFamily> Clone for ProbProofsProvenance<P> {
+   fn clone(&self) -> Self {
+     Self {
+diff --git a/etc/scli/src/main.rs b/etc/scli/src/main.rs
+index db19dc6..eef24a9 100644
+--- a/etc/scli/src/main.rs
++++ b/etc/scli/src/main.rs
+@@ -190,6 +190,10 @@ fn main() -> Result<(), String> {
+       let ctx = provenance::add_mult_prob::AddMultProbProvenance::default();
+       interpret(ctx, &opt.input, integrate_opt, predicate_set, monitor_options)
+     }
++    "probproofs" | "prob-proofs" => {
++      let ctx = provenance::prob_proofs::ProbProofsProvenance::<RcFamily>::default();
++      interpret(ctx, &opt.input, integrate_opt, predicate_set, monitor_options)
++    }
+     "topkproofs" => {
+       let ctx = provenance::top_k_proofs::TopKProofsProvenance::<RcFamily>::new(opt.top_k, opt.wmc_with_disjunctions);
+       interpret(ctx, &opt.input, integrate_opt, predicate_set, monitor_options)

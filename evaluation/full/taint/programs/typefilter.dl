@@ -1,0 +1,35 @@
+.type V = number
+.type C = number
+.type H = number
+.type T = number
+.type M = number
+.type Z = number
+.type I = number
+
+.decl VT(v:V, t:T)
+.input VT
+
+.decl HTFilter(h:H, t:T)
+.input HTFilter
+
+.decl CH(o:C, h:H)
+.input CH
+
+.decl typeFilter(v:V, o:C)
+.output typeFilter
+
+// name=typefilter
+
+// .include "V.dom"
+// .include "C.dom"
+// .include "H.dom"
+// .include "T.dom"
+// .include "M.dom"
+// .include "Z.dom"
+// .include "I.dom"
+
+// .bddvarorder V0_T0_H0_C0xC1_M0_Z0_I0
+
+
+
+0.999000::typeFilter(v,o) :- VT(v,t), HTFilter(h,t), CH(o,h).

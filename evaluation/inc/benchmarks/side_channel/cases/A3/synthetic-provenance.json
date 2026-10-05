@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "fraction": 0.75,
+      "kept_facts": 41396,
+      "offset": 0,
+      "selected_s_ids": 17964,
+      "source": "P15",
+      "source_facts": 55063,
+      "source_s_ids": 23952
+    }
+  ],
+  "target": "A3",
+  "template_source": "P15"
+}

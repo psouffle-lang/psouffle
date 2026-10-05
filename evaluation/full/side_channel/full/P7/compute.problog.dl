@@ -1,0 +1,563 @@
+% Generated from: side_channel/full/P7/compute.souffle.dl
+% Domain: side_channel    Case: P7
+
+0.982264::bv_diff_rec(68, 66, 1).
+0.822105::bv_diff_rec(77, 79, 1).
+0.933647::bv_diff_rec(84, 86, 1).
+0.826393::bv_diff_rec(91, 93, 1).
+0.868469::bv_diff_rec(98, 100, 1).
+0.94859::bv_diff_rec(105, 107, 1).
+0.975349::bv_diff_rec(112, 114, 1).
+0.858002::bv_diff_rec(119, 121, 1).
+0.98158::bv_diff_rec(128, 130, 1).
+0.957933::bv_diff_rec(137, 139, 1).
+0.868222::bv_diff_rec(146, 148, 1).
+0.825161::bv_diff_rec(157, 159, 1).
+0.976903::bv_diff_rec(164, 166, 1).
+0.959874::bv_diff_rec(171, 173, 1).
+0.902105::bv_diff_rec(178, 180, 1).
+0.853548::bv_diff_rec(185, 187, 1).
+0.80749::bv_diff_rec(192, 194, 1).
+0.954225::bv_diff_rec(199, 201, 1).
+0.900339::bv_diff_rec(208, 210, 1).
+0.809077::bv_diff_rec(215, 217, 1).
+0.842956::bv_diff_rec(222, 224, 1).
+0.845521::bv_diff_rec(229, 231, 1).
+0.833231::bv_diff_rec(236, 238, 1).
+0.859932::bv_diff_rec(243, 245, 1).
+0.886175::bv_diff_rec(250, 252, 1).
+0.951823::bv_diff_rec(257, 259, 1).
+0.909258::bv_diff_rec(264, 266, 1).
+0.952587::bv_diff_rec(273, 271, 1).
+0.804157::bv_diff_rec(280, 278, 1).
+0.896261::bv_diff_rec(285, 287, 1).
+0.908618::bv_diff_rec(292, 294, 1).
+0.845499::bv_diff_rec(299, 301, 1).
+0.804993::bv_diff_rec(306, 308, 1).
+0.988711::bv_diff_rec(313, 315, 1).
+0.867739::bv_diff_rec(320, 322, 1).
+0.90036::bv_diff_rec(329, 327, 1).
+0.904477::bv_diff_rec(336, 334, 1).
+0.824568::bv_diff_rec(341, 343, 1).
+0.972653::bv_diff_rec(350, 348, 0).
+0.823369::bv_diff_rec(348, 350, 0).
+0.862814::bv_same_rec(348, 350, 1).
+0.966035::constant(9).
+0.864487::key_sensitive(1).
+0.994876::rand(2).
+0.889278::rand(3).
+0.887839::rand(4).
+0.882455::rand(5).
+0.974313::rand(6).
+0.913165::rand(7).
+0.87993::rand(8).
+andor_assign_left(232, 229).
+andor_assign_left(239, 236).
+andor_assign_left(246, 243).
+andor_assign_left(260, 257).
+andor_assign_left(288, 285).
+andor_assign_left(295, 292).
+andor_assign_left(302, 299).
+andor_assign_left(316, 313).
+andor_assign_right(232, 231).
+andor_assign_right(239, 238).
+andor_assign_right(246, 245).
+andor_assign_right(260, 259).
+andor_assign_right(288, 287).
+andor_assign_right(295, 294).
+andor_assign_right(302, 301).
+andor_assign_right(316, 315).
+load_assign(65, 1).
+load_assign(67, 2).
+load_assign(72, 2).
+load_assign(74, 10).
+load_assign(76, 2).
+load_assign(78, 4).
+load_assign(83, 3).
+load_assign(85, 13).
+load_assign(90, 10).
+load_assign(92, 4).
+load_assign(97, 14).
+load_assign(99, 15).
+load_assign(104, 2).
+load_assign(106, 4).
+load_assign(111, 17).
+load_assign(113, 10).
+load_assign(118, 16).
+load_assign(120, 18).
+load_assign(125, 4).
+load_assign(127, 19).
+load_assign(129, 20).
+load_assign(134, 2).
+load_assign(136, 22).
+load_assign(138, 3).
+load_assign(143, 10).
+load_assign(145, 24).
+load_assign(147, 21).
+load_assign(152, 23).
+load_assign(154, 25).
+load_assign(156, 23).
+load_assign(158, 6).
+load_assign(163, 5).
+load_assign(165, 28).
+load_assign(170, 25).
+load_assign(172, 6).
+load_assign(177, 29).
+load_assign(179, 30).
+load_assign(184, 23).
+load_assign(186, 6).
+load_assign(191, 32).
+load_assign(193, 24).
+load_assign(198, 31).
+load_assign(200, 33).
+load_assign(205, 6).
+load_assign(207, 34).
+load_assign(209, 35).
+load_assign(214, 23).
+load_assign(216, 5).
+load_assign(221, 25).
+load_assign(223, 36).
+load_assign(228, 37).
+load_assign(230, 26).
+load_assign(235, 38).
+load_assign(237, 27).
+load_assign(242, 37).
+load_assign(244, 27).
+load_assign(249, 7).
+load_assign(251, 41).
+load_assign(256, 38).
+load_assign(258, 26).
+load_assign(263, 42).
+load_assign(265, 43).
+load_assign(270, 39).
+load_assign(272, 7).
+load_assign(277, 40).
+load_assign(279, 44).
+load_assign(284, 45).
+load_assign(286, 11).
+load_assign(291, 46).
+load_assign(293, 12).
+load_assign(298, 45).
+load_assign(300, 12).
+load_assign(305, 8).
+load_assign(307, 49).
+load_assign(312, 46).
+load_assign(314, 11).
+load_assign(319, 50).
+load_assign(321, 51).
+load_assign(326, 47).
+load_assign(328, 8).
+load_assign(333, 48).
+load_assign(335, 52).
+load_assign(340, 53).
+load_assign(342, 9).
+load_assign(347, 55).
+load_assign(349, 54).
+0.985868::share(2, 10).
+0.957166::share(2, 11).
+0.977247::share(2, 12).
+0.845729::share(2, 13).
+0.963902::share(2, 14).
+0.906999::share(2, 17).
+0.886105::share(2, 18).
+0.855124::share(2, 22).
+0.999274::share(2, 23).
+0.986838::share(4, 2).
+0.895854::share(4, 11).
+0.925797::share(4, 20).
+0.8144::share(4, 21).
+0.815909::share(6, 35).
+0.819172::share(6, 36).
+0.954545::share(7, 2).
+0.95405::share(7, 10).
+0.833588::share(10, 2).
+0.953801::share(10, 12).
+0.90578::share(10, 15).
+0.99202::share(10, 16).
+0.841008::share(10, 24).
+0.984336::share(10, 25).
+0.945655::share(11, 10).
+0.959401::share(11, 24).
+0.944737::share(12, 2).
+0.98059::share(12, 13).
+0.887599::share(13, 10).
+0.939196::share(13, 14).
+0.857338::share(14, 10).
+0.803866::share(14, 15).
+0.813307::share(15, 2).
+0.986378::share(15, 16).
+0.811387::share(16, 2).
+0.941099::share(16, 17).
+0.998692::share(17, 18).
+0.98001::share(17, 19).
+0.859792::share(18, 4).
+0.857889::share(18, 19).
+0.845434::share(19, 4).
+0.88337::share(19, 20).
+0.847315::share(20, 2).
+0.800262::share(20, 21).
+0.916576::share(21, 2).
+0.881456::share(21, 22).
+0.861829::share(22, 23).
+0.865048::share(22, 26).
+0.909089::share(23, 25).
+0.880019::share(23, 26).
+0.959666::share(23, 28).
+0.878106::share(23, 29).
+0.95763::share(23, 32).
+0.838688::share(23, 33).
+0.815163::share(23, 37).
+0.933696::share(24, 25).
+0.842046::share(25, 23).
+0.888026::share(25, 27).
+0.984353::share(25, 30).
+0.875701::share(25, 31).
+0.86704::share(25, 37).
+0.959506::share(25, 38).
+0.95252::share(26, 25).
+0.831909::share(26, 27).
+0.944364::share(27, 23).
+0.99829::share(27, 28).
+0.916847::share(28, 25).
+0.981317::share(28, 29).
+0.908439::share(29, 25).
+0.932383::share(29, 30).
+0.87186::share(30, 23).
+0.858744::share(30, 31).
+0.98305::share(31, 23).
+0.956633::share(31, 32).
+0.961571::share(32, 33).
+0.893399::share(32, 34).
+0.952009::share(33, 6).
+0.988536::share(33, 34).
+0.922196::share(34, 6).
+0.951412::share(34, 35).
+0.832494::share(35, 23).
+0.991711::share(35, 36).
+0.832262::share(36, 23).
+0.830754::share(36, 37).
+0.886871::share(37, 25).
+0.860016::share(37, 38).
+0.922249::share(37, 39).
+0.837723::share(37, 41).
+0.881435::share(37, 42).
+0.882434::share(38, 37).
+0.854614::share(38, 39).
+0.974933::share(38, 40).
+0.880726::share(38, 43).
+0.949303::share(38, 44).
+0.951183::share(39, 38).
+0.832145::share(39, 40).
+0.900539::share(39, 45).
+0.912483::share(40, 37).
+0.910214::share(40, 41).
+0.842205::share(40, 45).
+0.979215::share(40, 46).
+0.806508::share(41, 38).
+0.914424::share(41, 42).
+0.816993::share(42, 38).
+0.978747::share(42, 43).
+0.850215::share(43, 39).
+0.888884::share(43, 44).
+0.945278::share(44, 39).
+0.92791::share(44, 45).
+0.944035::share(45, 40).
+0.916452::share(45, 46).
+0.995398::share(45, 47).
+0.922627::share(45, 49).
+0.891393::share(45, 50).
+0.863545::share(46, 45).
+0.826958::share(46, 47).
+0.902702::share(46, 48).
+0.878883::share(46, 51).
+0.904018::share(46, 52).
+0.907657::share(47, 46).
+0.933829::share(47, 48).
+0.826213::share(47, 53).
+0.863716::share(48, 45).
+0.943016::share(48, 49).
+0.834366::share(48, 53).
+0.99103::share(48, 54).
+0.930782::share(49, 46).
+0.890669::share(49, 50).
+0.95266::share(50, 46).
+0.930473::share(50, 51).
+0.94017::share(51, 47).
+0.92825::share(51, 52).
+0.837657::share(52, 47).
+0.98436::share(52, 53).
+0.991079::share(53, 48).
+0.935117::share(53, 54).
+0.960315::share(53, 55).
+0.890383::share(54, 53).
+0.963102::share(54, 55).
+store_assign(10, 70).
+store_assign(11, 72).
+store_assign(12, 74).
+store_assign(13, 81).
+store_assign(14, 88).
+store_assign(15, 95).
+store_assign(16, 102).
+store_assign(17, 109).
+store_assign(18, 116).
+store_assign(19, 123).
+store_assign(20, 125).
+store_assign(21, 132).
+store_assign(22, 134).
+store_assign(23, 141).
+store_assign(24, 143).
+store_assign(25, 150).
+store_assign(26, 152).
+store_assign(27, 154).
+store_assign(28, 161).
+store_assign(29, 168).
+store_assign(30, 175).
+store_assign(31, 182).
+store_assign(32, 189).
+store_assign(33, 196).
+store_assign(34, 203).
+store_assign(35, 205).
+store_assign(36, 212).
+store_assign(37, 219).
+store_assign(38, 226).
+store_assign(39, 233).
+store_assign(40, 240).
+store_assign(41, 247).
+store_assign(42, 254).
+store_assign(43, 261).
+store_assign(44, 268).
+store_assign(45, 275).
+store_assign(46, 282).
+store_assign(47, 289).
+store_assign(48, 296).
+store_assign(49, 303).
+store_assign(50, 310).
+store_assign(51, 317).
+store_assign(52, 324).
+store_assign(53, 331).
+store_assign(54, 338).
+store_assign(55, 345).
+0.956455::trunc_assign(70, 69).
+0.885665::trunc_assign(81, 80).
+0.957899::trunc_assign(88, 87).
+0.973479::trunc_assign(95, 94).
+0.97956::trunc_assign(102, 101).
+0.937504::trunc_assign(109, 108).
+0.858783::trunc_assign(116, 115).
+0.932088::trunc_assign(123, 122).
+0.911561::trunc_assign(132, 131).
+0.940812::trunc_assign(141, 140).
+0.897497::trunc_assign(150, 149).
+0.98552::trunc_assign(161, 160).
+0.888658::trunc_assign(168, 167).
+0.827911::trunc_assign(175, 174).
+0.890043::trunc_assign(182, 181).
+0.836535::trunc_assign(189, 188).
+0.8932::trunc_assign(196, 195).
+0.933748::trunc_assign(203, 202).
+0.918509::trunc_assign(212, 211).
+0.905106::trunc_assign(219, 218).
+0.941344::trunc_assign(226, 225).
+0.945421::trunc_assign(233, 232).
+0.942633::trunc_assign(240, 239).
+0.898875::trunc_assign(247, 246).
+0.977329::trunc_assign(254, 253).
+0.825468::trunc_assign(261, 260).
+0.888305::trunc_assign(268, 267).
+0.804092::trunc_assign(275, 274).
+0.862707::trunc_assign(282, 281).
+0.825626::trunc_assign(289, 288).
+0.867269::trunc_assign(296, 295).
+0.915785::trunc_assign(303, 302).
+0.863397::trunc_assign(310, 309).
+0.864397::trunc_assign(317, 316).
+0.980684::trunc_assign(324, 323).
+0.815201::trunc_assign(331, 330).
+0.87571::trunc_assign(338, 337).
+0.839861::trunc_assign(345, 344).
+0.832385::trunc_assign(352, 351).
+xor_assign_left(69, 66).
+xor_assign_left(80, 77).
+xor_assign_left(87, 84).
+xor_assign_left(94, 91).
+xor_assign_left(101, 98).
+xor_assign_left(108, 105).
+xor_assign_left(115, 112).
+xor_assign_left(122, 119).
+xor_assign_left(131, 128).
+xor_assign_left(140, 137).
+xor_assign_left(149, 146).
+xor_assign_left(160, 157).
+xor_assign_left(167, 164).
+xor_assign_left(174, 171).
+xor_assign_left(181, 178).
+xor_assign_left(188, 185).
+xor_assign_left(195, 192).
+xor_assign_left(202, 199).
+xor_assign_left(211, 208).
+xor_assign_left(218, 215).
+xor_assign_left(225, 222).
+xor_assign_left(253, 250).
+xor_assign_left(267, 264).
+xor_assign_left(274, 271).
+xor_assign_left(281, 278).
+xor_assign_left(309, 306).
+xor_assign_left(323, 320).
+xor_assign_left(330, 327).
+xor_assign_left(337, 334).
+xor_assign_left(344, 341).
+xor_assign_left(351, 348).
+xor_assign_right(69, 68).
+xor_assign_right(80, 79).
+xor_assign_right(87, 86).
+xor_assign_right(94, 93).
+xor_assign_right(101, 100).
+xor_assign_right(108, 107).
+xor_assign_right(115, 114).
+xor_assign_right(122, 121).
+xor_assign_right(131, 130).
+xor_assign_right(140, 139).
+xor_assign_right(149, 148).
+xor_assign_right(160, 159).
+xor_assign_right(167, 166).
+xor_assign_right(174, 173).
+xor_assign_right(181, 180).
+xor_assign_right(188, 187).
+xor_assign_right(195, 194).
+xor_assign_right(202, 201).
+xor_assign_right(211, 210).
+xor_assign_right(218, 217).
+xor_assign_right(225, 224).
+xor_assign_right(253, 252).
+xor_assign_right(267, 266).
+xor_assign_right(274, 273).
+xor_assign_right(281, 280).
+xor_assign_right(309, 308).
+xor_assign_right(323, 322).
+xor_assign_right(330, 329).
+xor_assign_right(337, 336).
+xor_assign_right(344, 343).
+xor_assign_right(351, 350).
+0.95291::zext_assign(66, 65).
+0.957644::zext_assign(68, 67).
+0.948241::zext_assign(77, 76).
+0.818988::zext_assign(79, 78).
+0.958056::zext_assign(84, 83).
+0.893609::zext_assign(86, 85).
+0.921524::zext_assign(91, 90).
+0.895::zext_assign(93, 92).
+0.881416::zext_assign(98, 97).
+0.923488::zext_assign(100, 99).
+0.887305::zext_assign(105, 104).
+0.831538::zext_assign(107, 106).
+0.921346::zext_assign(112, 111).
+0.878915::zext_assign(114, 113).
+0.994185::zext_assign(119, 118).
+0.825796::zext_assign(121, 120).
+0.80346::zext_assign(128, 127).
+0.81083::zext_assign(130, 129).
+0.890043::zext_assign(137, 136).
+0.822316::zext_assign(139, 138).
+0.967427::zext_assign(146, 145).
+0.937684::zext_assign(148, 147).
+0.840766::zext_assign(157, 156).
+0.961398::zext_assign(159, 158).
+0.81442::zext_assign(164, 163).
+0.908736::zext_assign(166, 165).
+0.866087::zext_assign(171, 170).
+0.878508::zext_assign(173, 172).
+0.979385::zext_assign(178, 177).
+0.990836::zext_assign(180, 179).
+0.977987::zext_assign(185, 184).
+0.99697::zext_assign(187, 186).
+0.950714::zext_assign(192, 191).
+0.857666::zext_assign(194, 193).
+0.891319::zext_assign(199, 198).
+0.909334::zext_assign(201, 200).
+0.860418::zext_assign(208, 207).
+0.899935::zext_assign(210, 209).
+0.993935::zext_assign(215, 214).
+0.850313::zext_assign(217, 216).
+0.917396::zext_assign(222, 221).
+0.825255::zext_assign(224, 223).
+0.944955::zext_assign(229, 228).
+0.966597::zext_assign(231, 230).
+0.859942::zext_assign(236, 235).
+0.81409::zext_assign(238, 237).
+0.847438::zext_assign(243, 242).
+0.910596::zext_assign(245, 244).
+0.925675::zext_assign(250, 249).
+0.961314::zext_assign(252, 251).
+0.841415::zext_assign(257, 256).
+0.801748::zext_assign(259, 258).
+0.958659::zext_assign(264, 263).
+0.812297::zext_assign(266, 265).
+0.95851::zext_assign(271, 270).
+0.877103::zext_assign(273, 272).
+0.809592::zext_assign(278, 277).
+0.909097::zext_assign(280, 279).
+0.879725::zext_assign(285, 284).
+0.939856::zext_assign(287, 286).
+0.972417::zext_assign(292, 291).
+0.833763::zext_assign(294, 293).
+0.995499::zext_assign(299, 298).
+0.952836::zext_assign(301, 300).
+0.921049::zext_assign(306, 305).
+0.914321::zext_assign(308, 307).
+0.813073::zext_assign(313, 312).
+0.97876::zext_assign(315, 314).
+0.81473::zext_assign(320, 319).
+0.999824::zext_assign(322, 321).
+0.930006::zext_assign(327, 326).
+0.888278::zext_assign(329, 328).
+0.853938::zext_assign(334, 333).
+0.987237::zext_assign(336, 335).
+0.936214::zext_assign(341, 340).
+0.892069::zext_assign(343, 342).
+0.978297::zext_assign(348, 347).
+0.836744::zext_assign(350, 349).
+
+0.904752::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.904752::rand(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), \+((INT_RES1 = 0)).
+0.921478::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.973459::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), rand(FROM1), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.817383::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_sensitive(FROM1), key_sensitive(FROM2).
+0.952379::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.850367::key_ind(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)), bv_same_rec(FROM1,FROM2,INT_RES1), (INT_RES1 = 0).
+0.881481::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)), bv_same_rec(FROM1,FROM2,INT_RES1), \+((INT_RES1 = 0)).
+0.949621::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM1), key_sensitive(FROM2).
+0.949621::key_sensitive(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), key_ind(FROM2), key_sensitive(FROM1).
+0.847658::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.847658::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM2), key_ind(FROM1), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.93136::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.888476::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.888476::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM2,FROM1,INT_RES1), \+((INT_RES1 = 0)).
+0.811122::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.854277::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), rand(FROM1), rand(FROM2), bv_diff_rec(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), bv_diff_rec(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), bv_same_rec(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)).
+0.992618::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM1).
+0.992618::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_sensitive(FROM2).
+0.94399::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.937407::key_ind(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)), bv_same_rec(FROM1,FROM2,INT_RES1), (INT_RES1 = 0).
+0.804519::key_sensitive(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), key_ind(FROM1), key_ind(FROM2), bv_all_intersect(FROM1,FROM2,INT_RES0), \+((INT_RES0 = 0)), bv_same_rec(FROM1,FROM2,INT_RES1), \+((INT_RES1 = 0)).
+assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- binary_constant(FROM1,FROM2).
+assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+key_sensitive(FROM2) :- key_sensitive(FROM1), assign(FROM2,FROM1).
+key_ind(FROM2) :- key_ind(FROM1), assign(FROM2,FROM1).
+rand(FROM2) :- rand(FROM1), assign(FROM2,FROM1).
+equal_assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM3) :- equal_assign(FROM1,FROM2), equal_assign(FROM2,FROM3).
+equal_assign(FROM2,FROM1) :- equal_assign(FROM1,FROM2).
+key_ind(FROM1) :- constant(FROM1).
+
+query(key_ind(_)).
+query(key_sensitive(_)).
+query(hd_sensitive(_,_)).
+query(hd_sensitive_2(_,_)).

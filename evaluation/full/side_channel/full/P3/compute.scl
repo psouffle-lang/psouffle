@@ -1,0 +1,99 @@
+type hd_sensitive(i32, i32)
+type hd_sensitive_2(i32, i32)
+rel 0.810961::bv_diff_rec(14, 13, 1)
+rel 0.856579::bv_diff_rec(17, 18, 1)
+rel 0.818657::bv_diff_rec(21, 22, 1)
+rel 0.865109::bv_diff_rec(26, 25, 0)
+rel 0.972226::bv_diff_rec(25, 26, 0)
+rel 0.990847::bv_diff_rec(30, 29, 1)
+rel 0.823845::bv_diff_rec(34, 33, 0)
+rel 0.811799::bv_diff_rec(33, 34, 0)
+rel 0.826397::bv_same_rec(25, 26, 1)
+rel 0.844575::bv_same_rec(33, 34, 1)
+rel 0.862075::key_sensitive(3)
+rel 0.856677::rand(1)
+rel 0.97942::rand(2)
+rel load_assign(13, 3)
+rel load_assign(14, 2)
+rel load_assign(17, 1)
+rel load_assign(18, 2)
+rel load_assign(21, 1)
+rel load_assign(22, 9)
+rel load_assign(25, 5)
+rel load_assign(26, 4)
+rel load_assign(29, 6)
+rel load_assign(30, 1)
+rel load_assign(33, 7)
+rel load_assign(34, 1)
+rel load_assign(37, 8)
+rel 0.856506::share(1, 1)
+rel 0.834334::share(1, 4)
+rel 0.950252::share(1, 5)
+rel 0.854366::share(1, 6)
+rel 0.971499::share(3, 9)
+rel 0.969015::share(4, 1)
+rel 0.911817::share(4, 5)
+rel 0.961009::share(5, 6)
+rel 0.801565::share(5, 7)
+rel 0.821518::share(6, 7)
+rel 0.951714::share(6, 8)
+rel 0.856182::share(7, 8)
+rel store_assign(9, 15)
+rel store_assign(4, 19)
+rel store_assign(5, 23)
+rel store_assign(6, 27)
+rel store_assign(7, 31)
+rel store_assign(8, 35)
+rel xor_assign_left(15, 13)
+rel xor_assign_left(19, 17)
+rel xor_assign_left(23, 21)
+rel xor_assign_left(27, 25)
+rel xor_assign_left(31, 29)
+rel xor_assign_left(35, 33)
+rel xor_assign_right(15, 14)
+rel xor_assign_right(19, 18)
+rel xor_assign_right(23, 22)
+rel xor_assign_right(27, 26)
+rel xor_assign_right(31, 30)
+rel xor_assign_right(35, 34)
+rel 0.859637::rand(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), rand(v_from1), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.859637::rand(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), rand(v_from2), bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 != 0
+rel 0.970754::key_ind(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), rand(v_from1), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0, rand(v_from2), bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 == 0, bv_same_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.87022::key_sensitive(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), rand(v_from1), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0, rand(v_from2), bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 == 0, bv_same_rec(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.986071::key_sensitive(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), key_sensitive(v_from1), key_sensitive(v_from2)
+rel 0.937117::key_ind(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), key_ind(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.943204::key_sensitive(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), key_ind(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.913103::key_sensitive(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), key_ind(v_from1), key_sensitive(v_from2)
+rel 0.913103::key_sensitive(v_to) = xor_assign_left(v_to, v_from1), xor_assign_right(v_to, v_from2), key_ind(v_from2), key_sensitive(v_from1)
+rel 0.896959::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.896959::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from2), key_ind(v_from1), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.953615::key_sensitive(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.829627::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), rand(v_from2), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.829627::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), rand(v_from2), bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 != 0
+rel 0.817937::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), rand(v_from2), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0, bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 == 0, bv_same_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.814463::key_sensitive(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), rand(v_from1), rand(v_from2), bv_diff_rec(v_from1, v_from2, v_int_res0), v_int_res0 == 0, bv_diff_rec(v_from2, v_from1, v_int_res1), v_int_res1 == 0, bv_same_rec(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel 0.864745::key_sensitive(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), key_sensitive(v_from1)
+rel 0.864745::key_sensitive(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), key_sensitive(v_from2)
+rel 0.996104::key_ind(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), key_ind(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 == 0
+rel 0.986039::key_sensitive(v_to) = andor_assign_left(v_to, v_from1), andor_assign_right(v_to, v_from2), key_ind(v_from1), key_ind(v_from2), bv_all_intersect(v_from1, v_from2, v_int_res0), v_int_res0 != 0
+rel assign(v_from1, v_from2) = load_assign(v_from1, v_from2)
+rel assign(v_from1, v_from2) = store_assign(v_from1, v_from2)
+rel assign(v_from1, v_from2) = binary_constant(v_from1, v_from2)
+rel assign(v_from1, v_from2) = sext_assign(v_from1, v_from2)
+rel assign(v_from1, v_from2) = zext_assign(v_from1, v_from2)
+rel assign(v_from1, v_from2) = trunc_assign(v_from1, v_from2)
+rel key_sensitive(v_from2) = key_sensitive(v_from1), assign(v_from2, v_from1)
+rel key_ind(v_from2) = key_ind(v_from1), assign(v_from2, v_from1)
+rel rand(v_from2) = rand(v_from1), assign(v_from2, v_from1)
+rel equal_assign(v_from1, v_from2) = load_assign(v_from1, v_from2)
+rel equal_assign(v_from1, v_from2) = store_assign(v_from1, v_from2)
+rel equal_assign(v_from1, v_from2) = sext_assign(v_from1, v_from2)
+rel equal_assign(v_from1, v_from2) = zext_assign(v_from1, v_from2)
+rel equal_assign(v_from1, v_from2) = trunc_assign(v_from1, v_from2)
+rel equal_assign(v_from1, v_from3) = equal_assign(v_from1, v_from2), equal_assign(v_from2, v_from3)
+rel equal_assign(v_from2, v_from1) = equal_assign(v_from1, v_from2)
+rel key_ind(v_from1) = constant(v_from1)
+query key_ind
+query key_sensitive
+query hd_sensitive
+query hd_sensitive_2

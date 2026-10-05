@@ -6,7 +6,7 @@ modified. Compiler, runtime, tests, licenses, and build support are retained.
 New benchmark outputs and timing logs are excluded. Maintained example-output
 fixtures from the upstream incremental snapshot are retained.
 
-The `main` branch contains the integrated codebase in a single `initial commit`.
+The integrated compiler/runtime was introduced in a single `initial commit`.
 The upstream source revisions and release tags are recorded below; their git
 history is not imported into this repository.
 
@@ -50,7 +50,15 @@ confirmed that its artifact refs were current.
 ## Paper And Benchmark Records
 
 The companion `Hughshine/problog-benchmark` repository provides the evaluator
-workloads; they remain a separate benchmark repository.
+workloads. Its incremental and full/rewrite inputs and experiment scripts are
+copied into [../evaluation/](../evaluation/README.md), including native inputs
+for the external comparison engines. Generated runs and timing logs are excluded.
+Incremental evaluation comes from `CAV-INC` revision
+`be3fd21e80277bd6c12db8f2ec1f1916b429ecf9`; full/rewrite evaluation comes from
+the local `CAV-FULL` revision `1fb689e07a989279bf154d605439bdb33c3ee886`.
+Five VProbLog helper scripts are also copied from the source workspace's
+untracked `scripts/` directory. Evaluation READMEs describe local path and
+execution-selector adaptations.
 
 - CAV full packaging is recorded by branch `CAV-FULL` and tag
   `cav26-full-ae-v1` (`e0bce504a45c0107e38476c839743907bf3a3277`). Internal development notes record the March packaging

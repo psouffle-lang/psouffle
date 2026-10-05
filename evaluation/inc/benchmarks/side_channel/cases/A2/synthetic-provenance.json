@@ -1,0 +1,24 @@
+{
+  "components": [
+    {
+      "fraction": 0.8,
+      "kept_facts": 19115,
+      "offset": 0,
+      "selected_s_ids": 8304,
+      "source": "P14",
+      "source_facts": 23807,
+      "source_s_ids": 10380
+    },
+    {
+      "fraction": 0.25,
+      "kept_facts": 4120,
+      "offset": 12729,
+      "selected_s_ids": 1746,
+      "source": "P13",
+      "source_facts": 16039,
+      "source_s_ids": 6983
+    }
+  ],
+  "target": "A2",
+  "template_source": "P14"
+}

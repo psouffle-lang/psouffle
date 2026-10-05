@@ -1,0 +1,5 @@
+# Retain benchmark snapshot bytes, including native CSV line endings.
+full/side_channel/** -text
+full/taint/** -text
+full/symbolization/** -text
+inc/benchmarks/side_channel/cases/** -text

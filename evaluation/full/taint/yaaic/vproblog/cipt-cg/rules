@@ -1,0 +1,392 @@
+// firstphaseEdb
+t_1_Alloc(V0, V1, F0, conj(F0)) :- esrc_Alloc(V0, V1, F0).
+t_2_Any(V0, F0, conj(F0)) :- esrc_Any(V0, F0).
+t_3_Assign(V0, V1, F0, conj(F0)) :- esrc_Assign(V0, V1, F0).
+t_4_AssignPrim(V0, V1, F0, conj(F0)) :- esrc_AssignPrim(V0, V1, F0).
+t_5_CC(V0, V1, F0, conj(F0)) :- esrc_CC(V0, V1, F0).
+t_6_CCL(V0, V1, F0, conj(F0)) :- esrc_CCL(V0, V1, F0).
+t_7_CH(V0, V1, F0, conj(F0)) :- esrc_CH(V0, V1, F0).
+t_8_CI(V0, V1, F0, conj(F0)) :- esrc_CI(V0, V1, F0).
+t_9_CMap(V0, V1, F0, conj(F0)) :- esrc_CMap(V0, V1, F0).
+t_10_ClassT(V0, F0, conj(F0)) :- esrc_ClassT(V0, F0).
+t_11_ClinitTM(V0, V1, F0, conj(F0)) :- esrc_ClinitTM(V0, V1, F0).
+t_12_Dispatch(V0, V1, V2, F0, conj(F0)) :- esrc_Dispatch(V0, V1, V2, F0).
+t_13_GlobalAlloc(V0, V1, F0, conj(F0)) :- esrc_GlobalAlloc(V0, V1, F0).
+t_14_HT(V0, V1, F0, conj(F0)) :- esrc_HT(V0, V1, F0).
+t_15_HTFilter(V0, V1, F0, conj(F0)) :- esrc_HTFilter(V0, V1, F0).
+t_16_IinvkArg(V0, V1, V2, F0, conj(F0)) :- esrc_IinvkArg(V0, V1, V2, F0).
+t_17_IinvkPrimArg(V0, V1, V2, F0, conj(F0)) :- esrc_IinvkPrimArg(V0, V1, V2, F0).
+t_18_IinvkPrimRet(V0, V1, V2, F0, conj(F0)) :- esrc_IinvkPrimRet(V0, V1, V2, F0).
+t_19_IinvkRet(V0, V1, V2, F0, conj(F0)) :- esrc_IinvkRet(V0, V1, V2, F0).
+t_20_LCL(V0, V1, F0, conj(F0)) :- esrc_LCL(V0, V1, F0).
+t_21_Load(V0, V1, V2, F0, conj(F0)) :- esrc_Load(V0, V1, V2, F0).
+t_22_LoadPrim(V0, V1, V2, F0, conj(F0)) :- esrc_LoadPrim(V0, V1, V2, F0).
+t_23_LoadStat(V0, V1, F0, conj(F0)) :- esrc_LoadStat(V0, V1, F0).
+t_24_LoadStatPrim(V0, V1, F0, conj(F0)) :- esrc_LoadStatPrim(V0, V1, F0).
+t_25_MI(V0, V1, F0, conj(F0)) :- esrc_MI(V0, V1, F0).
+t_26_MU(V0, V1, F0, conj(F0)) :- esrc_MU(V0, V1, F0).
+t_27_MV(V0, V1, F0, conj(F0)) :- esrc_MV(V0, V1, F0).
+t_28_MmethArg(V0, V1, V2, F0, conj(F0)) :- esrc_MmethArg(V0, V1, V2, F0).
+t_29_MmethPrimArg(V0, V1, V2, F0, conj(F0)) :- esrc_MmethPrimArg(V0, V1, V2, F0).
+t_30_MmethPrimRet(V0, V1, V2, F0, conj(F0)) :- esrc_MmethPrimRet(V0, V1, V2, F0).
+t_31_MmethRet(V0, V1, V2, F0, conj(F0)) :- esrc_MmethRet(V0, V1, V2, F0).
+t_32_SinkLabel(V0, F0, conj(F0)) :- esrc_SinkLabel(V0, F0).
+t_33_SpecIM(V0, V1, F0, conj(F0)) :- esrc_SpecIM(V0, V1, F0).
+t_34_SrcLabel(V0, F0, conj(F0)) :- esrc_SrcLabel(V0, F0).
+t_35_StatIM(V0, V1, F0, conj(F0)) :- esrc_StatIM(V0, V1, F0).
+t_36_StaticTF(V0, V1, F0, conj(F0)) :- esrc_StaticTF(V0, V1, F0).
+t_37_StaticTM(V0, V1, F0, conj(F0)) :- esrc_StaticTM(V0, V1, F0).
+t_38_Store(V0, V1, V2, F0, conj(F0)) :- esrc_Store(V0, V1, V2, F0).
+t_39_StorePrim(V0, V1, V2, F0, conj(F0)) :- esrc_StorePrim(V0, V1, V2, F0).
+t_40_StoreStat(V0, V1, F0, conj(F0)) :- esrc_StoreStat(V0, V1, F0).
+t_41_StoreStatPrim(V0, V1, F0, conj(F0)) :- esrc_StoreStatPrim(V0, V1, F0).
+t_42_SubSig(V0, V1, F0, conj(F0)) :- esrc_SubSig(V0, V1, F0).
+t_43_Subtype(V0, V1, F0, conj(F0)) :- esrc_Subtype(V0, V1, F0).
+t_44_VT(V0, V1, F0, conj(F0)) :- esrc_VT(V0, V1, F0).
+t_45_VirtIM(V0, V1, F0, conj(F0)) :- esrc_VirtIM(V0, V1, F0).
+t_46_ci_reachableM(V0, F0, conj(F0)) :- esrc_ci_reachableM(V0, F0).
+t_47_transferPrimPrim(V0, V1, F0, conj(F0)) :- esrc_transferPrimPrim(V0, V1, F0).
+t_48_transferPrimRef(V0, V1, F0, conj(F0)) :- esrc_transferPrimRef(V0, V1, F0).
+t_49_transferRefPrim(V0, V1, F0, conj(F0)) :- esrc_transferRefPrim(V0, V1, F0).
+t_50_transferRefRef(V0, V1, F0, conj(F0)) :- esrc_transferRefRef(V0, V1, F0).
+t_51_varInLabel(V0, V1, F0, conj(F0)) :- esrc_varInLabel(V0, V1, F0).
+t_52_varOutLabel(V0, V1, F0, conj(F0)) :- esrc_varOutLabel(V0, V1, F0).
+
+// secondphaseEdb
+Alloc(X0, X1, F, I) :- agg_Alloc(X0, X1, F, I).
+Any(X0, F, I) :- agg_Any(X0, F, I).
+Assign(X0, X1, F, I) :- agg_Assign(X0, X1, F, I).
+AssignPrim(X0, X1, F, I) :- agg_AssignPrim(X0, X1, F, I).
+CC(X0, X1, F, I) :- agg_CC(X0, X1, F, I).
+CCL(X0, X1, F, I) :- agg_CCL(X0, X1, F, I).
+CH(X0, X1, F, I) :- agg_CH(X0, X1, F, I).
+CI(X0, X1, F, I) :- agg_CI(X0, X1, F, I).
+CMap(X0, X1, F, I) :- agg_CMap(X0, X1, F, I).
+ClassT(X0, F, I) :- agg_ClassT(X0, F, I).
+ClinitTM(X0, X1, F, I) :- agg_ClinitTM(X0, X1, F, I).
+Dispatch(X0, X1, X2, F, I) :- agg_Dispatch(X0, X1, X2, F, I).
+GlobalAlloc(X0, X1, F, I) :- agg_GlobalAlloc(X0, X1, F, I).
+HT(X0, X1, F, I) :- agg_HT(X0, X1, F, I).
+HTFilter(X0, X1, F, I) :- agg_HTFilter(X0, X1, F, I).
+IHM(X0, X1, X2, F, I) :- agg_IHM(X0, X1, X2, F, I).
+IinvkArg(X0, X1, X2, F, I) :- agg_IinvkArg(X0, X1, X2, F, I).
+IinvkPrimArg(X0, X1, X2, F, I) :- agg_IinvkPrimArg(X0, X1, X2, F, I).
+IinvkPrimRet(X0, X1, X2, F, I) :- agg_IinvkPrimRet(X0, X1, X2, F, I).
+IinvkRet(X0, X1, X2, F, I) :- agg_IinvkRet(X0, X1, X2, F, I).
+LCL(X0, X1, F, I) :- agg_LCL(X0, X1, F, I).
+Load(X0, X1, X2, F, I) :- agg_Load(X0, X1, X2, F, I).
+LoadPrim(X0, X1, X2, F, I) :- agg_LoadPrim(X0, X1, X2, F, I).
+LoadStat(X0, X1, F, I) :- agg_LoadStat(X0, X1, F, I).
+LoadStatPrim(X0, X1, F, I) :- agg_LoadStatPrim(X0, X1, F, I).
+MI(X0, X1, F, I) :- agg_MI(X0, X1, F, I).
+MU(X0, X1, F, I) :- agg_MU(X0, X1, F, I).
+MV(X0, X1, F, I) :- agg_MV(X0, X1, F, I).
+MmethArg(X0, X1, X2, F, I) :- agg_MmethArg(X0, X1, X2, F, I).
+MmethPrimArg(X0, X1, X2, F, I) :- agg_MmethPrimArg(X0, X1, X2, F, I).
+MmethPrimRet(X0, X1, X2, F, I) :- agg_MmethPrimRet(X0, X1, X2, F, I).
+MmethRet(X0, X1, X2, F, I) :- agg_MmethRet(X0, X1, X2, F, I).
+SinkLabel(X0, F, I) :- agg_SinkLabel(X0, F, I).
+SpecIM(X0, X1, F, I) :- agg_SpecIM(X0, X1, F, I).
+SrcLabel(X0, F, I) :- agg_SrcLabel(X0, F, I).
+StatIM(X0, X1, F, I) :- agg_StatIM(X0, X1, F, I).
+StaticTF(X0, X1, F, I) :- agg_StaticTF(X0, X1, F, I).
+StaticTM(X0, X1, F, I) :- agg_StaticTM(X0, X1, F, I).
+Store(X0, X1, X2, F, I) :- agg_Store(X0, X1, X2, F, I).
+StorePrim(X0, X1, X2, F, I) :- agg_StorePrim(X0, X1, X2, F, I).
+StoreStat(X0, X1, F, I) :- agg_StoreStat(X0, X1, F, I).
+StoreStatPrim(X0, X1, F, I) :- agg_StoreStatPrim(X0, X1, F, I).
+SubSig(X0, X1, F, I) :- agg_SubSig(X0, X1, F, I).
+Subtype(X0, X1, F, I) :- agg_Subtype(X0, X1, F, I).
+VT(X0, X1, F, I) :- agg_VT(X0, X1, F, I).
+VirtIM(X0, X1, F, I) :- agg_VirtIM(X0, X1, F, I).
+ci_IM(X0, X1, F, I) :- agg_ci_IM(X0, X1, F, I).
+ci_fpt(X0, X1, X2, F, I) :- agg_ci_fpt(X0, X1, X2, F, I).
+ci_fptStat(X0, X1, F, I) :- agg_ci_fptStat(X0, X1, F, I).
+ci_pt(X0, X1, F, I) :- agg_ci_pt(X0, X1, F, I).
+ci_reachableI(X0, F, I) :- agg_ci_reachableI(X0, F, I).
+ci_reachableM(X0, F, I) :- agg_ci_reachableM(X0, F, I).
+ci_reachableT(X0, F, I) :- agg_ci_reachableT(X0, F, I).
+ci_typeFilter(X0, X1, F, I) :- agg_ci_typeFilter(X0, X1, F, I).
+interprocAssign(X0, X1, F, I) :- agg_interprocAssign(X0, X1, F, I).
+transferPrimPrim(X0, X1, F, I) :- agg_transferPrimPrim(X0, X1, F, I).
+transferPrimRef(X0, X1, F, I) :- agg_transferPrimRef(X0, X1, F, I).
+transferRefPrim(X0, X1, F, I) :- agg_transferRefPrim(X0, X1, F, I).
+transferRefRef(X0, X1, F, I) :- agg_transferRefRef(X0, X1, F, I).
+varInLabel(X0, X1, F, I) :- agg_varInLabel(X0, X1, F, I).
+varOutLabel(X0, X1, F, I) :- agg_varOutLabel(X0, X1, F, I).
+
+// firstphaseRecIdb
+0.999::t_53_ci_typeFilter(V, H, F0, F1, conj(F0, F1)) :- VT(V, T, F0, I0), ~d_VT(I0), HTFilter(H, T, F1, I1), ~d_HTFilter(I1).
+0.999::t_54_ci_reachableM(M, F0, F1, conj(F0, F1)) :- ClinitTM(T, M, F0, I0), ~d_ClinitTM(I0), ci_reachableT(T, F1, I1), ~d_ci_reachableT(I1).
+0.999::t_55_ci_reachableM(M, F0, conj(F0)) :- ci_IM(T1, M, F0, I0), ~d_ci_IM(I0).
+0.999::t_56_ci_reachableI(I, F0, F1, conj(F0, F1)) :- MI(M, I, F0, I0), ~d_MI(I0), ci_reachableM(M, F1, I1), ~d_ci_reachableM(I1).
+0.999::t_57_IHM(I, H, M2, F0, F1, F2, conj(F0, F1, F2)) :- VirtIM(I, S, F0, I0), ~d_VirtIM(I0), Dispatch(T, S, M2, F1, I1), ~d_Dispatch(I1), HT(H, T, F2, I2), ~d_HT(I2).
+0.999::t_58_ci_IM(I, M, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- ci_reachableI(I, F0, I0), ~d_ci_reachableI(I0), IinvkArg(I, 0, V, F1, I1), ~d_IinvkArg(I1), ci_pt(V, O, F2, I2), ~d_ci_pt(I2), IHM(I, O, M, F3, I3), ~d_IHM(I3).
+0.999::t_59_ci_IM(I, M, F0, F1, conj(F0, F1)) :- ci_reachableI(I, F0, I0), ~d_ci_reachableI(I0), StatIM(I, M, F1, I1), ~d_StatIM(I1).
+0.999::t_60_ci_IM(I, M, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- ci_reachableI(I, F0, I0), ~d_ci_reachableI(I0), IinvkArg(I, 0, V, F1, I1), ~d_IinvkArg(I1), ci_pt(V, T1, F2, I2), ~d_ci_pt(I2), SpecIM(I, M, F3, I3), ~d_SpecIM(I3).
+0.999::t_61_interprocAssign(U, V, F0, F1, F2, conj(F0, F1, F2)) :- ci_IM(I, M, F0, I0), ~d_ci_IM(I0), IinvkArg(I, Z, V, F1, I1), ~d_IinvkArg(I1), MmethArg(M, Z, U, F2, I2), ~d_MmethArg(I2).
+0.999::t_62_interprocAssign(U, V, F0, F1, F2, conj(F0, F1, F2)) :- ci_IM(I, M, F0, I0), ~d_ci_IM(I0), IinvkRet(I, Z, U, F1, I1), ~d_IinvkRet(I1), MmethRet(M, Z, V, F2, I2), ~d_MmethRet(I2).
+0.999::t_63_ci_pt(U, O, F0, F1, F2, conj(F0, F1, F2)) :- interprocAssign(U, V, F0, I0), ~d_interprocAssign(I0), ci_pt(V, O, F1, I1), ~d_ci_pt(I1), ci_typeFilter(U, O, F2, I2), ~d_ci_typeFilter(I2).
+0.999::t_64_ci_pt(V, H, F0, F1, F2, conj(F0, F1, F2)) :- GlobalAlloc(V, H, F0, I0), ~d_GlobalAlloc(I0), MV(M, V, F1, I1), ~d_MV(I1), ci_reachableM(M, F2, I2), ~d_ci_reachableM(I2).
+0.999::t_65_ci_pt(V, H, F0, F1, F2, conj(F0, F1, F2)) :- Alloc(V, H, F0, I0), ~d_Alloc(I0), MV(M, V, F1, I1), ~d_MV(I1), ci_reachableM(M, F2, I2), ~d_ci_reachableM(I2).
+0.999::t_66_ci_pt(V, O, F0, F1, F2, conj(F0, F1, F2)) :- ci_pt(U, O, F0, I0), ~d_ci_pt(I0), Assign(V, U, F1, I1), ~d_Assign(I1), ci_typeFilter(V, O, F2, I2), ~d_ci_typeFilter(I2).
+0.999::t_67_ci_fpt(O1, F, O2, F0, F1, F2, conj(F0, F1, F2)) :- ci_pt(V, O2, F0, I0), ~d_ci_pt(I0), Store(U, F, V, F1, I1), ~d_Store(I1), ci_pt(U, O1, F2, I2), ~d_ci_pt(I2).
+0.999::t_68_ci_pt(Y, O2, F0, F1, F2, conj(F0, F1, F2)) :- ci_pt(X, O1, F0, I0), ~d_ci_pt(I0), Load(Y, X, F, F1, I1), ~d_Load(I1), ci_fpt(O1, F, O2, F2, I2), ~d_ci_fpt(I2).
+0.999::t_69_ci_fptStat(F, O, F0, F1, conj(F0, F1)) :- ci_pt(V, O, F0, I0), ~d_ci_pt(I0), StoreStat(F, V, F1, I1), ~d_StoreStat(I1).
+0.999::t_70_ci_pt(Y, O, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- LoadStat(Y, F, F0, I0), ~d_LoadStat(I0), ci_fptStat(F, O, F1, I1), ~d_ci_fptStat(I1), MV(M, Y, F2, I2), ~d_MV(I2), ci_reachableM(M, F3, I3), ~d_ci_reachableM(I3).
+0.999::t_71_ci_reachableT(T, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- ci_reachableM(M, F0, I0), ~d_ci_reachableM(I0), MV(M, V, F1, I1), ~d_MV(I1), Alloc(V, H, F2, I2), ~d_Alloc(I2), HT(H, T, F3, I3), ~d_HT(I3).
+0.999::t_72_ci_reachableT(T, F0, F1, conj(F0, F1)) :- ci_reachableM(M, F0, I0), ~d_ci_reachableM(I0), StaticTM(T, M, F1, I1), ~d_StaticTM(I1).
+0.999::t_73_ci_reachableT(T, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- ci_reachableM(M, F0, I0), ~d_ci_reachableM(I0), MV(M, V, F1, I1), ~d_MV(I1), StoreStat(F, V, F2, I2), ~d_StoreStat(I2), StaticTF(T, F, F3, I3), ~d_StaticTF(I3).
+0.999::t_74_ci_reachableT(T, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- ci_reachableM(M, F0, I0), ~d_ci_reachableM(I0), MV(M, V, F1, I1), ~d_MV(I1), LoadStat(V, F, F2, I2), ~d_LoadStat(I2), StaticTF(T, F, F3, I3), ~d_StaticTF(I3).
+0.999::t_75_ci_reachableT(T, F0, F1, F2, conj(F0, F1, F2)) :- ClassT(T, F0, I0), ~d_ClassT(I0), ci_reachableT(S, F1, I1), ~d_ci_reachableT(I1), Subtype(S, T, F2, I2), ~d_Subtype(I2).
+
+// secondphaseIdb
+Alloc(X0, X1, F, I) :- agg_Alloc(X0, X1, F, I), ~Alloc(X0, X1, F2, I2).
+tt_Alloc(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_Alloc(X0, X1, F1, I1), Alloc(X0, X1, F2, I2), ~d_Alloc(I2), equiv(F1, F2).
+Alloc(X0, X1, D, I1) :- tt_Alloc(X0, X1, F1, F2, I1, I2, D).
+d_Alloc(I2) :- tt_Alloc(X0, X1, F1, F2, I1, I2, D).
+Any(X0, F, I) :- agg_Any(X0, F, I), ~Any(X0, F2, I2).
+tt_Any(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_Any(X0, F1, I1), Any(X0, F2, I2), ~d_Any(I2), equiv(F1, F2).
+Any(X0, D, I1) :- tt_Any(X0, F1, F2, I1, I2, D).
+d_Any(I2) :- tt_Any(X0, F1, F2, I1, I2, D).
+Assign(X0, X1, F, I) :- agg_Assign(X0, X1, F, I), ~Assign(X0, X1, F2, I2).
+tt_Assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_Assign(X0, X1, F1, I1), Assign(X0, X1, F2, I2), ~d_Assign(I2), equiv(F1, F2).
+Assign(X0, X1, D, I1) :- tt_Assign(X0, X1, F1, F2, I1, I2, D).
+d_Assign(I2) :- tt_Assign(X0, X1, F1, F2, I1, I2, D).
+AssignPrim(X0, X1, F, I) :- agg_AssignPrim(X0, X1, F, I), ~AssignPrim(X0, X1, F2, I2).
+tt_AssignPrim(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_AssignPrim(X0, X1, F1, I1), AssignPrim(X0, X1, F2, I2), ~d_AssignPrim(I2), equiv(F1, F2).
+AssignPrim(X0, X1, D, I1) :- tt_AssignPrim(X0, X1, F1, F2, I1, I2, D).
+d_AssignPrim(I2) :- tt_AssignPrim(X0, X1, F1, F2, I1, I2, D).
+CC(X0, X1, F, I) :- agg_CC(X0, X1, F, I), ~CC(X0, X1, F2, I2).
+tt_CC(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CC(X0, X1, F1, I1), CC(X0, X1, F2, I2), ~d_CC(I2), equiv(F1, F2).
+CC(X0, X1, D, I1) :- tt_CC(X0, X1, F1, F2, I1, I2, D).
+d_CC(I2) :- tt_CC(X0, X1, F1, F2, I1, I2, D).
+CCL(X0, X1, F, I) :- agg_CCL(X0, X1, F, I), ~CCL(X0, X1, F2, I2).
+tt_CCL(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CCL(X0, X1, F1, I1), CCL(X0, X1, F2, I2), ~d_CCL(I2), equiv(F1, F2).
+CCL(X0, X1, D, I1) :- tt_CCL(X0, X1, F1, F2, I1, I2, D).
+d_CCL(I2) :- tt_CCL(X0, X1, F1, F2, I1, I2, D).
+CH(X0, X1, F, I) :- agg_CH(X0, X1, F, I), ~CH(X0, X1, F2, I2).
+tt_CH(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CH(X0, X1, F1, I1), CH(X0, X1, F2, I2), ~d_CH(I2), equiv(F1, F2).
+CH(X0, X1, D, I1) :- tt_CH(X0, X1, F1, F2, I1, I2, D).
+d_CH(I2) :- tt_CH(X0, X1, F1, F2, I1, I2, D).
+CI(X0, X1, F, I) :- agg_CI(X0, X1, F, I), ~CI(X0, X1, F2, I2).
+tt_CI(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CI(X0, X1, F1, I1), CI(X0, X1, F2, I2), ~d_CI(I2), equiv(F1, F2).
+CI(X0, X1, D, I1) :- tt_CI(X0, X1, F1, F2, I1, I2, D).
+d_CI(I2) :- tt_CI(X0, X1, F1, F2, I1, I2, D).
+CMap(X0, X1, F, I) :- agg_CMap(X0, X1, F, I), ~CMap(X0, X1, F2, I2).
+tt_CMap(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CMap(X0, X1, F1, I1), CMap(X0, X1, F2, I2), ~d_CMap(I2), equiv(F1, F2).
+CMap(X0, X1, D, I1) :- tt_CMap(X0, X1, F1, F2, I1, I2, D).
+d_CMap(I2) :- tt_CMap(X0, X1, F1, F2, I1, I2, D).
+ClassT(X0, F, I) :- agg_ClassT(X0, F, I), ~ClassT(X0, F2, I2).
+tt_ClassT(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_ClassT(X0, F1, I1), ClassT(X0, F2, I2), ~d_ClassT(I2), equiv(F1, F2).
+ClassT(X0, D, I1) :- tt_ClassT(X0, F1, F2, I1, I2, D).
+d_ClassT(I2) :- tt_ClassT(X0, F1, F2, I1, I2, D).
+ClinitTM(X0, X1, F, I) :- agg_ClinitTM(X0, X1, F, I), ~ClinitTM(X0, X1, F2, I2).
+tt_ClinitTM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_ClinitTM(X0, X1, F1, I1), ClinitTM(X0, X1, F2, I2), ~d_ClinitTM(I2), equiv(F1, F2).
+ClinitTM(X0, X1, D, I1) :- tt_ClinitTM(X0, X1, F1, F2, I1, I2, D).
+d_ClinitTM(I2) :- tt_ClinitTM(X0, X1, F1, F2, I1, I2, D).
+Dispatch(X0, X1, X2, F, I) :- agg_Dispatch(X0, X1, X2, F, I), ~Dispatch(X0, X1, X2, F2, I2).
+tt_Dispatch(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_Dispatch(X0, X1, X2, F1, I1), Dispatch(X0, X1, X2, F2, I2), ~d_Dispatch(I2), equiv(F1, F2).
+Dispatch(X0, X1, X2, D, I1) :- tt_Dispatch(X0, X1, X2, F1, F2, I1, I2, D).
+d_Dispatch(I2) :- tt_Dispatch(X0, X1, X2, F1, F2, I1, I2, D).
+GlobalAlloc(X0, X1, F, I) :- agg_GlobalAlloc(X0, X1, F, I), ~GlobalAlloc(X0, X1, F2, I2).
+tt_GlobalAlloc(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_GlobalAlloc(X0, X1, F1, I1), GlobalAlloc(X0, X1, F2, I2), ~d_GlobalAlloc(I2), equiv(F1, F2).
+GlobalAlloc(X0, X1, D, I1) :- tt_GlobalAlloc(X0, X1, F1, F2, I1, I2, D).
+d_GlobalAlloc(I2) :- tt_GlobalAlloc(X0, X1, F1, F2, I1, I2, D).
+HT(X0, X1, F, I) :- agg_HT(X0, X1, F, I), ~HT(X0, X1, F2, I2).
+tt_HT(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_HT(X0, X1, F1, I1), HT(X0, X1, F2, I2), ~d_HT(I2), equiv(F1, F2).
+HT(X0, X1, D, I1) :- tt_HT(X0, X1, F1, F2, I1, I2, D).
+d_HT(I2) :- tt_HT(X0, X1, F1, F2, I1, I2, D).
+HTFilter(X0, X1, F, I) :- agg_HTFilter(X0, X1, F, I), ~HTFilter(X0, X1, F2, I2).
+tt_HTFilter(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_HTFilter(X0, X1, F1, I1), HTFilter(X0, X1, F2, I2), ~d_HTFilter(I2), equiv(F1, F2).
+HTFilter(X0, X1, D, I1) :- tt_HTFilter(X0, X1, F1, F2, I1, I2, D).
+d_HTFilter(I2) :- tt_HTFilter(X0, X1, F1, F2, I1, I2, D).
+IHM(X0, X1, X2, F, I) :- agg_IHM(X0, X1, X2, F, I), ~IHM(X0, X1, X2, F2, I2).
+tt_IHM(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_IHM(X0, X1, X2, F1, I1), IHM(X0, X1, X2, F2, I2), ~d_IHM(I2), equiv(F1, F2).
+IHM(X0, X1, X2, D, I1) :- tt_IHM(X0, X1, X2, F1, F2, I1, I2, D).
+d_IHM(I2) :- tt_IHM(X0, X1, X2, F1, F2, I1, I2, D).
+IinvkArg(X0, X1, X2, F, I) :- agg_IinvkArg(X0, X1, X2, F, I), ~IinvkArg(X0, X1, X2, F2, I2).
+tt_IinvkArg(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_IinvkArg(X0, X1, X2, F1, I1), IinvkArg(X0, X1, X2, F2, I2), ~d_IinvkArg(I2), equiv(F1, F2).
+IinvkArg(X0, X1, X2, D, I1) :- tt_IinvkArg(X0, X1, X2, F1, F2, I1, I2, D).
+d_IinvkArg(I2) :- tt_IinvkArg(X0, X1, X2, F1, F2, I1, I2, D).
+IinvkPrimArg(X0, X1, X2, F, I) :- agg_IinvkPrimArg(X0, X1, X2, F, I), ~IinvkPrimArg(X0, X1, X2, F2, I2).
+tt_IinvkPrimArg(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_IinvkPrimArg(X0, X1, X2, F1, I1), IinvkPrimArg(X0, X1, X2, F2, I2), ~d_IinvkPrimArg(I2), equiv(F1, F2).
+IinvkPrimArg(X0, X1, X2, D, I1) :- tt_IinvkPrimArg(X0, X1, X2, F1, F2, I1, I2, D).
+d_IinvkPrimArg(I2) :- tt_IinvkPrimArg(X0, X1, X2, F1, F2, I1, I2, D).
+IinvkPrimRet(X0, X1, X2, F, I) :- agg_IinvkPrimRet(X0, X1, X2, F, I), ~IinvkPrimRet(X0, X1, X2, F2, I2).
+tt_IinvkPrimRet(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_IinvkPrimRet(X0, X1, X2, F1, I1), IinvkPrimRet(X0, X1, X2, F2, I2), ~d_IinvkPrimRet(I2), equiv(F1, F2).
+IinvkPrimRet(X0, X1, X2, D, I1) :- tt_IinvkPrimRet(X0, X1, X2, F1, F2, I1, I2, D).
+d_IinvkPrimRet(I2) :- tt_IinvkPrimRet(X0, X1, X2, F1, F2, I1, I2, D).
+IinvkRet(X0, X1, X2, F, I) :- agg_IinvkRet(X0, X1, X2, F, I), ~IinvkRet(X0, X1, X2, F2, I2).
+tt_IinvkRet(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_IinvkRet(X0, X1, X2, F1, I1), IinvkRet(X0, X1, X2, F2, I2), ~d_IinvkRet(I2), equiv(F1, F2).
+IinvkRet(X0, X1, X2, D, I1) :- tt_IinvkRet(X0, X1, X2, F1, F2, I1, I2, D).
+d_IinvkRet(I2) :- tt_IinvkRet(X0, X1, X2, F1, F2, I1, I2, D).
+LCL(X0, X1, F, I) :- agg_LCL(X0, X1, F, I), ~LCL(X0, X1, F2, I2).
+tt_LCL(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_LCL(X0, X1, F1, I1), LCL(X0, X1, F2, I2), ~d_LCL(I2), equiv(F1, F2).
+LCL(X0, X1, D, I1) :- tt_LCL(X0, X1, F1, F2, I1, I2, D).
+d_LCL(I2) :- tt_LCL(X0, X1, F1, F2, I1, I2, D).
+Load(X0, X1, X2, F, I) :- agg_Load(X0, X1, X2, F, I), ~Load(X0, X1, X2, F2, I2).
+tt_Load(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_Load(X0, X1, X2, F1, I1), Load(X0, X1, X2, F2, I2), ~d_Load(I2), equiv(F1, F2).
+Load(X0, X1, X2, D, I1) :- tt_Load(X0, X1, X2, F1, F2, I1, I2, D).
+d_Load(I2) :- tt_Load(X0, X1, X2, F1, F2, I1, I2, D).
+LoadPrim(X0, X1, X2, F, I) :- agg_LoadPrim(X0, X1, X2, F, I), ~LoadPrim(X0, X1, X2, F2, I2).
+tt_LoadPrim(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_LoadPrim(X0, X1, X2, F1, I1), LoadPrim(X0, X1, X2, F2, I2), ~d_LoadPrim(I2), equiv(F1, F2).
+LoadPrim(X0, X1, X2, D, I1) :- tt_LoadPrim(X0, X1, X2, F1, F2, I1, I2, D).
+d_LoadPrim(I2) :- tt_LoadPrim(X0, X1, X2, F1, F2, I1, I2, D).
+LoadStat(X0, X1, F, I) :- agg_LoadStat(X0, X1, F, I), ~LoadStat(X0, X1, F2, I2).
+tt_LoadStat(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_LoadStat(X0, X1, F1, I1), LoadStat(X0, X1, F2, I2), ~d_LoadStat(I2), equiv(F1, F2).
+LoadStat(X0, X1, D, I1) :- tt_LoadStat(X0, X1, F1, F2, I1, I2, D).
+d_LoadStat(I2) :- tt_LoadStat(X0, X1, F1, F2, I1, I2, D).
+LoadStatPrim(X0, X1, F, I) :- agg_LoadStatPrim(X0, X1, F, I), ~LoadStatPrim(X0, X1, F2, I2).
+tt_LoadStatPrim(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_LoadStatPrim(X0, X1, F1, I1), LoadStatPrim(X0, X1, F2, I2), ~d_LoadStatPrim(I2), equiv(F1, F2).
+LoadStatPrim(X0, X1, D, I1) :- tt_LoadStatPrim(X0, X1, F1, F2, I1, I2, D).
+d_LoadStatPrim(I2) :- tt_LoadStatPrim(X0, X1, F1, F2, I1, I2, D).
+MI(X0, X1, F, I) :- agg_MI(X0, X1, F, I), ~MI(X0, X1, F2, I2).
+tt_MI(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_MI(X0, X1, F1, I1), MI(X0, X1, F2, I2), ~d_MI(I2), equiv(F1, F2).
+MI(X0, X1, D, I1) :- tt_MI(X0, X1, F1, F2, I1, I2, D).
+d_MI(I2) :- tt_MI(X0, X1, F1, F2, I1, I2, D).
+MU(X0, X1, F, I) :- agg_MU(X0, X1, F, I), ~MU(X0, X1, F2, I2).
+tt_MU(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_MU(X0, X1, F1, I1), MU(X0, X1, F2, I2), ~d_MU(I2), equiv(F1, F2).
+MU(X0, X1, D, I1) :- tt_MU(X0, X1, F1, F2, I1, I2, D).
+d_MU(I2) :- tt_MU(X0, X1, F1, F2, I1, I2, D).
+MV(X0, X1, F, I) :- agg_MV(X0, X1, F, I), ~MV(X0, X1, F2, I2).
+tt_MV(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_MV(X0, X1, F1, I1), MV(X0, X1, F2, I2), ~d_MV(I2), equiv(F1, F2).
+MV(X0, X1, D, I1) :- tt_MV(X0, X1, F1, F2, I1, I2, D).
+d_MV(I2) :- tt_MV(X0, X1, F1, F2, I1, I2, D).
+MmethArg(X0, X1, X2, F, I) :- agg_MmethArg(X0, X1, X2, F, I), ~MmethArg(X0, X1, X2, F2, I2).
+tt_MmethArg(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_MmethArg(X0, X1, X2, F1, I1), MmethArg(X0, X1, X2, F2, I2), ~d_MmethArg(I2), equiv(F1, F2).
+MmethArg(X0, X1, X2, D, I1) :- tt_MmethArg(X0, X1, X2, F1, F2, I1, I2, D).
+d_MmethArg(I2) :- tt_MmethArg(X0, X1, X2, F1, F2, I1, I2, D).
+MmethPrimArg(X0, X1, X2, F, I) :- agg_MmethPrimArg(X0, X1, X2, F, I), ~MmethPrimArg(X0, X1, X2, F2, I2).
+tt_MmethPrimArg(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_MmethPrimArg(X0, X1, X2, F1, I1), MmethPrimArg(X0, X1, X2, F2, I2), ~d_MmethPrimArg(I2), equiv(F1, F2).
+MmethPrimArg(X0, X1, X2, D, I1) :- tt_MmethPrimArg(X0, X1, X2, F1, F2, I1, I2, D).
+d_MmethPrimArg(I2) :- tt_MmethPrimArg(X0, X1, X2, F1, F2, I1, I2, D).
+MmethPrimRet(X0, X1, X2, F, I) :- agg_MmethPrimRet(X0, X1, X2, F, I), ~MmethPrimRet(X0, X1, X2, F2, I2).
+tt_MmethPrimRet(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_MmethPrimRet(X0, X1, X2, F1, I1), MmethPrimRet(X0, X1, X2, F2, I2), ~d_MmethPrimRet(I2), equiv(F1, F2).
+MmethPrimRet(X0, X1, X2, D, I1) :- tt_MmethPrimRet(X0, X1, X2, F1, F2, I1, I2, D).
+d_MmethPrimRet(I2) :- tt_MmethPrimRet(X0, X1, X2, F1, F2, I1, I2, D).
+MmethRet(X0, X1, X2, F, I) :- agg_MmethRet(X0, X1, X2, F, I), ~MmethRet(X0, X1, X2, F2, I2).
+tt_MmethRet(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_MmethRet(X0, X1, X2, F1, I1), MmethRet(X0, X1, X2, F2, I2), ~d_MmethRet(I2), equiv(F1, F2).
+MmethRet(X0, X1, X2, D, I1) :- tt_MmethRet(X0, X1, X2, F1, F2, I1, I2, D).
+d_MmethRet(I2) :- tt_MmethRet(X0, X1, X2, F1, F2, I1, I2, D).
+SinkLabel(X0, F, I) :- agg_SinkLabel(X0, F, I), ~SinkLabel(X0, F2, I2).
+tt_SinkLabel(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_SinkLabel(X0, F1, I1), SinkLabel(X0, F2, I2), ~d_SinkLabel(I2), equiv(F1, F2).
+SinkLabel(X0, D, I1) :- tt_SinkLabel(X0, F1, F2, I1, I2, D).
+d_SinkLabel(I2) :- tt_SinkLabel(X0, F1, F2, I1, I2, D).
+SpecIM(X0, X1, F, I) :- agg_SpecIM(X0, X1, F, I), ~SpecIM(X0, X1, F2, I2).
+tt_SpecIM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_SpecIM(X0, X1, F1, I1), SpecIM(X0, X1, F2, I2), ~d_SpecIM(I2), equiv(F1, F2).
+SpecIM(X0, X1, D, I1) :- tt_SpecIM(X0, X1, F1, F2, I1, I2, D).
+d_SpecIM(I2) :- tt_SpecIM(X0, X1, F1, F2, I1, I2, D).
+SrcLabel(X0, F, I) :- agg_SrcLabel(X0, F, I), ~SrcLabel(X0, F2, I2).
+tt_SrcLabel(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_SrcLabel(X0, F1, I1), SrcLabel(X0, F2, I2), ~d_SrcLabel(I2), equiv(F1, F2).
+SrcLabel(X0, D, I1) :- tt_SrcLabel(X0, F1, F2, I1, I2, D).
+d_SrcLabel(I2) :- tt_SrcLabel(X0, F1, F2, I1, I2, D).
+StatIM(X0, X1, F, I) :- agg_StatIM(X0, X1, F, I), ~StatIM(X0, X1, F2, I2).
+tt_StatIM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_StatIM(X0, X1, F1, I1), StatIM(X0, X1, F2, I2), ~d_StatIM(I2), equiv(F1, F2).
+StatIM(X0, X1, D, I1) :- tt_StatIM(X0, X1, F1, F2, I1, I2, D).
+d_StatIM(I2) :- tt_StatIM(X0, X1, F1, F2, I1, I2, D).
+StaticTF(X0, X1, F, I) :- agg_StaticTF(X0, X1, F, I), ~StaticTF(X0, X1, F2, I2).
+tt_StaticTF(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_StaticTF(X0, X1, F1, I1), StaticTF(X0, X1, F2, I2), ~d_StaticTF(I2), equiv(F1, F2).
+StaticTF(X0, X1, D, I1) :- tt_StaticTF(X0, X1, F1, F2, I1, I2, D).
+d_StaticTF(I2) :- tt_StaticTF(X0, X1, F1, F2, I1, I2, D).
+StaticTM(X0, X1, F, I) :- agg_StaticTM(X0, X1, F, I), ~StaticTM(X0, X1, F2, I2).
+tt_StaticTM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_StaticTM(X0, X1, F1, I1), StaticTM(X0, X1, F2, I2), ~d_StaticTM(I2), equiv(F1, F2).
+StaticTM(X0, X1, D, I1) :- tt_StaticTM(X0, X1, F1, F2, I1, I2, D).
+d_StaticTM(I2) :- tt_StaticTM(X0, X1, F1, F2, I1, I2, D).
+Store(X0, X1, X2, F, I) :- agg_Store(X0, X1, X2, F, I), ~Store(X0, X1, X2, F2, I2).
+tt_Store(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_Store(X0, X1, X2, F1, I1), Store(X0, X1, X2, F2, I2), ~d_Store(I2), equiv(F1, F2).
+Store(X0, X1, X2, D, I1) :- tt_Store(X0, X1, X2, F1, F2, I1, I2, D).
+d_Store(I2) :- tt_Store(X0, X1, X2, F1, F2, I1, I2, D).
+StorePrim(X0, X1, X2, F, I) :- agg_StorePrim(X0, X1, X2, F, I), ~StorePrim(X0, X1, X2, F2, I2).
+tt_StorePrim(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_StorePrim(X0, X1, X2, F1, I1), StorePrim(X0, X1, X2, F2, I2), ~d_StorePrim(I2), equiv(F1, F2).
+StorePrim(X0, X1, X2, D, I1) :- tt_StorePrim(X0, X1, X2, F1, F2, I1, I2, D).
+d_StorePrim(I2) :- tt_StorePrim(X0, X1, X2, F1, F2, I1, I2, D).
+StoreStat(X0, X1, F, I) :- agg_StoreStat(X0, X1, F, I), ~StoreStat(X0, X1, F2, I2).
+tt_StoreStat(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_StoreStat(X0, X1, F1, I1), StoreStat(X0, X1, F2, I2), ~d_StoreStat(I2), equiv(F1, F2).
+StoreStat(X0, X1, D, I1) :- tt_StoreStat(X0, X1, F1, F2, I1, I2, D).
+d_StoreStat(I2) :- tt_StoreStat(X0, X1, F1, F2, I1, I2, D).
+StoreStatPrim(X0, X1, F, I) :- agg_StoreStatPrim(X0, X1, F, I), ~StoreStatPrim(X0, X1, F2, I2).
+tt_StoreStatPrim(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_StoreStatPrim(X0, X1, F1, I1), StoreStatPrim(X0, X1, F2, I2), ~d_StoreStatPrim(I2), equiv(F1, F2).
+StoreStatPrim(X0, X1, D, I1) :- tt_StoreStatPrim(X0, X1, F1, F2, I1, I2, D).
+d_StoreStatPrim(I2) :- tt_StoreStatPrim(X0, X1, F1, F2, I1, I2, D).
+SubSig(X0, X1, F, I) :- agg_SubSig(X0, X1, F, I), ~SubSig(X0, X1, F2, I2).
+tt_SubSig(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_SubSig(X0, X1, F1, I1), SubSig(X0, X1, F2, I2), ~d_SubSig(I2), equiv(F1, F2).
+SubSig(X0, X1, D, I1) :- tt_SubSig(X0, X1, F1, F2, I1, I2, D).
+d_SubSig(I2) :- tt_SubSig(X0, X1, F1, F2, I1, I2, D).
+Subtype(X0, X1, F, I) :- agg_Subtype(X0, X1, F, I), ~Subtype(X0, X1, F2, I2).
+tt_Subtype(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_Subtype(X0, X1, F1, I1), Subtype(X0, X1, F2, I2), ~d_Subtype(I2), equiv(F1, F2).
+Subtype(X0, X1, D, I1) :- tt_Subtype(X0, X1, F1, F2, I1, I2, D).
+d_Subtype(I2) :- tt_Subtype(X0, X1, F1, F2, I1, I2, D).
+VT(X0, X1, F, I) :- agg_VT(X0, X1, F, I), ~VT(X0, X1, F2, I2).
+tt_VT(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_VT(X0, X1, F1, I1), VT(X0, X1, F2, I2), ~d_VT(I2), equiv(F1, F2).
+VT(X0, X1, D, I1) :- tt_VT(X0, X1, F1, F2, I1, I2, D).
+d_VT(I2) :- tt_VT(X0, X1, F1, F2, I1, I2, D).
+VirtIM(X0, X1, F, I) :- agg_VirtIM(X0, X1, F, I), ~VirtIM(X0, X1, F2, I2).
+tt_VirtIM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_VirtIM(X0, X1, F1, I1), VirtIM(X0, X1, F2, I2), ~d_VirtIM(I2), equiv(F1, F2).
+VirtIM(X0, X1, D, I1) :- tt_VirtIM(X0, X1, F1, F2, I1, I2, D).
+d_VirtIM(I2) :- tt_VirtIM(X0, X1, F1, F2, I1, I2, D).
+ci_IM(X0, X1, F, I) :- agg_ci_IM(X0, X1, F, I), ~ci_IM(X0, X1, F2, I2).
+tt_ci_IM(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_IM(X0, X1, F1, I1), ci_IM(X0, X1, F2, I2), ~d_ci_IM(I2), equiv(F1, F2).
+ci_IM(X0, X1, D, I1) :- tt_ci_IM(X0, X1, F1, F2, I1, I2, D).
+d_ci_IM(I2) :- tt_ci_IM(X0, X1, F1, F2, I1, I2, D).
+ci_fpt(X0, X1, X2, F, I) :- agg_ci_fpt(X0, X1, X2, F, I), ~ci_fpt(X0, X1, X2, F2, I2).
+tt_ci_fpt(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_fpt(X0, X1, X2, F1, I1), ci_fpt(X0, X1, X2, F2, I2), ~d_ci_fpt(I2), equiv(F1, F2).
+ci_fpt(X0, X1, X2, D, I1) :- tt_ci_fpt(X0, X1, X2, F1, F2, I1, I2, D).
+d_ci_fpt(I2) :- tt_ci_fpt(X0, X1, X2, F1, F2, I1, I2, D).
+ci_fptStat(X0, X1, F, I) :- agg_ci_fptStat(X0, X1, F, I), ~ci_fptStat(X0, X1, F2, I2).
+tt_ci_fptStat(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_fptStat(X0, X1, F1, I1), ci_fptStat(X0, X1, F2, I2), ~d_ci_fptStat(I2), equiv(F1, F2).
+ci_fptStat(X0, X1, D, I1) :- tt_ci_fptStat(X0, X1, F1, F2, I1, I2, D).
+d_ci_fptStat(I2) :- tt_ci_fptStat(X0, X1, F1, F2, I1, I2, D).
+ci_pt(X0, X1, F, I) :- agg_ci_pt(X0, X1, F, I), ~ci_pt(X0, X1, F2, I2).
+tt_ci_pt(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_pt(X0, X1, F1, I1), ci_pt(X0, X1, F2, I2), ~d_ci_pt(I2), equiv(F1, F2).
+ci_pt(X0, X1, D, I1) :- tt_ci_pt(X0, X1, F1, F2, I1, I2, D).
+d_ci_pt(I2) :- tt_ci_pt(X0, X1, F1, F2, I1, I2, D).
+ci_reachableI(X0, F, I) :- agg_ci_reachableI(X0, F, I), ~ci_reachableI(X0, F2, I2).
+tt_ci_reachableI(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_reachableI(X0, F1, I1), ci_reachableI(X0, F2, I2), ~d_ci_reachableI(I2), equiv(F1, F2).
+ci_reachableI(X0, D, I1) :- tt_ci_reachableI(X0, F1, F2, I1, I2, D).
+d_ci_reachableI(I2) :- tt_ci_reachableI(X0, F1, F2, I1, I2, D).
+ci_reachableM(X0, F, I) :- agg_ci_reachableM(X0, F, I), ~ci_reachableM(X0, F2, I2).
+tt_ci_reachableM(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_reachableM(X0, F1, I1), ci_reachableM(X0, F2, I2), ~d_ci_reachableM(I2), equiv(F1, F2).
+ci_reachableM(X0, D, I1) :- tt_ci_reachableM(X0, F1, F2, I1, I2, D).
+d_ci_reachableM(I2) :- tt_ci_reachableM(X0, F1, F2, I1, I2, D).
+ci_reachableT(X0, F, I) :- agg_ci_reachableT(X0, F, I), ~ci_reachableT(X0, F2, I2).
+tt_ci_reachableT(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_reachableT(X0, F1, I1), ci_reachableT(X0, F2, I2), ~d_ci_reachableT(I2), equiv(F1, F2).
+ci_reachableT(X0, D, I1) :- tt_ci_reachableT(X0, F1, F2, I1, I2, D).
+d_ci_reachableT(I2) :- tt_ci_reachableT(X0, F1, F2, I1, I2, D).
+ci_typeFilter(X0, X1, F, I) :- agg_ci_typeFilter(X0, X1, F, I), ~ci_typeFilter(X0, X1, F2, I2).
+tt_ci_typeFilter(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_ci_typeFilter(X0, X1, F1, I1), ci_typeFilter(X0, X1, F2, I2), ~d_ci_typeFilter(I2), equiv(F1, F2).
+ci_typeFilter(X0, X1, D, I1) :- tt_ci_typeFilter(X0, X1, F1, F2, I1, I2, D).
+d_ci_typeFilter(I2) :- tt_ci_typeFilter(X0, X1, F1, F2, I1, I2, D).
+interprocAssign(X0, X1, F, I) :- agg_interprocAssign(X0, X1, F, I), ~interprocAssign(X0, X1, F2, I2).
+tt_interprocAssign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_interprocAssign(X0, X1, F1, I1), interprocAssign(X0, X1, F2, I2), ~d_interprocAssign(I2), equiv(F1, F2).
+interprocAssign(X0, X1, D, I1) :- tt_interprocAssign(X0, X1, F1, F2, I1, I2, D).
+d_interprocAssign(I2) :- tt_interprocAssign(X0, X1, F1, F2, I1, I2, D).
+transferPrimPrim(X0, X1, F, I) :- agg_transferPrimPrim(X0, X1, F, I), ~transferPrimPrim(X0, X1, F2, I2).
+tt_transferPrimPrim(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_transferPrimPrim(X0, X1, F1, I1), transferPrimPrim(X0, X1, F2, I2), ~d_transferPrimPrim(I2), equiv(F1, F2).
+transferPrimPrim(X0, X1, D, I1) :- tt_transferPrimPrim(X0, X1, F1, F2, I1, I2, D).
+d_transferPrimPrim(I2) :- tt_transferPrimPrim(X0, X1, F1, F2, I1, I2, D).
+transferPrimRef(X0, X1, F, I) :- agg_transferPrimRef(X0, X1, F, I), ~transferPrimRef(X0, X1, F2, I2).
+tt_transferPrimRef(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_transferPrimRef(X0, X1, F1, I1), transferPrimRef(X0, X1, F2, I2), ~d_transferPrimRef(I2), equiv(F1, F2).
+transferPrimRef(X0, X1, D, I1) :- tt_transferPrimRef(X0, X1, F1, F2, I1, I2, D).
+d_transferPrimRef(I2) :- tt_transferPrimRef(X0, X1, F1, F2, I1, I2, D).
+transferRefPrim(X0, X1, F, I) :- agg_transferRefPrim(X0, X1, F, I), ~transferRefPrim(X0, X1, F2, I2).
+tt_transferRefPrim(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_transferRefPrim(X0, X1, F1, I1), transferRefPrim(X0, X1, F2, I2), ~d_transferRefPrim(I2), equiv(F1, F2).
+transferRefPrim(X0, X1, D, I1) :- tt_transferRefPrim(X0, X1, F1, F2, I1, I2, D).
+d_transferRefPrim(I2) :- tt_transferRefPrim(X0, X1, F1, F2, I1, I2, D).
+transferRefRef(X0, X1, F, I) :- agg_transferRefRef(X0, X1, F, I), ~transferRefRef(X0, X1, F2, I2).
+tt_transferRefRef(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_transferRefRef(X0, X1, F1, I1), transferRefRef(X0, X1, F2, I2), ~d_transferRefRef(I2), equiv(F1, F2).
+transferRefRef(X0, X1, D, I1) :- tt_transferRefRef(X0, X1, F1, F2, I1, I2, D).
+d_transferRefRef(I2) :- tt_transferRefRef(X0, X1, F1, F2, I1, I2, D).
+varInLabel(X0, X1, F, I) :- agg_varInLabel(X0, X1, F, I), ~varInLabel(X0, X1, F2, I2).
+tt_varInLabel(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_varInLabel(X0, X1, F1, I1), varInLabel(X0, X1, F2, I2), ~d_varInLabel(I2), equiv(F1, F2).
+varInLabel(X0, X1, D, I1) :- tt_varInLabel(X0, X1, F1, F2, I1, I2, D).
+d_varInLabel(I2) :- tt_varInLabel(X0, X1, F1, F2, I1, I2, D).
+varOutLabel(X0, X1, F, I) :- agg_varOutLabel(X0, X1, F, I), ~varOutLabel(X0, X1, F2, I2).
+tt_varOutLabel(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_varOutLabel(X0, X1, F1, I1), varOutLabel(X0, X1, F2, I2), ~d_varOutLabel(I2), equiv(F1, F2).
+varOutLabel(X0, X1, D, I1) :- tt_varOutLabel(X0, X1, F1, F2, I1, I2, D).
+d_varOutLabel(I2) :- tt_varOutLabel(X0, X1, F1, F2, I1, I2, D).
+
+// final
+req_ci_IM(X0, X1, F) :- ci_IM(X0, X1, F, I), ~d_ci_IM(I).
+req_ci_pt(X0, X1, F) :- ci_pt(X0, X1, F, I), ~d_ci_pt(I).
+req_ci_reachableM(X0, F) :- ci_reachableM(X0, F, I), ~d_ci_reachableM(I).

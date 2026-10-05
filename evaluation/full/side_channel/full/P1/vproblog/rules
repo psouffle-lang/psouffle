@@ -1,0 +1,324 @@
+// firstphaseEdb
+t_1_KEY_NUMBER(V0, V1, F0, conj(F0)) :- esrc_KEY_NUMBER(V0, V1, F0).
+t_2_KEY_SENSITIVE(V0, F0, conj(F0)) :- esrc_KEY_SENSITIVE(V0, F0).
+t_3_RAND(V0, F0, conj(F0)) :- esrc_RAND(V0, F0).
+t_4_RAND_NUMBER(V0, V1, F0, conj(F0)) :- esrc_RAND_NUMBER(V0, V1, F0).
+t_5_REC_ALL_INC(V0, V1, V2, F0, conj(F0)) :- esrc_REC_ALL_INC(V0, V1, V2, F0).
+t_6_REC_RAND_VAR(V0, V1, V2, F0, conj(F0)) :- esrc_REC_RAND_VAR(V0, V1, V2, F0).
+t_7_Time(V0, F0, conj(F0)) :- esrc_Time(V0, F0).
+t_8_assign(V0, V1, F0, conj(F0)) :- esrc_assign(V0, V1, F0).
+t_9_binary_constant(V0, V1, F0, conj(F0)) :- esrc_binary_constant(V0, V1, F0).
+t_10_icmp_assign(V0, V1, F0, conj(F0)) :- esrc_icmp_assign(V0, V1, F0).
+t_11_load_assign(V0, V1, F0, conj(F0)) :- esrc_load_assign(V0, V1, F0).
+t_12_share(V0, V1, F0, conj(F0)) :- esrc_share(V0, V1, F0).
+t_13_store_assign(V0, V1, F0, conj(F0)) :- esrc_store_assign(V0, V1, F0).
+t_14_trunc_assign(V0, V1, F0, conj(F0)) :- esrc_trunc_assign(V0, V1, F0).
+t_15_xor_assign_left(V0, V1, F0, conj(F0)) :- esrc_xor_assign_left(V0, V1, F0).
+t_16_xor_assign_right(V0, V1, F0, conj(F0)) :- esrc_xor_assign_right(V0, V1, F0).
+t_17_zext_assign(V0, V1, F0, conj(F0)) :- esrc_zext_assign(V0, V1, F0).
+
+// secondphaseEdb
+BVAND_REC(X0, X1, X2, X3, F, I) :- agg_BVAND_REC(X0, X1, X2, X3, F, I).
+BVOR(X0, X1, X2, F, I) :- agg_BVOR(X0, X1, X2, F, I).
+BVOR_ALL_REC(X0, X1, X2, X3, F, I) :- agg_BVOR_ALL_REC(X0, X1, X2, X3, F, I).
+BVOR_RAND_REC(X0, X1, X2, X3, F, I) :- agg_BVOR_RAND_REC(X0, X1, X2, X3, F, I).
+BV_DIFF_REC(X0, X1, X2, X3, F, I) :- agg_BV_DIFF_REC(X0, X1, X2, X3, F, I).
+BV_EQUAL_ALL_REC(X0, X1, X2, F, I) :- agg_BV_EQUAL_ALL_REC(X0, X1, X2, F, I).
+BV_EQUAL_RAND_REC(X0, X1, X2, F, I) :- agg_BV_EQUAL_RAND_REC(X0, X1, X2, F, I).
+BV_INTERSECT_REC(X0, X1, X2, X3, F, I) :- agg_BV_INTERSECT_REC(X0, X1, X2, X3, F, I).
+BV_SAME_REC(X0, X1, X2, X3, F, I) :- agg_BV_SAME_REC(X0, X1, X2, X3, F, I).
+BV_ZERO_REC(X0, X1, X2, F, I) :- agg_BV_ZERO_REC(X0, X1, X2, F, I).
+CHECK_SAME(X0, X1, F, I) :- agg_CHECK_SAME(X0, X1, F, I).
+CONSTANT(X0, F, I) :- agg_CONSTANT(X0, F, I).
+DIFF_LABEL(X0, X1, F, I) :- agg_DIFF_LABEL(X0, X1, F, I).
+HD_SENSITIVE(X0, X1, F, I) :- agg_HD_SENSITIVE(X0, X1, F, I).
+INTERSECT_LABEL(X0, X1, F, I) :- agg_INTERSECT_LABEL(X0, X1, F, I).
+KEY_IND(X0, F, I) :- agg_KEY_IND(X0, F, I).
+KEY_NUMBER(X0, X1, F, I) :- agg_KEY_NUMBER(X0, X1, F, I).
+KEY_SENSITIVE(X0, F, I) :- agg_KEY_SENSITIVE(X0, F, I).
+RAND(X0, F, I) :- agg_RAND(X0, F, I).
+RAND_NUMBER(X0, X1, F, I) :- agg_RAND_NUMBER(X0, X1, F, I).
+REC_ALL_INC(X0, X1, X2, F, I) :- agg_REC_ALL_INC(X0, X1, X2, F, I).
+REC_RAND_VAR(X0, X1, X2, F, I) :- agg_REC_RAND_VAR(X0, X1, X2, F, I).
+SET_SUM(X0, X1, X2, F, I) :- agg_SET_SUM(X0, X1, X2, F, I).
+SET_SUM_REC(X0, X1, X2, X3, F, I) :- agg_SET_SUM_REC(X0, X1, X2, X3, F, I).
+TDEP(X0, X1, F, I) :- agg_TDEP(X0, X1, F, I).
+Time(X0, F, I) :- agg_Time(X0, F, I).
+XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F, I) :- agg_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F, I).
+XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F, I) :- agg_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F, I).
+andor_assign_left(X0, X1, F, I) :- agg_andor_assign_left(X0, X1, F, I).
+andor_assign_right(X0, X1, F, I) :- agg_andor_assign_right(X0, X1, F, I).
+assign(X0, X1, F, I) :- agg_assign(X0, X1, F, I).
+binary_constant(X0, X1, F, I) :- agg_binary_constant(X0, X1, F, I).
+equal_assign(X0, X1, F, I) :- agg_equal_assign(X0, X1, F, I).
+icmp_assign(X0, X1, F, I) :- agg_icmp_assign(X0, X1, F, I).
+load_assign(X0, X1, F, I) :- agg_load_assign(X0, X1, F, I).
+not_assign(X0, X1, F, I) :- agg_not_assign(X0, X1, F, I).
+q1(X0, F, I) :- agg_q1(X0, F, I).
+share(X0, X1, F, I) :- agg_share(X0, X1, F, I).
+store_assign(X0, X1, F, I) :- agg_store_assign(X0, X1, F, I).
+trunc_assign(X0, X1, F, I) :- agg_trunc_assign(X0, X1, F, I).
+xor_assign_left(X0, X1, F, I) :- agg_xor_assign_left(X0, X1, F, I).
+xor_assign_right(X0, X1, F, I) :- agg_xor_assign_right(X0, X1, F, I).
+zext_assign(X0, X1, F, I) :- agg_zext_assign(X0, X1, F, I).
+
+// firstphaseRecIdb
+t_18_REC_RAND_VAR(Var_z, Times, Tmp, F0, F1, F2, conj(F0, F1, F2)) :- REC_RAND_VAR(Var_x, Times, X, F0, I0), ~d_REC_RAND_VAR(I0), REC_RAND_VAR(Var_y, Times, Y, F1, I1), ~d_REC_RAND_VAR(I1), BVAND_REC(Var_x, Var_y, Var_z, Times, F2, I2), ~d_BVAND_REC(I2), Tmp = X band Y.
+0.94983::t_19_REC_RAND_VAR(Var_z, Times, XY, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- REC_RAND_VAR(Var_x, Times, X, F0, I0), ~d_REC_RAND_VAR(I0), REC_RAND_VAR(Var_y, Times, Y, F1, I1), ~d_REC_RAND_VAR(I1), BVOR_RAND_REC(Var_x, Var_y, Var_z, Times, F2, I2), ~d_BVOR_RAND_REC(I2), BVOR(X, Y, XY, F3, I3), ~d_BVOR(I3).
+0.865147::t_20_REC_ALL_INC(Var_z, Times, XY, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- REC_ALL_INC(Var_x, Times, X, F0, I0), ~d_REC_ALL_INC(I0), REC_ALL_INC(Var_y, Times, Y, F1, I1), ~d_REC_ALL_INC(I1), BVOR_ALL_REC(Var_x, Var_y, Var_z, Times, F2, I2), ~d_BVOR_ALL_REC(I2), BVOR(X, Y, XY, F3, I3), ~d_BVOR(I3).
+0.829006::t_21_REC_RAND_VAR(Var_z, Times, XY, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- REC_RAND_VAR(Var_x, Times, X, F0, I0), ~d_REC_RAND_VAR(I0), REC_RAND_VAR(Var_y, Times, Y, F1, I1), ~d_REC_RAND_VAR(I1), SET_SUM_REC(Var_x, Var_y, Var_z, Times, F2, I2), ~d_SET_SUM_REC(I2), SET_SUM(X, Y, XY, F3, I3), ~d_SET_SUM(I3).
+t_22_SET_SUM_REC(Var_x, Var_y, Var_z, Times_New, F0, conj(F0)) :- SET_SUM_REC(Var_x, Var_y, Var_z, Times, F0, I0), ~d_SET_SUM_REC(I0), Times_New = Times - 1, Times_New != 0.
+0.992228::t_23_REC_ALL_INC(Var_z, Times, XY, F0, F1, F2, F3, F4, F5, F6, conj(F0, F1, F2, F3, F4, F5, F6)) :- REC_RAND_VAR(Var_x, Times, X_R, F0, I0), ~d_REC_RAND_VAR(I0), REC_RAND_VAR(Var_y, Times, Y_R, F1, I1), ~d_REC_RAND_VAR(I1), REC_ALL_INC(Var_x, Times, X_A, F2, I2), ~d_REC_ALL_INC(I2), REC_ALL_INC(Var_y, Times, Y_A, F3, I3), ~d_REC_ALL_INC(I3), RAND_NUMBER(Times, RAND_NUM, F4, I4), ~d_RAND_NUMBER(I4), XOR_RUD1_ALL_INC(X_A, Y_A, X_R, Y_R, RAND_NUM, XY, F5, I5), ~d_XOR_RUD1_ALL_INC(I5), XOR_RUD1_ALL_INC_REC(Var_x, Var_y, Var_z, Times, F6, I6), ~d_XOR_RUD1_ALL_INC_REC(I6).
+t_24_XOR_RUD1_ALL_INC_REC(Var_x, Var_y, Var_z, Times_New, F0, conj(F0)) :- XOR_RUD1_ALL_INC_REC(Var_x, Var_y, Var_z, Times, F0, I0), ~d_XOR_RUD1_ALL_INC_REC(I0), Times_New = Times - 1, Times_New != 0.
+0.887132::t_25_REC_RAND_VAR(Var_y, Times, X, F0, F1, conj(F0, F1)) :- REC_RAND_VAR(Var_x, Times, X, F0, I0), ~d_REC_RAND_VAR(I0), BV_EQUAL_RAND_REC(Var_x, Var_y, Times, F1, I1), ~d_BV_EQUAL_RAND_REC(I1).
+0.896241::t_26_REC_ALL_INC(Var_y, Times, X, F0, F1, conj(F0, F1)) :- REC_ALL_INC(Var_x, Times, X, F0, I0), ~d_REC_ALL_INC(I0), BV_EQUAL_ALL_REC(Var_x, Var_y, Times, F1, I1), ~d_BV_EQUAL_ALL_REC(I1).
+0.964874::t_27_REC_RAND_VAR(Var_y, Times, XY, F0, F1, conj(F0, F1)) :- REC_RAND_VAR(Var_x, Times, X, F0, I0), ~d_REC_RAND_VAR(I0), BV_ZERO_REC(Var_x, Var_y, Times, F1, I1), ~d_BV_ZERO_REC(I1), XY = 0.
+0.935524::t_28_TDEP(To, From, F0, conj(F0)) :- assign(To, From, F0, I0), ~d_assign(I0).
+t_29_assign(To, From, F0, conj(F0)) :- load_assign(To, From, F0, I0), ~d_load_assign(I0).
+t_30_assign(To, From, F0, conj(F0)) :- store_assign(To, From, F0, I0), ~d_store_assign(I0).
+0.862479::t_31_TDEP(To, Prev, F0, F1, conj(F0, F1)) :- assign(To, From, F0, I0), ~d_assign(I0), TDEP(From, Prev, F1, I1), ~d_TDEP(I1).
+0.876238::t_32_DIFF_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3).
+0.876238::t_33_DIFF_LABEL(From2, From1, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3).
+0.942278::t_34_RAND(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3), BV_DIFF_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_DIFF_REC(I4), Int_res0 != 0.
+0.942278::t_35_RAND(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3), BV_DIFF_REC(From2, From1, Times, Int_res1, F4, I4), ~d_BV_DIFF_REC(I4), Int_res1 != 0.
+0.883253::t_36_CHECK_SAME(From1, From2, F0, F1, F2, F3, F4, F5, F6, conj(F0, F1, F2, F3, F4, F5, F6)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3), BV_DIFF_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_DIFF_REC(I4), Int_res0 = 0, RAND(From2, F5, I5), ~d_RAND(I5), BV_DIFF_REC(From2, From1, Times, Int_res1, F6, I6), ~d_BV_DIFF_REC(I6), Int_res1 = 0.
+0.892536::t_37_KEY_IND(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3), BV_SAME_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_SAME_REC(I4), Int_res0 = 0.
+0.892536::t_38_KEY_IND(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3), BV_SAME_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_SAME_REC(I4), Int_res0 = 0.
+0.853012::t_39_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3), BV_SAME_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_SAME_REC(I4), Int_res0 != 0.
+0.853012::t_40_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3), BV_SAME_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_SAME_REC(I4), Int_res0 != 0.
+0.968166::t_41_SET_SUM_REC(From1, From2, To, Times, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3), BV_DIFF_REC(From1, From2, Times, Int_res0, F4, I4), ~d_BV_DIFF_REC(I4), Int_res0 != 0.
+0.968166::t_42_SET_SUM_REC(From1, From2, To, Times, F0, F1, F2, F3, F4, conj(F0, F1, F2, F3, F4)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3), BV_DIFF_REC(From2, From1, Times, Int_res1, F4, I4), ~d_BV_DIFF_REC(I4), Int_res1 != 0.
+0.895278::t_43_XOR_RUD1_ALL_INC_REC(From1, From2, To, Times, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From1, F3, I3), ~d_RAND(I3).
+0.895278::t_44_XOR_RUD1_ALL_INC_REC(From1, From2, To, Times, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), Time(Times, F2, I2), ~d_Time(I2), RAND(From2, F3, I3), ~d_RAND(I3).
+0.898989::t_45_KEY_SENSITIVE(To, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), KEY_SENSITIVE(From1, F2, I2), ~d_KEY_SENSITIVE(I2), KEY_SENSITIVE(From2, F3, I3), ~d_KEY_SENSITIVE(I3).
+0.872231::t_46_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3).
+0.837703::t_47_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+0.915452::t_48_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- xor_assign_left(To, From1, F0, I0), ~d_xor_assign_left(I0), xor_assign_right(To, From2, F1, I1), ~d_xor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+0.904372::t_49_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3).
+t_50_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3).
+0.948042::t_51_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+t_52_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+0.830059::t_53_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+t_54_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+0.919733::t_55_KEY_SENSITIVE(To, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_SENSITIVE(From2, F2, I2), ~d_KEY_SENSITIVE(I2), RAND(From1, F3, I3), ~d_RAND(I3).
+0.904372::t_56_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From2, F2, I2), ~d_RAND(I2), KEY_IND(From1, F3, I3), ~d_KEY_IND(I3).
+t_57_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From2, F2, I2), ~d_RAND(I2), RAND(From1, F3, I3), ~d_RAND(I3).
+0.948042::t_58_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+t_59_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+0.948042::t_60_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+t_61_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+0.919733::t_62_KEY_SENSITIVE(To, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From2, F2, I2), ~d_RAND(I2), KEY_SENSITIVE(From1, F3, I3), ~d_KEY_SENSITIVE(I3).
+0.913775::t_63_DIFF_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3).
+0.984688::t_64_KEY_IND(To, F0, F1, F2, F3, F4, F5, F6, F7, conj(F0, F1, F2, F3, F4, F5, F6, F7)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_DIFF_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_DIFF_REC(I5), BV_DIFF_REC(From2, From1, Times, Int_res1, F6, I6), ~d_BV_DIFF_REC(I6), BVOR(Int_res0, Int_res1, Int_res2, F7, I7), ~d_BVOR(I7), Int_res2 != 0.
+0.873822::t_65_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, F5, F6, F7, conj(F0, F1, F2, F3, F4, F5, F6, F7)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), RAND(From1, F2, I2), ~d_RAND(I2), RAND(From2, F3, I3), ~d_RAND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_DIFF_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_DIFF_REC(I5), BV_DIFF_REC(From2, From1, Times, Int_res1, F6, I6), ~d_BV_DIFF_REC(I6), BVOR(Int_res0, Int_res1, Int_res2, F7, I7), ~d_BVOR(I7), Int_res2 = 0.
+0.928299::t_66_KEY_SENSITIVE(To, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_SENSITIVE(From1, F2, I2), ~d_KEY_SENSITIVE(I2), KEY_SENSITIVE(From2, F3, I3), ~d_KEY_SENSITIVE(I3).
+0.895169::t_67_INTERSECT_LABEL(From1, From2, F0, F1, F2, F3, conj(F0, F1, F2, F3)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3).
+0.850686::t_68_KEY_IND(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 = 0.
+0.88543::t_69_KEY_SENSITIVE(To, F0, F1, F2, F3, F4, F5, conj(F0, F1, F2, F3, F4, F5)) :- andor_assign_left(To, From1, F0, I0), ~d_andor_assign_left(I0), andor_assign_right(To, From2, F1, I1), ~d_andor_assign_right(I1), KEY_IND(From1, F2, I2), ~d_KEY_IND(I2), KEY_IND(From2, F3, I3), ~d_KEY_IND(I3), Time(Times, F4, I4), ~d_Time(I4), BV_INTERSECT_REC(From1, From2, Times, Int_res0, F5, I5), ~d_BV_INTERSECT_REC(I5), Int_res0 != 0.
+0.836958::t_70_RAND(To, F0, F1, conj(F0, F1)) :- not_assign(To, From1, F0, I0), ~d_not_assign(I0), RAND(From1, F1, I1), ~d_RAND(I1).
+0.929951::t_71_KEY_IND(To, F0, F1, conj(F0, F1)) :- not_assign(To, From1, F0, I0), ~d_not_assign(I0), KEY_IND(From1, F1, I1), ~d_KEY_IND(I1).
+0.957184::t_72_KEY_SENSITIVE(To, F0, F1, conj(F0, F1)) :- not_assign(To, From1, F0, I0), ~d_not_assign(I0), KEY_SENSITIVE(From1, F1, I1), ~d_KEY_SENSITIVE(I1).
+t_73_KEY_IND(From1, F0, conj(F0)) :- CONSTANT(From1, F0, I0), ~d_CONSTANT(I0).
+t_74_KEY_SENSITIVE(To, F0, F1, conj(F0, F1)) :- load_assign(To, From1, F0, I0), ~d_load_assign(I0), KEY_SENSITIVE(From1, F1, I1), ~d_KEY_SENSITIVE(I1).
+t_75_KEY_IND(To, F0, F1, conj(F0, F1)) :- load_assign(To, From1, F0, I0), ~d_load_assign(I0), KEY_IND(From1, F1, I1), ~d_KEY_IND(I1).
+t_76_RAND(To, F0, F1, conj(F0, F1)) :- load_assign(To, From1, F0, I0), ~d_load_assign(I0), RAND(From1, F1, I1), ~d_RAND(I1).
+t_77_KEY_SENSITIVE(To, F0, F1, conj(F0, F1)) :- store_assign(To, From1, F0, I0), ~d_store_assign(I0), KEY_SENSITIVE(From1, F1, I1), ~d_KEY_SENSITIVE(I1).
+t_78_KEY_IND(To, F0, F1, conj(F0, F1)) :- store_assign(To, From1, F0, I0), ~d_store_assign(I0), KEY_IND(From1, F1, I1), ~d_KEY_IND(I1).
+t_79_RAND(To, F0, F1, conj(F0, F1)) :- store_assign(To, From1, F0, I0), ~d_store_assign(I0), RAND(From1, F1, I1), ~d_RAND(I1).
+t_80_RAND(To, F0, F1, conj(F0, F1)) :- equal_assign(To, From1, F0, I0), ~d_equal_assign(I0), RAND(From1, F1, I1), ~d_RAND(I1).
+t_81_KEY_IND(To, F0, F1, conj(F0, F1)) :- equal_assign(To, From1, F0, I0), ~d_equal_assign(I0), KEY_IND(From1, F1, I1), ~d_KEY_IND(I1).
+t_82_KEY_SENSITIVE(To, F0, F1, conj(F0, F1)) :- equal_assign(To, From1, F0, I0), ~d_equal_assign(I0), KEY_SENSITIVE(From1, F1, I1), ~d_KEY_SENSITIVE(I1).
+t_83_KEY_SENSITIVE(To, F0, F1, conj(F0, F1)) :- binary_constant(To, From1, F0, I0), ~d_binary_constant(I0), KEY_SENSITIVE(From1, F1, I1), ~d_KEY_SENSITIVE(I1).
+t_84_KEY_IND(To, F0, F1, conj(F0, F1)) :- binary_constant(To, From1, F0, I0), ~d_binary_constant(I0), KEY_IND(From1, F1, I1), ~d_KEY_IND(I1).
+t_85_RAND(To, F0, F1, conj(F0, F1)) :- binary_constant(To, From1, F0, I0), ~d_binary_constant(I0), RAND(From1, F1, I1), ~d_RAND(I1).
+t_86_load_assign(To, From1, F0, conj(F0)) :- zext_assign(To, From1, F0, I0), ~d_zext_assign(I0).
+t_87_load_assign(To, From1, F0, conj(F0)) :- trunc_assign(To, From1, F0, I0), ~d_trunc_assign(I0).
+0.858916::t_88_load_assign(To, From1, F0, conj(F0)) :- icmp_assign(To, From1, F0, I0), ~d_icmp_assign(I0).
+t_89_assign(To, From1, F0, conj(F0)) :- load_assign(To, From1, F0, I0), ~d_load_assign(I0).
+t_90_assign(To, From1, F0, conj(F0)) :- store_assign(To, From1, F0, I0), ~d_store_assign(I0).
+t_91_assign(To, From2, F0, F1, conj(F0, F1)) :- assign(To, From1, F0, I0), ~d_assign(I0), assign(From1, From2, F1, I1), ~d_assign(I1).
+t_92_equal_assign(To, From1, F0, conj(F0)) :- assign(To, From1, F0, I0), ~d_assign(I0).
+t_93_equal_assign(To, From1, F0, conj(F0)) :- binary_constant(To, From1, F0, I0), ~d_binary_constant(I0).
+t_94_equal_assign(From2, From1, F0, conj(F0)) :- equal_assign(From1, From2, F0, I0), ~d_equal_assign(I0).
+t_95_equal_assign(From1, To, F0, F1, conj(F0, F1)) :- equal_assign(From1, From2, F0, I0), ~d_equal_assign(I0), equal_assign(From2, To, F1, I1), ~d_equal_assign(I1).
+0.966565::t_96_share(From2, From1, F0, conj(F0)) :- share(From1, From2, F0, I0), ~d_share(I0).
+0.961918::t_97_q1(To, F0, F1, conj(F0, F1)) :- HD_SENSITIVE(From1, From2, F0, I0), ~d_HD_SENSITIVE(I0), assign(To, From1, F1, I1), ~d_assign(I1).
+
+// secondphaseIdb
+BVAND_REC(X0, X1, X2, X3, F, I) :- agg_BVAND_REC(X0, X1, X2, X3, F, I), ~BVAND_REC(X0, X1, X2, X3, F2, I2).
+tt_BVAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BVAND_REC(X0, X1, X2, X3, F1, I1), BVAND_REC(X0, X1, X2, X3, F2, I2), ~d_BVAND_REC(I2), equiv(F1, F2).
+BVAND_REC(X0, X1, X2, X3, D, I1) :- tt_BVAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BVAND_REC(I2) :- tt_BVAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BVOR(X0, X1, X2, F, I) :- agg_BVOR(X0, X1, X2, F, I), ~BVOR(X0, X1, X2, F2, I2).
+tt_BVOR(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_BVOR(X0, X1, X2, F1, I1), BVOR(X0, X1, X2, F2, I2), ~d_BVOR(I2), equiv(F1, F2).
+BVOR(X0, X1, X2, D, I1) :- tt_BVOR(X0, X1, X2, F1, F2, I1, I2, D).
+d_BVOR(I2) :- tt_BVOR(X0, X1, X2, F1, F2, I1, I2, D).
+BVOR_ALL_REC(X0, X1, X2, X3, F, I) :- agg_BVOR_ALL_REC(X0, X1, X2, X3, F, I), ~BVOR_ALL_REC(X0, X1, X2, X3, F2, I2).
+tt_BVOR_ALL_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BVOR_ALL_REC(X0, X1, X2, X3, F1, I1), BVOR_ALL_REC(X0, X1, X2, X3, F2, I2), ~d_BVOR_ALL_REC(I2), equiv(F1, F2).
+BVOR_ALL_REC(X0, X1, X2, X3, D, I1) :- tt_BVOR_ALL_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BVOR_ALL_REC(I2) :- tt_BVOR_ALL_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BVOR_RAND_REC(X0, X1, X2, X3, F, I) :- agg_BVOR_RAND_REC(X0, X1, X2, X3, F, I), ~BVOR_RAND_REC(X0, X1, X2, X3, F2, I2).
+tt_BVOR_RAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BVOR_RAND_REC(X0, X1, X2, X3, F1, I1), BVOR_RAND_REC(X0, X1, X2, X3, F2, I2), ~d_BVOR_RAND_REC(I2), equiv(F1, F2).
+BVOR_RAND_REC(X0, X1, X2, X3, D, I1) :- tt_BVOR_RAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BVOR_RAND_REC(I2) :- tt_BVOR_RAND_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BV_DIFF_REC(X0, X1, X2, X3, F, I) :- agg_BV_DIFF_REC(X0, X1, X2, X3, F, I), ~BV_DIFF_REC(X0, X1, X2, X3, F2, I2).
+tt_BV_DIFF_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_DIFF_REC(X0, X1, X2, X3, F1, I1), BV_DIFF_REC(X0, X1, X2, X3, F2, I2), ~d_BV_DIFF_REC(I2), equiv(F1, F2).
+BV_DIFF_REC(X0, X1, X2, X3, D, I1) :- tt_BV_DIFF_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BV_DIFF_REC(I2) :- tt_BV_DIFF_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BV_EQUAL_ALL_REC(X0, X1, X2, F, I) :- agg_BV_EQUAL_ALL_REC(X0, X1, X2, F, I), ~BV_EQUAL_ALL_REC(X0, X1, X2, F2, I2).
+tt_BV_EQUAL_ALL_REC(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_EQUAL_ALL_REC(X0, X1, X2, F1, I1), BV_EQUAL_ALL_REC(X0, X1, X2, F2, I2), ~d_BV_EQUAL_ALL_REC(I2), equiv(F1, F2).
+BV_EQUAL_ALL_REC(X0, X1, X2, D, I1) :- tt_BV_EQUAL_ALL_REC(X0, X1, X2, F1, F2, I1, I2, D).
+d_BV_EQUAL_ALL_REC(I2) :- tt_BV_EQUAL_ALL_REC(X0, X1, X2, F1, F2, I1, I2, D).
+BV_EQUAL_RAND_REC(X0, X1, X2, F, I) :- agg_BV_EQUAL_RAND_REC(X0, X1, X2, F, I), ~BV_EQUAL_RAND_REC(X0, X1, X2, F2, I2).
+tt_BV_EQUAL_RAND_REC(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_EQUAL_RAND_REC(X0, X1, X2, F1, I1), BV_EQUAL_RAND_REC(X0, X1, X2, F2, I2), ~d_BV_EQUAL_RAND_REC(I2), equiv(F1, F2).
+BV_EQUAL_RAND_REC(X0, X1, X2, D, I1) :- tt_BV_EQUAL_RAND_REC(X0, X1, X2, F1, F2, I1, I2, D).
+d_BV_EQUAL_RAND_REC(I2) :- tt_BV_EQUAL_RAND_REC(X0, X1, X2, F1, F2, I1, I2, D).
+BV_INTERSECT_REC(X0, X1, X2, X3, F, I) :- agg_BV_INTERSECT_REC(X0, X1, X2, X3, F, I), ~BV_INTERSECT_REC(X0, X1, X2, X3, F2, I2).
+tt_BV_INTERSECT_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_INTERSECT_REC(X0, X1, X2, X3, F1, I1), BV_INTERSECT_REC(X0, X1, X2, X3, F2, I2), ~d_BV_INTERSECT_REC(I2), equiv(F1, F2).
+BV_INTERSECT_REC(X0, X1, X2, X3, D, I1) :- tt_BV_INTERSECT_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BV_INTERSECT_REC(I2) :- tt_BV_INTERSECT_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BV_SAME_REC(X0, X1, X2, X3, F, I) :- agg_BV_SAME_REC(X0, X1, X2, X3, F, I), ~BV_SAME_REC(X0, X1, X2, X3, F2, I2).
+tt_BV_SAME_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_SAME_REC(X0, X1, X2, X3, F1, I1), BV_SAME_REC(X0, X1, X2, X3, F2, I2), ~d_BV_SAME_REC(I2), equiv(F1, F2).
+BV_SAME_REC(X0, X1, X2, X3, D, I1) :- tt_BV_SAME_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_BV_SAME_REC(I2) :- tt_BV_SAME_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+BV_ZERO_REC(X0, X1, X2, F, I) :- agg_BV_ZERO_REC(X0, X1, X2, F, I), ~BV_ZERO_REC(X0, X1, X2, F2, I2).
+tt_BV_ZERO_REC(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_BV_ZERO_REC(X0, X1, X2, F1, I1), BV_ZERO_REC(X0, X1, X2, F2, I2), ~d_BV_ZERO_REC(I2), equiv(F1, F2).
+BV_ZERO_REC(X0, X1, X2, D, I1) :- tt_BV_ZERO_REC(X0, X1, X2, F1, F2, I1, I2, D).
+d_BV_ZERO_REC(I2) :- tt_BV_ZERO_REC(X0, X1, X2, F1, F2, I1, I2, D).
+CHECK_SAME(X0, X1, F, I) :- agg_CHECK_SAME(X0, X1, F, I), ~CHECK_SAME(X0, X1, F2, I2).
+tt_CHECK_SAME(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_CHECK_SAME(X0, X1, F1, I1), CHECK_SAME(X0, X1, F2, I2), ~d_CHECK_SAME(I2), equiv(F1, F2).
+CHECK_SAME(X0, X1, D, I1) :- tt_CHECK_SAME(X0, X1, F1, F2, I1, I2, D).
+d_CHECK_SAME(I2) :- tt_CHECK_SAME(X0, X1, F1, F2, I1, I2, D).
+CONSTANT(X0, F, I) :- agg_CONSTANT(X0, F, I), ~CONSTANT(X0, F2, I2).
+tt_CONSTANT(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_CONSTANT(X0, F1, I1), CONSTANT(X0, F2, I2), ~d_CONSTANT(I2), equiv(F1, F2).
+CONSTANT(X0, D, I1) :- tt_CONSTANT(X0, F1, F2, I1, I2, D).
+d_CONSTANT(I2) :- tt_CONSTANT(X0, F1, F2, I1, I2, D).
+DIFF_LABEL(X0, X1, F, I) :- agg_DIFF_LABEL(X0, X1, F, I), ~DIFF_LABEL(X0, X1, F2, I2).
+tt_DIFF_LABEL(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_DIFF_LABEL(X0, X1, F1, I1), DIFF_LABEL(X0, X1, F2, I2), ~d_DIFF_LABEL(I2), equiv(F1, F2).
+DIFF_LABEL(X0, X1, D, I1) :- tt_DIFF_LABEL(X0, X1, F1, F2, I1, I2, D).
+d_DIFF_LABEL(I2) :- tt_DIFF_LABEL(X0, X1, F1, F2, I1, I2, D).
+HD_SENSITIVE(X0, X1, F, I) :- agg_HD_SENSITIVE(X0, X1, F, I), ~HD_SENSITIVE(X0, X1, F2, I2).
+tt_HD_SENSITIVE(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_HD_SENSITIVE(X0, X1, F1, I1), HD_SENSITIVE(X0, X1, F2, I2), ~d_HD_SENSITIVE(I2), equiv(F1, F2).
+HD_SENSITIVE(X0, X1, D, I1) :- tt_HD_SENSITIVE(X0, X1, F1, F2, I1, I2, D).
+d_HD_SENSITIVE(I2) :- tt_HD_SENSITIVE(X0, X1, F1, F2, I1, I2, D).
+INTERSECT_LABEL(X0, X1, F, I) :- agg_INTERSECT_LABEL(X0, X1, F, I), ~INTERSECT_LABEL(X0, X1, F2, I2).
+tt_INTERSECT_LABEL(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_INTERSECT_LABEL(X0, X1, F1, I1), INTERSECT_LABEL(X0, X1, F2, I2), ~d_INTERSECT_LABEL(I2), equiv(F1, F2).
+INTERSECT_LABEL(X0, X1, D, I1) :- tt_INTERSECT_LABEL(X0, X1, F1, F2, I1, I2, D).
+d_INTERSECT_LABEL(I2) :- tt_INTERSECT_LABEL(X0, X1, F1, F2, I1, I2, D).
+KEY_IND(X0, F, I) :- agg_KEY_IND(X0, F, I), ~KEY_IND(X0, F2, I2).
+tt_KEY_IND(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_KEY_IND(X0, F1, I1), KEY_IND(X0, F2, I2), ~d_KEY_IND(I2), equiv(F1, F2).
+KEY_IND(X0, D, I1) :- tt_KEY_IND(X0, F1, F2, I1, I2, D).
+d_KEY_IND(I2) :- tt_KEY_IND(X0, F1, F2, I1, I2, D).
+KEY_NUMBER(X0, X1, F, I) :- agg_KEY_NUMBER(X0, X1, F, I), ~KEY_NUMBER(X0, X1, F2, I2).
+tt_KEY_NUMBER(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_KEY_NUMBER(X0, X1, F1, I1), KEY_NUMBER(X0, X1, F2, I2), ~d_KEY_NUMBER(I2), equiv(F1, F2).
+KEY_NUMBER(X0, X1, D, I1) :- tt_KEY_NUMBER(X0, X1, F1, F2, I1, I2, D).
+d_KEY_NUMBER(I2) :- tt_KEY_NUMBER(X0, X1, F1, F2, I1, I2, D).
+KEY_SENSITIVE(X0, F, I) :- agg_KEY_SENSITIVE(X0, F, I), ~KEY_SENSITIVE(X0, F2, I2).
+tt_KEY_SENSITIVE(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_KEY_SENSITIVE(X0, F1, I1), KEY_SENSITIVE(X0, F2, I2), ~d_KEY_SENSITIVE(I2), equiv(F1, F2).
+KEY_SENSITIVE(X0, D, I1) :- tt_KEY_SENSITIVE(X0, F1, F2, I1, I2, D).
+d_KEY_SENSITIVE(I2) :- tt_KEY_SENSITIVE(X0, F1, F2, I1, I2, D).
+RAND(X0, F, I) :- agg_RAND(X0, F, I), ~RAND(X0, F2, I2).
+tt_RAND(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_RAND(X0, F1, I1), RAND(X0, F2, I2), ~d_RAND(I2), equiv(F1, F2).
+RAND(X0, D, I1) :- tt_RAND(X0, F1, F2, I1, I2, D).
+d_RAND(I2) :- tt_RAND(X0, F1, F2, I1, I2, D).
+RAND_NUMBER(X0, X1, F, I) :- agg_RAND_NUMBER(X0, X1, F, I), ~RAND_NUMBER(X0, X1, F2, I2).
+tt_RAND_NUMBER(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_RAND_NUMBER(X0, X1, F1, I1), RAND_NUMBER(X0, X1, F2, I2), ~d_RAND_NUMBER(I2), equiv(F1, F2).
+RAND_NUMBER(X0, X1, D, I1) :- tt_RAND_NUMBER(X0, X1, F1, F2, I1, I2, D).
+d_RAND_NUMBER(I2) :- tt_RAND_NUMBER(X0, X1, F1, F2, I1, I2, D).
+REC_ALL_INC(X0, X1, X2, F, I) :- agg_REC_ALL_INC(X0, X1, X2, F, I), ~REC_ALL_INC(X0, X1, X2, F2, I2).
+tt_REC_ALL_INC(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_REC_ALL_INC(X0, X1, X2, F1, I1), REC_ALL_INC(X0, X1, X2, F2, I2), ~d_REC_ALL_INC(I2), equiv(F1, F2).
+REC_ALL_INC(X0, X1, X2, D, I1) :- tt_REC_ALL_INC(X0, X1, X2, F1, F2, I1, I2, D).
+d_REC_ALL_INC(I2) :- tt_REC_ALL_INC(X0, X1, X2, F1, F2, I1, I2, D).
+REC_RAND_VAR(X0, X1, X2, F, I) :- agg_REC_RAND_VAR(X0, X1, X2, F, I), ~REC_RAND_VAR(X0, X1, X2, F2, I2).
+tt_REC_RAND_VAR(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_REC_RAND_VAR(X0, X1, X2, F1, I1), REC_RAND_VAR(X0, X1, X2, F2, I2), ~d_REC_RAND_VAR(I2), equiv(F1, F2).
+REC_RAND_VAR(X0, X1, X2, D, I1) :- tt_REC_RAND_VAR(X0, X1, X2, F1, F2, I1, I2, D).
+d_REC_RAND_VAR(I2) :- tt_REC_RAND_VAR(X0, X1, X2, F1, F2, I1, I2, D).
+SET_SUM(X0, X1, X2, F, I) :- agg_SET_SUM(X0, X1, X2, F, I), ~SET_SUM(X0, X1, X2, F2, I2).
+tt_SET_SUM(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_SET_SUM(X0, X1, X2, F1, I1), SET_SUM(X0, X1, X2, F2, I2), ~d_SET_SUM(I2), equiv(F1, F2).
+SET_SUM(X0, X1, X2, D, I1) :- tt_SET_SUM(X0, X1, X2, F1, F2, I1, I2, D).
+d_SET_SUM(I2) :- tt_SET_SUM(X0, X1, X2, F1, F2, I1, I2, D).
+SET_SUM_REC(X0, X1, X2, X3, F, I) :- agg_SET_SUM_REC(X0, X1, X2, X3, F, I), ~SET_SUM_REC(X0, X1, X2, X3, F2, I2).
+tt_SET_SUM_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_SET_SUM_REC(X0, X1, X2, X3, F1, I1), SET_SUM_REC(X0, X1, X2, X3, F2, I2), ~d_SET_SUM_REC(I2), equiv(F1, F2).
+SET_SUM_REC(X0, X1, X2, X3, D, I1) :- tt_SET_SUM_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_SET_SUM_REC(I2) :- tt_SET_SUM_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+TDEP(X0, X1, F, I) :- agg_TDEP(X0, X1, F, I), ~TDEP(X0, X1, F2, I2).
+tt_TDEP(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_TDEP(X0, X1, F1, I1), TDEP(X0, X1, F2, I2), ~d_TDEP(I2), equiv(F1, F2).
+TDEP(X0, X1, D, I1) :- tt_TDEP(X0, X1, F1, F2, I1, I2, D).
+d_TDEP(I2) :- tt_TDEP(X0, X1, F1, F2, I1, I2, D).
+Time(X0, F, I) :- agg_Time(X0, F, I), ~Time(X0, F2, I2).
+tt_Time(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_Time(X0, F1, I1), Time(X0, F2, I2), ~d_Time(I2), equiv(F1, F2).
+Time(X0, D, I1) :- tt_Time(X0, F1, F2, I1, I2, D).
+d_Time(I2) :- tt_Time(X0, F1, F2, I1, I2, D).
+XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F, I) :- agg_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F, I), ~XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F2, I2).
+tt_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, dis(F1, F2)) :- agg_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F1, I1), XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F2, I2), ~d_XOR_RUD1_ALL_INC(I2), equiv(F1, F2).
+XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, D, I1) :- tt_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, D).
+d_XOR_RUD1_ALL_INC(I2) :- tt_XOR_RUD1_ALL_INC(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, D).
+XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F, I) :- agg_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F, I), ~XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F2, I2).
+tt_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F1, I1), XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F2, I2), ~d_XOR_RUD1_ALL_INC_REC(I2), equiv(F1, F2).
+XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, D, I1) :- tt_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_XOR_RUD1_ALL_INC_REC(I2) :- tt_XOR_RUD1_ALL_INC_REC(X0, X1, X2, X3, F1, F2, I1, I2, D).
+andor_assign_left(X0, X1, F, I) :- agg_andor_assign_left(X0, X1, F, I), ~andor_assign_left(X0, X1, F2, I2).
+tt_andor_assign_left(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_andor_assign_left(X0, X1, F1, I1), andor_assign_left(X0, X1, F2, I2), ~d_andor_assign_left(I2), equiv(F1, F2).
+andor_assign_left(X0, X1, D, I1) :- tt_andor_assign_left(X0, X1, F1, F2, I1, I2, D).
+d_andor_assign_left(I2) :- tt_andor_assign_left(X0, X1, F1, F2, I1, I2, D).
+andor_assign_right(X0, X1, F, I) :- agg_andor_assign_right(X0, X1, F, I), ~andor_assign_right(X0, X1, F2, I2).
+tt_andor_assign_right(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_andor_assign_right(X0, X1, F1, I1), andor_assign_right(X0, X1, F2, I2), ~d_andor_assign_right(I2), equiv(F1, F2).
+andor_assign_right(X0, X1, D, I1) :- tt_andor_assign_right(X0, X1, F1, F2, I1, I2, D).
+d_andor_assign_right(I2) :- tt_andor_assign_right(X0, X1, F1, F2, I1, I2, D).
+assign(X0, X1, F, I) :- agg_assign(X0, X1, F, I), ~assign(X0, X1, F2, I2).
+tt_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_assign(X0, X1, F1, I1), assign(X0, X1, F2, I2), ~d_assign(I2), equiv(F1, F2).
+assign(X0, X1, D, I1) :- tt_assign(X0, X1, F1, F2, I1, I2, D).
+d_assign(I2) :- tt_assign(X0, X1, F1, F2, I1, I2, D).
+binary_constant(X0, X1, F, I) :- agg_binary_constant(X0, X1, F, I), ~binary_constant(X0, X1, F2, I2).
+tt_binary_constant(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_binary_constant(X0, X1, F1, I1), binary_constant(X0, X1, F2, I2), ~d_binary_constant(I2), equiv(F1, F2).
+binary_constant(X0, X1, D, I1) :- tt_binary_constant(X0, X1, F1, F2, I1, I2, D).
+d_binary_constant(I2) :- tt_binary_constant(X0, X1, F1, F2, I1, I2, D).
+equal_assign(X0, X1, F, I) :- agg_equal_assign(X0, X1, F, I), ~equal_assign(X0, X1, F2, I2).
+tt_equal_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_equal_assign(X0, X1, F1, I1), equal_assign(X0, X1, F2, I2), ~d_equal_assign(I2), equiv(F1, F2).
+equal_assign(X0, X1, D, I1) :- tt_equal_assign(X0, X1, F1, F2, I1, I2, D).
+d_equal_assign(I2) :- tt_equal_assign(X0, X1, F1, F2, I1, I2, D).
+icmp_assign(X0, X1, F, I) :- agg_icmp_assign(X0, X1, F, I), ~icmp_assign(X0, X1, F2, I2).
+tt_icmp_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_icmp_assign(X0, X1, F1, I1), icmp_assign(X0, X1, F2, I2), ~d_icmp_assign(I2), equiv(F1, F2).
+icmp_assign(X0, X1, D, I1) :- tt_icmp_assign(X0, X1, F1, F2, I1, I2, D).
+d_icmp_assign(I2) :- tt_icmp_assign(X0, X1, F1, F2, I1, I2, D).
+load_assign(X0, X1, F, I) :- agg_load_assign(X0, X1, F, I), ~load_assign(X0, X1, F2, I2).
+tt_load_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_load_assign(X0, X1, F1, I1), load_assign(X0, X1, F2, I2), ~d_load_assign(I2), equiv(F1, F2).
+load_assign(X0, X1, D, I1) :- tt_load_assign(X0, X1, F1, F2, I1, I2, D).
+d_load_assign(I2) :- tt_load_assign(X0, X1, F1, F2, I1, I2, D).
+not_assign(X0, X1, F, I) :- agg_not_assign(X0, X1, F, I), ~not_assign(X0, X1, F2, I2).
+tt_not_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_not_assign(X0, X1, F1, I1), not_assign(X0, X1, F2, I2), ~d_not_assign(I2), equiv(F1, F2).
+not_assign(X0, X1, D, I1) :- tt_not_assign(X0, X1, F1, F2, I1, I2, D).
+d_not_assign(I2) :- tt_not_assign(X0, X1, F1, F2, I1, I2, D).
+q1(X0, F, I) :- agg_q1(X0, F, I), ~q1(X0, F2, I2).
+tt_q1(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_q1(X0, F1, I1), q1(X0, F2, I2), ~d_q1(I2), equiv(F1, F2).
+q1(X0, D, I1) :- tt_q1(X0, F1, F2, I1, I2, D).
+d_q1(I2) :- tt_q1(X0, F1, F2, I1, I2, D).
+share(X0, X1, F, I) :- agg_share(X0, X1, F, I), ~share(X0, X1, F2, I2).
+tt_share(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_share(X0, X1, F1, I1), share(X0, X1, F2, I2), ~d_share(I2), equiv(F1, F2).
+share(X0, X1, D, I1) :- tt_share(X0, X1, F1, F2, I1, I2, D).
+d_share(I2) :- tt_share(X0, X1, F1, F2, I1, I2, D).
+store_assign(X0, X1, F, I) :- agg_store_assign(X0, X1, F, I), ~store_assign(X0, X1, F2, I2).
+tt_store_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_store_assign(X0, X1, F1, I1), store_assign(X0, X1, F2, I2), ~d_store_assign(I2), equiv(F1, F2).
+store_assign(X0, X1, D, I1) :- tt_store_assign(X0, X1, F1, F2, I1, I2, D).
+d_store_assign(I2) :- tt_store_assign(X0, X1, F1, F2, I1, I2, D).
+trunc_assign(X0, X1, F, I) :- agg_trunc_assign(X0, X1, F, I), ~trunc_assign(X0, X1, F2, I2).
+tt_trunc_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_trunc_assign(X0, X1, F1, I1), trunc_assign(X0, X1, F2, I2), ~d_trunc_assign(I2), equiv(F1, F2).
+trunc_assign(X0, X1, D, I1) :- tt_trunc_assign(X0, X1, F1, F2, I1, I2, D).
+d_trunc_assign(I2) :- tt_trunc_assign(X0, X1, F1, F2, I1, I2, D).
+xor_assign_left(X0, X1, F, I) :- agg_xor_assign_left(X0, X1, F, I), ~xor_assign_left(X0, X1, F2, I2).
+tt_xor_assign_left(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_xor_assign_left(X0, X1, F1, I1), xor_assign_left(X0, X1, F2, I2), ~d_xor_assign_left(I2), equiv(F1, F2).
+xor_assign_left(X0, X1, D, I1) :- tt_xor_assign_left(X0, X1, F1, F2, I1, I2, D).
+d_xor_assign_left(I2) :- tt_xor_assign_left(X0, X1, F1, F2, I1, I2, D).
+xor_assign_right(X0, X1, F, I) :- agg_xor_assign_right(X0, X1, F, I), ~xor_assign_right(X0, X1, F2, I2).
+tt_xor_assign_right(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_xor_assign_right(X0, X1, F1, I1), xor_assign_right(X0, X1, F2, I2), ~d_xor_assign_right(I2), equiv(F1, F2).
+xor_assign_right(X0, X1, D, I1) :- tt_xor_assign_right(X0, X1, F1, F2, I1, I2, D).
+d_xor_assign_right(I2) :- tt_xor_assign_right(X0, X1, F1, F2, I1, I2, D).
+zext_assign(X0, X1, F, I) :- agg_zext_assign(X0, X1, F, I), ~zext_assign(X0, X1, F2, I2).
+tt_zext_assign(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_zext_assign(X0, X1, F1, I1), zext_assign(X0, X1, F2, I2), ~d_zext_assign(I2), equiv(F1, F2).
+zext_assign(X0, X1, D, I1) :- tt_zext_assign(X0, X1, F1, F2, I1, I2, D).
+d_zext_assign(I2) :- tt_zext_assign(X0, X1, F1, F2, I1, I2, D).
+
+// final
+req_HD_SENSITIVE(X0, X1, F) :- HD_SENSITIVE(X0, X1, F, I), ~d_HD_SENSITIVE(I).
+req_KEY_IND(X0, F) :- KEY_IND(X0, F, I), ~d_KEY_IND(I).
+req_KEY_SENSITIVE(X0, F) :- KEY_SENSITIVE(X0, F, I), ~d_KEY_SENSITIVE(I).

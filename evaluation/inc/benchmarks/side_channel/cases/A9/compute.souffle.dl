@@ -1,0 +1,99 @@
+.type s <: number
+.type BitSet <: number
+.type ind <: number
+.decl assign(v0:s,v1:s)
+.decl xor_assign_left(v0:s,v1:s)
+.decl xor_assign_right(v0:s,v1:s)
+.decl andor_assign_left(v0:s,v1:s)
+.decl andor_assign_right(v0:s,v1:s)
+.decl not_assign(v0:s,v1:s)
+.decl load_assign(v0:s,v1:s)
+.decl store_assign(v0:s,v1:s)
+.decl zext_assign(v0:s,v1:s)
+.decl sext_assign(v0:s,v1:s)
+.decl icmp_assign(v0:s,v1:s)
+.decl trunc_assign(v0:s,v1:s)
+.decl share(v0:s,v1:s)
+.decl binary_constant(v0:s,v1:s)
+.decl equal_assign(v0:s,v1:s) eqrel
+.decl BV_DIFF_REC(v0:s,v1:s,v2:BitSet)
+.decl BV_SAME_REC(v0:s,v1:s,v2:BitSet)
+.decl BV_ALL_INTERSECT(v0:s,v1:s,v2:BitSet)
+.decl BVOR(v0:BitSet,v1:BitSet,v2:BitSet)
+.decl KEY_SENSITIVE(v0:s)
+.decl KEY_IND(v0:s)
+.decl CONSTANT(v0:s)
+.decl RAND(v0:s)
+.decl HD_SENSITIVE(v0:s,v1:s)
+.decl HD_SENSITIVE_2(v0:s,v1:s)
+.output KEY_IND
+.output KEY_SENSITIVE
+.output HD_SENSITIVE
+.output HD_SENSITIVE_2
+.input xor_assign_left
+.input xor_assign_right
+.input andor_assign_left
+.input andor_assign_right
+.input load_assign
+.input store_assign
+.input sext_assign
+.input trunc_assign
+.input share
+.input binary_constant
+.input BV_DIFF_REC
+.input BV_SAME_REC
+.input BV_ALL_INTERSECT
+.input BVOR
+.input KEY_SENSITIVE
+.output KEY_SENSITIVE
+.input KEY_IND
+.output KEY_IND
+.input RAND
+.output HD_SENSITIVE
+.output HD_SENSITIVE_2
+
+0.841456::RAND(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), RAND(FROM1), BV_DIFF_REC(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)).
+0.841456::RAND(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), RAND(FROM2), BV_DIFF_REC(FROM2,FROM1,INT_RES1), !((INT_RES1 = 0)).
+0.985411::KEY_IND(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), RAND(FROM1), BV_DIFF_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), RAND(FROM2), BV_DIFF_REC(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), BV_SAME_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.909187::KEY_SENSITIVE(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), RAND(FROM1), BV_DIFF_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), RAND(FROM2), BV_DIFF_REC(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), BV_SAME_REC(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)).
+0.828978::KEY_SENSITIVE(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_SENSITIVE(FROM1), KEY_SENSITIVE(FROM2).
+0.979306::KEY_IND(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.864826::KEY_IND(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)), BV_SAME_REC(FROM1,FROM2,INT_RES1), (INT_RES1 = 0).
+0.843355::KEY_SENSITIVE(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)), BV_SAME_REC(FROM1,FROM2,INT_RES1), !((INT_RES1 = 0)).
+0.995494::KEY_SENSITIVE(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_SENSITIVE(FROM2).
+0.995494::KEY_SENSITIVE(TO) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), KEY_IND(FROM2), KEY_SENSITIVE(FROM1).
+0.852143::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.852143::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM2), KEY_IND(FROM1), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.985425::KEY_SENSITIVE(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)).
+0.873533::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), RAND(FROM2), BV_DIFF_REC(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)).
+0.873533::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), RAND(FROM2), BV_DIFF_REC(FROM2,FROM1,INT_RES1), !((INT_RES1 = 0)).
+0.8645::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), RAND(FROM2), BV_DIFF_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), BV_DIFF_REC(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), BV_SAME_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.975895::KEY_SENSITIVE(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), RAND(FROM1), RAND(FROM2), BV_DIFF_REC(FROM1,FROM2,INT_RES0), (INT_RES0 = 0), BV_DIFF_REC(FROM2,FROM1,INT_RES1), (INT_RES1 = 0), BV_SAME_REC(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)).
+0.929005::KEY_SENSITIVE(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), KEY_SENSITIVE(FROM1).
+0.929005::KEY_SENSITIVE(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), KEY_SENSITIVE(FROM2).
+0.984527::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), (INT_RES0 = 0).
+0.912833::KEY_IND(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)), BV_SAME_REC(FROM1,FROM2,INT_RES1), (INT_RES1 = 0).
+0.95907::KEY_SENSITIVE(TO) :- andor_assign_left(TO,FROM1), andor_assign_right(TO,FROM2), KEY_IND(FROM1), KEY_IND(FROM2), BV_ALL_INTERSECT(FROM1,FROM2,INT_RES0), !((INT_RES0 = 0)), BV_SAME_REC(FROM1,FROM2,INT_RES1), !((INT_RES1 = 0)).
+assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- binary_constant(FROM1,FROM2).
+assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+KEY_SENSITIVE(FROM2) :- KEY_SENSITIVE(FROM1), assign(FROM2,FROM1).
+KEY_IND(FROM2) :- KEY_IND(FROM1), assign(FROM2,FROM1).
+RAND(FROM2) :- RAND(FROM1), assign(FROM2,FROM1).
+equal_assign(FROM1,FROM2) :- load_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- store_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- sext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- zext_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM2) :- trunc_assign(FROM1,FROM2).
+equal_assign(FROM1,FROM3) :- equal_assign(FROM1,FROM2), equal_assign(FROM2,FROM3).
+equal_assign(FROM2,FROM1) :- equal_assign(FROM1,FROM2).
+0.910339::HD_SENSITIVE(TO_E,FROM2_E) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), share(TO_E,FROM2_E), equal_assign(FROM2,FROM2_E), equal_assign(TO,TO_E), KEY_SENSITIVE(FROM1).
+0.910339::HD_SENSITIVE(TO_E,FROM2_E) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), share(FROM2_E,TO_E), equal_assign(FROM2,FROM2_E), equal_assign(TO,TO_E), KEY_SENSITIVE(FROM1).
+0.910339::HD_SENSITIVE(TO_E,FROM1_E) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), share(TO_E,FROM1_E), equal_assign(FROM1,FROM1_E), equal_assign(TO,TO_E), KEY_SENSITIVE(FROM2).
+0.910339::HD_SENSITIVE(TO_E,FROM1_E) :- xor_assign_left(TO,FROM1), xor_assign_right(TO,FROM2), share(FROM1_E,TO_E), equal_assign(FROM1,FROM1_E), equal_assign(TO,TO_E), KEY_SENSITIVE(FROM2).
+KEY_IND(FROM1) :- CONSTANT(FROM1).
+0.866781::HD_SENSITIVE_2(TO,FROM2) :- load_assign(FROM1,FROM), store_assign(TO,FROM1), HD_SENSITIVE(TO,FROM2).
+0.866781::HD_SENSITIVE_2(FROM2,TO) :- load_assign(FROM1,FROM), store_assign(TO,FROM1), HD_SENSITIVE(FROM2,TO).

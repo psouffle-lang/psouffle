@@ -1,0 +1,132 @@
+// firstphaseEdb
+t_1_address_array(V0, V1, V2, F0, conj(F0)) :- esrc_address_array(V0, V1, V2, F0).
+t_2_address_in_data_refined(V0, V1, F0, conj(F0)) :- esrc_address_in_data_refined(V0, V1, F0).
+t_3_data_limit(V0, F0, conj(F0)) :- esrc_data_limit(V0, F0).
+t_4_pointer_size(V0, F0, conj(F0)) :- esrc_pointer_size(V0, F0).
+t_5_preferred_data_access(V0, V1, V2, F0, conj(F0)) :- esrc_preferred_data_access(V0, V1, V2, F0).
+t_6_string_candidate_refined(V0, V1, V2, F0, conj(F0)) :- esrc_string_candidate_refined(V0, V1, V2, F0).
+t_7_subsequent_string_candidate(V0, V1, F0, conj(F0)) :- esrc_subsequent_string_candidate(V0, V1, F0).
+
+// secondphaseEdb
+address_array(X0, X1, X2, F, I) :- agg_address_array(X0, X1, X2, F, I).
+address_in_data_refined(X0, X1, F, I) :- agg_address_in_data_refined(X0, X1, F, I).
+data_limit(X0, F, I) :- agg_data_limit(X0, F, I).
+data_object(X0, X1, X2, F, I) :- agg_data_object(X0, X1, X2, F, I).
+data_object_candidate(X0, X1, X2, F, I) :- agg_data_object_candidate(X0, X1, X2, F, I).
+data_object_conflict(X0, X1, X2, X3, X4, X5, F, I) :- agg_data_object_conflict(X0, X1, X2, X3, X4, X5, F, I).
+data_object_point(X0, X1, X2, X3, X4, F, I) :- agg_data_object_point(X0, X1, X2, X3, X4, F, I).
+data_object_total_points(X0, X1, X2, X3, F, I) :- agg_data_object_total_points(X0, X1, X2, X3, F, I).
+discarded_data_object(X0, X1, X2, F, I) :- agg_discarded_data_object(X0, X1, X2, F, I).
+has_address_in_data_refined(X0, F, I) :- agg_has_address_in_data_refined(X0, F, I).
+labeled_ea(X0, F, I) :- agg_labeled_ea(X0, F, I).
+may_have_symbolic_immediate(X0, X1, F, I) :- agg_may_have_symbolic_immediate(X0, X1, F, I).
+pointer_size(X0, F, I) :- agg_pointer_size(X0, F, I).
+preferred_data_access(X0, X1, X2, F, I) :- agg_preferred_data_access(X0, X1, X2, F, I).
+string_candidate_refined(X0, X1, X2, F, I) :- agg_string_candidate_refined(X0, X1, X2, F, I).
+subsequent_string_candidate(X0, X1, F, I) :- agg_subsequent_string_candidate(X0, X1, F, I).
+symbolic_data(X0, X1, X2, F, I) :- agg_symbolic_data(X0, X1, X2, F, I).
+
+// firstphaseRecIdb
+t_8_data_object_candidate(EA, PtrSize, CTX__SYMBOL__0, F0, F1, conj(F0, F1)) :- esrc_ctx__symbol_(CTX__SYMBOL__0), address_in_data_refined(EA, WC_8_1_0, F0, I0), ~d_address_in_data_refined(I0), pointer_size(PtrSize, F1, I1), ~d_pointer_size(I1).
+t_9_has_address_in_data_refined(EA, F0, conj(F0)) :- address_in_data_refined(EA, WC_9_1_0, F0, I0), ~d_address_in_data_refined(I0).
+t_10_data_object_candidate(EA, End - EA, CTX__STRING__0, F0, conj(F0)) :- esrc_ctx__string_(CTX__STRING__0), string_candidate_refined(EA, End, WC_10_2_0, F0, I0), ~d_string_candidate_refined(I0).
+t_11_data_object_candidate(EA, Size, CTX__OTHER__0, F0, conj(F0)) :- esrc_ctx__other_(CTX__OTHER__0), preferred_data_access(EA, Size, WC_11_2_0, F0, I0), ~d_preferred_data_access(I0), Size < 16, ~has_has_address_in_data_refined(EA).
+t_12_data_object_point(EA, Size, Type, CTX__2_0, CTX__DATA_OBJECT_BIAS__1, F0, conj(F0)) :- esrc_ctx__2(CTX__2_0), esrc_ctx__data_object_bias_(CTX__DATA_OBJECT_BIAS__1), data_object_candidate(EA, Size, Type, F0, I0), ~d_data_object_candidate(I0).
+t_13_data_object_point(EA, PtrSize, CTX__SYMBOL__0, CTX_N5_1, CTX__DATA_ACCESS__2, F0, F1, conj(F0, F1)) :- esrc_ctx__symbol_(CTX__SYMBOL__0), esrc_ctx_n5(CTX_N5_1), esrc_ctx__data_access_(CTX__DATA_ACCESS__2), data_object_candidate(EA, PtrSize, "symbol", F0, I0), ~d_data_object_candidate(I0), preferred_data_access(EA, PtrSize, WC_13_2_2, F1, I1), ~d_preferred_data_access(I1).
+t_14_data_object_point(EA, PtrSize, CTX__SYMBOL__0, CTX_N3_1, CTX__POINTER_ARRAY__2, F0, F1, conj(F0, F1)) :- esrc_ctx__symbol_(CTX__SYMBOL__0), esrc_ctx_n3(CTX_N3_1), esrc_ctx__pointer_array_(CTX__POINTER_ARRAY__2), data_object_candidate(EA, PtrSize, "symbol", F0, I0), ~d_data_object_candidate(I0), address_array(EA, WC_14_1_2, WC_14_2_2, F1, I1), ~d_address_array(I1).
+t_15_data_object_point(EA, PtrSize, CTX__SYMBOL__0, CTX_N2_1, CTX__ALIGNED__2, F0, conj(F0)) :- esrc_ctx__symbol_(CTX__SYMBOL__0), esrc_ctx_n2(CTX_N2_1), esrc_ctx__aligned_(CTX__ALIGNED__2), data_object_candidate(EA, PtrSize, "symbol", F0, I0), ~d_data_object_candidate(I0), EA % PtrSize = 0.
+t_16_data_object_point(EA, PtrSize, CTX__SYMBOL__0, CTX__1_1, CTX__OVERLAPS_STRING__2, F0, F1, conj(F0, F1)) :- esrc_ctx__symbol_(CTX__SYMBOL__0), esrc_ctx__1(CTX__1_1), esrc_ctx__overlaps_string_(CTX__OVERLAPS_STRING__2), data_object_candidate(EA, PtrSize, "symbol", F0, I0), ~d_data_object_candidate(I0), string_candidate_refined(StrBeg, StrEnd, WC_16_2_2, F1, I1), ~d_string_candidate_refined(I1), StrBeg <= EA, EA < StrEnd.
+t_17_data_object_point(EA, Size, CTX__STRING__0, CTX_N2_1, CTX__STRING_BASIC_POINT__2, F0, conj(F0)) :- esrc_ctx__string_(CTX__STRING__0), esrc_ctx_n2(CTX_N2_1), esrc_ctx__string_basic_point_(CTX__STRING_BASIC_POINT__2), data_object_candidate(EA, Size, "string", F0, I0), ~d_data_object_candidate(I0).
+t_18_data_object_point(EA, Size, CTX__STRING__0, CTX_N3_1, CTX__LONG_STRING__2, F0, conj(F0)) :- esrc_ctx__string_(CTX__STRING__0), esrc_ctx_n3(CTX_N3_1), esrc_ctx__long_string_(CTX__LONG_STRING__2), data_object_candidate(EA, Size, "string", F0, I0), ~d_data_object_candidate(I0), Size > 5.
+t_19_data_object_point(EA, Size, CTX__STRING__0, CTX_N1_1, CTX__STRING_THAT_HAS_REFERENCE__2, F0, F1, F2, conj(F0, F1, F2)) :- esrc_ctx__string_(CTX__STRING__0), esrc_ctx_n1(CTX_N1_1), esrc_ctx__string_that_has_reference_(CTX__STRING_THAT_HAS_REFERENCE__2), data_object_candidate(EA, Size, "string", F0, I0), ~d_data_object_candidate(I0), may_have_symbolic_immediate(WC_19_0_2, EA, F1, I1), ~d_may_have_symbolic_immediate(I1), data_limit(EA, F2, I2), ~d_data_limit(I2).
+t_20_data_object_point(EA, Size, CTX__STRING__0, CTX_N1_1, CTX__STRING_HAS_STRING_NEIGHBORS__2, F0, F1, F2, conj(F0, F1, F2)) :- esrc_ctx__string_(CTX__STRING__0), esrc_ctx_n1(CTX_N1_1), esrc_ctx__string_has_string_neighbors_(CTX__STRING_HAS_STRING_NEIGHBORS__2), data_object_candidate(EA, Size, "string", F0, I0), ~d_data_object_candidate(I0), subsequent_string_candidate(EA, WC_20_1_2, F1, I1), ~d_subsequent_string_candidate(I1), subsequent_string_candidate(WC_20_0_4, EA, F2, I2), ~d_subsequent_string_candidate(I2).
+t_21_data_object_point(EA, Size, CTX__OTHER__0, CTX_N4_1, CTX__DATA_ACCESS__2, F0, conj(F0)) :- esrc_ctx__other_(CTX__OTHER__0), esrc_ctx_n4(CTX_N4_1), esrc_ctx__data_access_(CTX__DATA_ACCESS__2), data_object_candidate(EA, Size, "other", F0, I0), ~d_data_object_candidate(I0), Size < 16.
+t_22_data_object_conflict(EA, Size, Type, EA2, Size2, Type2, F0, F1, conj(F0, F1)) :- data_object_candidate(EA, Size, Type, F0, I0), ~d_data_object_candidate(I0), data_object_candidate(EA2, Size2, Type2, F1, I1), ~d_data_object_candidate(I1), EA2 > EA, EA2 < EA + Size.
+t_23_data_object_conflict(EA, Size, Type, EA, Size2, Type2, F0, F1, conj(F0, F1)) :- data_object_candidate(EA, Size, Type, F0, I0), ~d_data_object_candidate(I0), data_object_candidate(EA, Size2, Type2, F1, I1), ~d_data_object_candidate(I1), Size2 > Size.
+t_24_data_object_conflict(EA, Size, Type, EA, Size, Type2, F0, F1, conj(F0, F1)) :- data_object_candidate(EA, Size, Type, F0, I0), ~d_data_object_candidate(I0), data_object_candidate(EA, Size, Type2, F1, I1), ~d_data_object_candidate(I1), Type != Type2.
+t_25_data_object_total_points(EA, Size, Type, Points, F0, F1, conj(F0, F1)) :- data_object_candidate(EA, Size, Type, F0, I0), ~d_data_object_candidate(I0), Points = sum(X, data_object_point(EA, Size, Type, X, WC_sum_85_4, F1, I1)).
+t_26_discarded_data_object(EA, Size, Type, F0, F1, F2, conj(F0, F1, F2)) :- data_object_conflict(EA, Size, Type, EA2, Size2, Type2, F0, I0), ~d_data_object_conflict(I0), data_object_total_points(EA, Size, Type, Points1, F1, I1), ~d_data_object_total_points(I1), data_object_total_points(EA2, Size2, Type2, Points2, F2, I2), ~d_data_object_total_points(I2), Points1 < Points2.
+t_27_discarded_data_object(EA, Size, Type, F0, F1, F2, conj(F0, F1, F2)) :- data_object_conflict(EA2, Size2, Type2, EA, Size, Type, F0, I0), ~d_data_object_conflict(I0), data_object_total_points(EA, Size, Type, Points1, F1, I1), ~d_data_object_total_points(I1), data_object_total_points(EA2, Size2, Type2, Points2, F2, I2), ~d_data_object_total_points(I2), Points1 < Points2.
+t_28_data_object(EA, Size, Type, F0, conj(F0)) :- data_object_total_points(EA, Size, Type, Points, F0, I0), ~d_data_object_total_points(I0), ~has_discarded_data_object(EA, Size, Type), Points >= 0.
+t_29_symbolic_data(EA, Size, Val, F0, F1, conj(F0, F1)) :- data_object(EA, Size, "symbol", F0, I0), ~d_data_object(I0), address_in_data_refined(EA, Val, F1, I1), ~d_address_in_data_refined(I1).
+t_30_labeled_ea(EA, F0, conj(F0)) :- symbolic_data(WC_30_0_0, WC_30_1_0, EA, F0, I0), ~d_symbolic_data(I0).
+t_31_labeled_ea(EA, F0, conj(F0)) :- data_object(EA, WC_31_1_0, "string", F0, I0), ~d_data_object(I0).
+
+// NAF witnesses (for ~has_<pred>(keys...) rewrites)
+has_discarded_data_object(X0, X1, X2) :- discarded_data_object(X0, X1, X2, F, I), ~d_discarded_data_object(I).
+has_has_address_in_data_refined(X0) :- has_address_in_data_refined(X0, F, I), ~d_has_address_in_data_refined(I).
+
+// secondphaseIdb
+address_array(X0, X1, X2, F, I) :- agg_address_array(X0, X1, X2, F, I), ~address_array(X0, X1, X2, F2, I2).
+tt_address_array(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_address_array(X0, X1, X2, F1, I1), address_array(X0, X1, X2, F2, I2), ~d_address_array(I2), equiv(F1, F2).
+address_array(X0, X1, X2, D, I1) :- tt_address_array(X0, X1, X2, F1, F2, I1, I2, D).
+d_address_array(I2) :- tt_address_array(X0, X1, X2, F1, F2, I1, I2, D).
+address_in_data_refined(X0, X1, F, I) :- agg_address_in_data_refined(X0, X1, F, I), ~address_in_data_refined(X0, X1, F2, I2).
+tt_address_in_data_refined(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_address_in_data_refined(X0, X1, F1, I1), address_in_data_refined(X0, X1, F2, I2), ~d_address_in_data_refined(I2), equiv(F1, F2).
+address_in_data_refined(X0, X1, D, I1) :- tt_address_in_data_refined(X0, X1, F1, F2, I1, I2, D).
+d_address_in_data_refined(I2) :- tt_address_in_data_refined(X0, X1, F1, F2, I1, I2, D).
+data_limit(X0, F, I) :- agg_data_limit(X0, F, I), ~data_limit(X0, F2, I2).
+tt_data_limit(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_limit(X0, F1, I1), data_limit(X0, F2, I2), ~d_data_limit(I2), equiv(F1, F2).
+data_limit(X0, D, I1) :- tt_data_limit(X0, F1, F2, I1, I2, D).
+d_data_limit(I2) :- tt_data_limit(X0, F1, F2, I1, I2, D).
+data_object(X0, X1, X2, F, I) :- agg_data_object(X0, X1, X2, F, I), ~data_object(X0, X1, X2, F2, I2).
+tt_data_object(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_object(X0, X1, X2, F1, I1), data_object(X0, X1, X2, F2, I2), ~d_data_object(I2), equiv(F1, F2).
+data_object(X0, X1, X2, D, I1) :- tt_data_object(X0, X1, X2, F1, F2, I1, I2, D).
+d_data_object(I2) :- tt_data_object(X0, X1, X2, F1, F2, I1, I2, D).
+data_object_candidate(X0, X1, X2, F, I) :- agg_data_object_candidate(X0, X1, X2, F, I), ~data_object_candidate(X0, X1, X2, F2, I2).
+tt_data_object_candidate(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_object_candidate(X0, X1, X2, F1, I1), data_object_candidate(X0, X1, X2, F2, I2), ~d_data_object_candidate(I2), equiv(F1, F2).
+data_object_candidate(X0, X1, X2, D, I1) :- tt_data_object_candidate(X0, X1, X2, F1, F2, I1, I2, D).
+d_data_object_candidate(I2) :- tt_data_object_candidate(X0, X1, X2, F1, F2, I1, I2, D).
+data_object_conflict(X0, X1, X2, X3, X4, X5, F, I) :- agg_data_object_conflict(X0, X1, X2, X3, X4, X5, F, I), ~data_object_conflict(X0, X1, X2, X3, X4, X5, F2, I2).
+tt_data_object_conflict(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_object_conflict(X0, X1, X2, X3, X4, X5, F1, I1), data_object_conflict(X0, X1, X2, X3, X4, X5, F2, I2), ~d_data_object_conflict(I2), equiv(F1, F2).
+data_object_conflict(X0, X1, X2, X3, X4, X5, D, I1) :- tt_data_object_conflict(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, D).
+d_data_object_conflict(I2) :- tt_data_object_conflict(X0, X1, X2, X3, X4, X5, F1, F2, I1, I2, D).
+data_object_point(X0, X1, X2, X3, X4, F, I) :- agg_data_object_point(X0, X1, X2, X3, X4, F, I), ~data_object_point(X0, X1, X2, X3, X4, F2, I2).
+tt_data_object_point(X0, X1, X2, X3, X4, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_object_point(X0, X1, X2, X3, X4, F1, I1), data_object_point(X0, X1, X2, X3, X4, F2, I2), ~d_data_object_point(I2), equiv(F1, F2).
+data_object_point(X0, X1, X2, X3, X4, D, I1) :- tt_data_object_point(X0, X1, X2, X3, X4, F1, F2, I1, I2, D).
+d_data_object_point(I2) :- tt_data_object_point(X0, X1, X2, X3, X4, F1, F2, I1, I2, D).
+data_object_total_points(X0, X1, X2, X3, F, I) :- agg_data_object_total_points(X0, X1, X2, X3, F, I), ~data_object_total_points(X0, X1, X2, X3, F2, I2).
+tt_data_object_total_points(X0, X1, X2, X3, F1, F2, I1, I2, dis(F1, F2)) :- agg_data_object_total_points(X0, X1, X2, X3, F1, I1), data_object_total_points(X0, X1, X2, X3, F2, I2), ~d_data_object_total_points(I2), equiv(F1, F2).
+data_object_total_points(X0, X1, X2, X3, D, I1) :- tt_data_object_total_points(X0, X1, X2, X3, F1, F2, I1, I2, D).
+d_data_object_total_points(I2) :- tt_data_object_total_points(X0, X1, X2, X3, F1, F2, I1, I2, D).
+discarded_data_object(X0, X1, X2, F, I) :- agg_discarded_data_object(X0, X1, X2, F, I), ~discarded_data_object(X0, X1, X2, F2, I2).
+tt_discarded_data_object(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_discarded_data_object(X0, X1, X2, F1, I1), discarded_data_object(X0, X1, X2, F2, I2), ~d_discarded_data_object(I2), equiv(F1, F2).
+discarded_data_object(X0, X1, X2, D, I1) :- tt_discarded_data_object(X0, X1, X2, F1, F2, I1, I2, D).
+d_discarded_data_object(I2) :- tt_discarded_data_object(X0, X1, X2, F1, F2, I1, I2, D).
+has_address_in_data_refined(X0, F, I) :- agg_has_address_in_data_refined(X0, F, I), ~has_address_in_data_refined(X0, F2, I2).
+tt_has_address_in_data_refined(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_has_address_in_data_refined(X0, F1, I1), has_address_in_data_refined(X0, F2, I2), ~d_has_address_in_data_refined(I2), equiv(F1, F2).
+has_address_in_data_refined(X0, D, I1) :- tt_has_address_in_data_refined(X0, F1, F2, I1, I2, D).
+d_has_address_in_data_refined(I2) :- tt_has_address_in_data_refined(X0, F1, F2, I1, I2, D).
+labeled_ea(X0, F, I) :- agg_labeled_ea(X0, F, I), ~labeled_ea(X0, F2, I2).
+tt_labeled_ea(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_labeled_ea(X0, F1, I1), labeled_ea(X0, F2, I2), ~d_labeled_ea(I2), equiv(F1, F2).
+labeled_ea(X0, D, I1) :- tt_labeled_ea(X0, F1, F2, I1, I2, D).
+d_labeled_ea(I2) :- tt_labeled_ea(X0, F1, F2, I1, I2, D).
+may_have_symbolic_immediate(X0, X1, F, I) :- agg_may_have_symbolic_immediate(X0, X1, F, I), ~may_have_symbolic_immediate(X0, X1, F2, I2).
+tt_may_have_symbolic_immediate(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_may_have_symbolic_immediate(X0, X1, F1, I1), may_have_symbolic_immediate(X0, X1, F2, I2), ~d_may_have_symbolic_immediate(I2), equiv(F1, F2).
+may_have_symbolic_immediate(X0, X1, D, I1) :- tt_may_have_symbolic_immediate(X0, X1, F1, F2, I1, I2, D).
+d_may_have_symbolic_immediate(I2) :- tt_may_have_symbolic_immediate(X0, X1, F1, F2, I1, I2, D).
+pointer_size(X0, F, I) :- agg_pointer_size(X0, F, I), ~pointer_size(X0, F2, I2).
+tt_pointer_size(X0, F1, F2, I1, I2, dis(F1, F2)) :- agg_pointer_size(X0, F1, I1), pointer_size(X0, F2, I2), ~d_pointer_size(I2), equiv(F1, F2).
+pointer_size(X0, D, I1) :- tt_pointer_size(X0, F1, F2, I1, I2, D).
+d_pointer_size(I2) :- tt_pointer_size(X0, F1, F2, I1, I2, D).
+preferred_data_access(X0, X1, X2, F, I) :- agg_preferred_data_access(X0, X1, X2, F, I), ~preferred_data_access(X0, X1, X2, F2, I2).
+tt_preferred_data_access(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_preferred_data_access(X0, X1, X2, F1, I1), preferred_data_access(X0, X1, X2, F2, I2), ~d_preferred_data_access(I2), equiv(F1, F2).
+preferred_data_access(X0, X1, X2, D, I1) :- tt_preferred_data_access(X0, X1, X2, F1, F2, I1, I2, D).
+d_preferred_data_access(I2) :- tt_preferred_data_access(X0, X1, X2, F1, F2, I1, I2, D).
+string_candidate_refined(X0, X1, X2, F, I) :- agg_string_candidate_refined(X0, X1, X2, F, I), ~string_candidate_refined(X0, X1, X2, F2, I2).
+tt_string_candidate_refined(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_string_candidate_refined(X0, X1, X2, F1, I1), string_candidate_refined(X0, X1, X2, F2, I2), ~d_string_candidate_refined(I2), equiv(F1, F2).
+string_candidate_refined(X0, X1, X2, D, I1) :- tt_string_candidate_refined(X0, X1, X2, F1, F2, I1, I2, D).
+d_string_candidate_refined(I2) :- tt_string_candidate_refined(X0, X1, X2, F1, F2, I1, I2, D).
+subsequent_string_candidate(X0, X1, F, I) :- agg_subsequent_string_candidate(X0, X1, F, I), ~subsequent_string_candidate(X0, X1, F2, I2).
+tt_subsequent_string_candidate(X0, X1, F1, F2, I1, I2, dis(F1, F2)) :- agg_subsequent_string_candidate(X0, X1, F1, I1), subsequent_string_candidate(X0, X1, F2, I2), ~d_subsequent_string_candidate(I2), equiv(F1, F2).
+subsequent_string_candidate(X0, X1, D, I1) :- tt_subsequent_string_candidate(X0, X1, F1, F2, I1, I2, D).
+d_subsequent_string_candidate(I2) :- tt_subsequent_string_candidate(X0, X1, F1, F2, I1, I2, D).
+symbolic_data(X0, X1, X2, F, I) :- agg_symbolic_data(X0, X1, X2, F, I), ~symbolic_data(X0, X1, X2, F2, I2).
+tt_symbolic_data(X0, X1, X2, F1, F2, I1, I2, dis(F1, F2)) :- agg_symbolic_data(X0, X1, X2, F1, I1), symbolic_data(X0, X1, X2, F2, I2), ~d_symbolic_data(I2), equiv(F1, F2).
+symbolic_data(X0, X1, X2, D, I1) :- tt_symbolic_data(X0, X1, X2, F1, F2, I1, I2, D).
+d_symbolic_data(I2) :- tt_symbolic_data(X0, X1, X2, F1, F2, I1, I2, D).
+
+// final
+req_data_object(X0, X1, X2, F) :- data_object(X0, X1, X2, F, I), ~d_data_object(I).
+req_labeled_ea(X0, F) :- labeled_ea(X0, F, I), ~d_labeled_ea(I).
+req_symbolic_data(X0, X1, X2, F) :- symbolic_data(X0, X1, X2, F, I), ~d_symbolic_data(I).
