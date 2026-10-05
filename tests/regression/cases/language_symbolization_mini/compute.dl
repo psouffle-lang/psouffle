@@ -1,0 +1,22 @@
+.decl object_size(obj:symbol, bytes:number)
+.input object_size
+
+.decl object_kind(obj:symbol, kind:symbol)
+.input object_kind
+
+.decl selected(kind:symbol)
+selected("widget").
+selected("other").
+
+.decl class_object_size(kind:symbol, bytes:number)
+class_object_size(Kind, Bytes) :-
+    object_size(Obj, Bytes),
+    object_kind(Obj, Kind).
+
+.decl class_total_bytes(kind:symbol, total_bytes:number)
+.output class_total_bytes
+class_total_bytes(Kind, TotalBytes) :-
+    selected(Kind),
+    TotalBytes = sum Bytes : { class_object_size(Kind, Bytes) }.
+
+query(class_total_bytes(_, _)).

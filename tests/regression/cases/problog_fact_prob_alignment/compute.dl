@@ -1,0 +1,7 @@
+.decl edge(src:symbol, dst:symbol)
+.input edge
+
+.decl seen(src:symbol, dst:symbol)
+.output seen
+
+seen(Src, Dst) :- edge(Src, Dst).

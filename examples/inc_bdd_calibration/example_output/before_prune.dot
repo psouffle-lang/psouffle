@@ -1,0 +1,20 @@
+digraph SubgraphView {
+  rankdir=LR;
+  node [shape=box, style=filled, fillcolor=lightblue];
+  node4 [label="o2(0)"];
+  node3 [label="o4(0)"];
+  node2 [label="o5(0)"];
+  node1 [label="i1(0)"];
+  node0 [label="i2(0)"];
+  node [shape=point, fillcolor=red, width=0.2];
+  edge2;
+  node0 -> edge2;
+  edge2 -> node4;
+  edge1;
+  node4 -> edge1;
+  edge1 -> node3;
+  edge0;
+  node1 -> edge0;
+  node3 -> edge0;
+  edge0 -> node2;
+}

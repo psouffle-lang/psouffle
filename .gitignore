@@ -1,0 +1,39 @@
+# Build outputs
+/build/
+/build-*/
+/cmake-build-*/
+*build*/
+/CMakeCache.txt
+/CMakeFiles/
+/Makefile
+/compile_commands.json
+
+# Generated compiler/runtime outputs
+/compute
+/compute_*
+/compute.cpp
+/compute.souffle*
+/preDG*
+/dg_*
+/derivation*.json
+/graph-*.json
+/facts.prob
+/fact-iter*.prob
+/*.log
+/*.tsv
+
+# Local benchmark/checkouts
+/problog-benchmark/
+/side_channel_inc/
+/side_channel_inc_*/
+/research/
+
+# Editor/cache
+/.cache/
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+__pycache__/
+*.pyc

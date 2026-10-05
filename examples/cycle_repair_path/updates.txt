@@ -1,0 +1,9 @@
+delete edge(0,1)
+commit
+insert 0.85::edge(0,2)
+commit
+delete edge(2,3)
+commit
+insert 0.70::edge(2,3)
+commit
+q

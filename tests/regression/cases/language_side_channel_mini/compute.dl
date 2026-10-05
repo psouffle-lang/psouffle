@@ -1,0 +1,17 @@
+.decl secret(value:symbol)
+.input secret
+
+.decl mapping(value:symbol, observation:symbol)
+.input mapping
+
+.decl monitor(observation:symbol)
+.input monitor
+
+.decl leak(observation:symbol)
+leak(Observation) :- secret(Value), mapping(Value, Observation).
+
+.decl explained(observation:symbol)
+.output explained
+explained(Observation) :- leak(Observation), monitor(Observation).
+
+query(explained(_)).

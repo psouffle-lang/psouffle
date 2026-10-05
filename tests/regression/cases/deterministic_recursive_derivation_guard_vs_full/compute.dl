@@ -1,0 +1,8 @@
+.decl edge(x:number, y:number)
+.input edge
+
+.decl reach(x:number, y:number)
+.output reach
+
+reach(x,y) :- edge(x,y).
+reach(x,z) :- reach(x,y), edge(y,z).

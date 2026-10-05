@@ -1,0 +1,16 @@
+.decl trust(x:number, y:number)
+.input trust
+.decl chance(x:number, y:number)
+.input chance
+
+.decl det_path(x:number, y:number)
+det_path(x,y) :- trust(x,y).
+det_path(x,z) :- det_path(x,y), trust(y,z).
+
+.decl risk(y:number)
+risk(y) :- chance(1,y).
+
+.decl alert(y:number)
+.output alert
+alert(y) :- det_path(1,y).
+alert(y) :- risk(y).

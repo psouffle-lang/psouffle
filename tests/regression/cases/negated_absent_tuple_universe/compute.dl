@@ -1,0 +1,10 @@
+.decl src(x:number)
+.input src
+
+.decl block(x:number)
+.input block
+
+.decl allow(x:number)
+.output allow
+
+allow(x) :- src(x), !block(x).

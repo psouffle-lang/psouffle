@@ -1,0 +1,47 @@
+digraph G {
+  rankdir=LR;
+  "o2(0)" [shape=ellipse, penwidth=2, color="#ff7f0e"];
+  "i1(0)" [shape=box, penwidth=1, color="black"];
+  "o5(0)" [shape=ellipse, penwidth=1, color="black"];
+  "i2(0)" [shape=box, penwidth=2, color="#f2c744"];
+  "o4(0)" [shape=ellipse, penwidth=1, color="black"];
+  "d2(0)" [shape=box, penwidth=2, color="#2ca02c"];
+  "edge_node_2" [shape=point, width=0.2, height=0.2, label="", style=filled, color="red", fillcolor="red", penwidth=2];
+  "i2(0)" -> "edge_node_2" [color="red", penwidth=2, style=solid];
+  "edge_node_2" -> "o2(0)" [color="red", penwidth=2, style=solid];
+  "edge_node_0" [shape=point, width=0.2, height=0.2, label="", style=filled, color="black", fillcolor="black", penwidth=1];
+  "i1(0)" -> "edge_node_0" [color="black", penwidth=1, style=solid];
+  "o4(0)" -> "edge_node_0" [color="black", penwidth=1, style=solid];
+  "edge_node_0" -> "o5(0)" [color="black", penwidth=1, style=solid];
+  "edge_node_1" [shape=point, width=0.2, height=0.2, label="", style=filled, color="black", fillcolor="black", penwidth=1];
+  "o2(0)" -> "edge_node_1" [color="black", penwidth=1, style=solid];
+  "edge_node_1" -> "o4(0)" [color="black", penwidth=1, style=solid];
+  "edge_node_3" [shape=point, width=0.2, height=0.2, label="", style=filled, color="#2ca02c", fillcolor="#2ca02c", penwidth=2];
+  "d2(0)" -> "edge_node_3" [color="#2ca02c", penwidth=2, style=solid];
+  "edge_node_3" -> "o2(0)" [color="#2ca02c", penwidth=2, style=solid];
+  subgraph cluster_legend {
+    label="Legend";
+    color=gray;
+    legend_fact [shape=box, label="Fact node"];
+    legend_derived [shape=ellipse, label="Derived node"];
+    legend_region [shape=ellipse, penwidth=2, color="#1f77b4", label="Region member"];
+    legend_boundary [shape=ellipse, penwidth=2, color="#ff7f0e", label="Boundary head"];
+    legend_delta_node [shape=ellipse, penwidth=2, color="#2ca02c", label="Delta node"];
+    legend_anchor_node [shape=box, penwidth=2, color="#f2c744", label="Mergeable node anchor"];
+    legend_src_region [shape=box, label="Sample fact"];
+    legend_dst_region [shape=ellipse, label="Sample head"];
+    legend_hyper_region [shape=point, width=0.2, height=0.2, label="", style=filled, color="#1f77b4", fillcolor="#1f77b4"];
+    legend_src_region -> legend_hyper_region [color="#1f77b4", penwidth=2, label="region hyperedge"];
+    legend_hyper_region -> legend_dst_region [color="#1f77b4", penwidth=2];
+    legend_src_delta [shape=box, label="Sample fact"];
+    legend_dst_delta [shape=ellipse, label="Sample head"];
+    legend_hyper_delta [shape=point, width=0.2, height=0.2, label="", style=filled, color="#2ca02c", fillcolor="#2ca02c"];
+    legend_src_delta -> legend_hyper_delta [color="#2ca02c", penwidth=2, label="delta hyperedge"];
+    legend_hyper_delta -> legend_dst_delta [color="#2ca02c", penwidth=2];
+    legend_src_merge [shape=box, label="Sample fact"];
+    legend_dst_merge [shape=ellipse, label="Sample head"];
+    legend_hyper_merge [shape=point, width=0.2, height=0.2, label="", style=filled, color="red", fillcolor="red"];
+    legend_src_merge -> legend_hyper_merge [color="red", penwidth=2, label="mergeable anchor path"];
+    legend_hyper_merge -> legend_dst_merge [color="red", penwidth=2];
+  }
+}

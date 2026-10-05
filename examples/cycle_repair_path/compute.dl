@@ -1,0 +1,11 @@
+.decl source(x:number)
+.input source
+
+.decl edge(x:number, y:number)
+.input edge
+
+.decl path(x:number, y:number)
+.output path
+
+path(x,x) :- source(x).
+path(x,z) :- path(x,y), edge(y,z).

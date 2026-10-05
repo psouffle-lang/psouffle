@@ -1,0 +1,71 @@
+digraph IncrementalDerivationGraph {
+  rankdir=LR;
+  subgraph cluster_legend {
+    label="Legend";
+    style=filled;
+    color=lightgrey;
+    node [style=filled];
+    "Normal Node" [fillcolor=lightblue];
+    "Inserted Node" [fillcolor=lightgreen];
+    "Deleted Node" [fillcolor=pink, style="filled,dashed"];
+    "Normal Node" -> "Normal Edge" [color=black];
+    "Inserted Node" -> "Inserted Edge" [color=green];
+    "Deleted Node" -> "Deleted Edge" [color=red, style=dashed];
+    "Normal Edge" [shape=point, fillcolor=black, width=0.2];
+    "Inserted Edge" [shape=point, fillcolor=green, width=0.2];
+    "Deleted Edge" [shape=point, fillcolor=red, width=0.2];
+  }
+
+  // Regular nodes
+  node [shape=box, style=filled, fillcolor=lightblue];
+  node4 [label="source(0)\nP=0.99"];
+  node12 [label="path(0,0)"];
+
+  // Inserted nodes
+  node [shape=box, style=filled, fillcolor=lightgreen];
+
+  // Deleted nodes
+  node [shape=box, style="filled,dashed", fillcolor=pink];
+  node7 [label="path(0,5)"];
+  node6 [label="edge(0,1)\nP=0.9"];
+  node8 [label="path(0,4)"];
+  node9 [label="path(0,3)"];
+  node10 [label="path(0,2)"];
+  node11 [label="path(0,1)"];
+
+  // Regular edges
+  node [shape=point, fillcolor=black, width=0.2];
+  edge6 [label="R1"];
+  node4 -> edge6;
+  edge6 -> node12;
+
+  // Inserted edges
+  node [shape=point, fillcolor=green, width=0.2];
+
+  // Deleted edges
+  node [shape=point, fillcolor=red, width=0.2];
+  edge0 [label="R2", color=red, style=dashed];
+  node8 -> edge0 [color=red, style=dashed];
+  node0 -> edge0 [color=red, style=dashed];
+  edge0 -> node7 [color=red, style=dashed];
+  edge1 [label="R2", color=red, style=dashed];
+  node9 -> edge1 [color=red, style=dashed];
+  node1 -> edge1 [color=red, style=dashed];
+  edge1 -> node8 [color=red, style=dashed];
+  edge2 [label="R2", color=red, style=dashed];
+  node10 -> edge2 [color=red, style=dashed];
+  node3 -> edge2 [color=red, style=dashed];
+  edge2 -> node9 [color=red, style=dashed];
+  edge3 [label="R2", color=red, style=dashed];
+  node11 -> edge3 [color=red, style=dashed];
+  node5 -> edge3 [color=red, style=dashed];
+  edge3 -> node10 [color=red, style=dashed];
+  edge4 [label="R2", color=red, style=dashed];
+  node9 -> edge4 [color=red, style=dashed];
+  node2 -> edge4 [color=red, style=dashed];
+  edge4 -> node11 [color=red, style=dashed];
+  edge5 [label="R2", color=red, style=dashed];
+  node12 -> edge5 [color=red, style=dashed];
+  node6 -> edge5 [color=red, style=dashed];
+  edge5 -> node11 [color=red, style=dashed];
+}

@@ -1,0 +1,22 @@
+.decl i(x:number)
+.input i
+
+.decl d(x:number)
+.input d
+
+.decl step(x:number, y:number)
+.input step
+
+.decl mid(x:number)
+.decl h(x:number)
+.decl raw(x:number)
+.decl sink(x:number)
+.output sink
+
+mid(y) :- i(x), step(x, y).
+mid(y) :- mid(x), step(x, y).
+h(x) :- mid(x).
+
+raw(x) :- h(x).
+raw(x) :- d(x).
+sink(x) :- raw(x).

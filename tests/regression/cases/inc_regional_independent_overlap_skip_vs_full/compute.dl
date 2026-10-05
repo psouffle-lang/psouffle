@@ -1,0 +1,32 @@
+.decl i1(x:number)
+.input i1
+
+.decl i2(x:number)
+.input i2
+
+.decl d1(x:number)
+.input d1
+
+.decl d2(x:number)
+.input d2
+
+.decl o1(x:number)
+.decl o2(x:number)
+.decl o3(x:number)
+.decl o4(x:number)
+.decl o5(x:number)
+.decl o6(x:number)
+.output o5
+.output o6
+
+o1(x) :- i1(x).
+o2(x) :- i2(x).
+
+o3(x) :- o1(x).
+o3(x) :- d1(x).
+
+o4(x) :- o2(x).
+o4(x) :- d2(x).
+
+o5(x) :- o3(x).
+o6(x) :- o4(x).

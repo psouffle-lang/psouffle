@@ -1,0 +1,28 @@
+.decl i1(x:number)
+.input i1
+
+.decl i2(x:number)
+.input i2
+
+.decl dshared(x:number)
+.input dshared
+
+.decl o1(x:number)
+.decl o2(x:number)
+.decl o3(x:number)
+.decl o4(x:number)
+.decl o5(x:number)
+.output o4
+.output o5
+
+o1(x) :- i1(x).
+
+o2(x) :- i2(x).
+o2(x) :- dshared(x).
+
+o3(x) :- o1(x).
+o3(x) :- dshared(x).
+
+o4(x) :- o2(x).
+
+o5(x) :- o3(x), o4(x).

@@ -1,0 +1,26 @@
+.type s <: number
+
+.decl srcA(v0:s)
+.decl srcB(v0:s)
+.decl srcD(v0:s)
+.decl A(v0:s)
+.decl B(v0:s)
+.decl D(v0:s)
+.decl M(v0:s)
+.decl N(v0:s)
+.decl O(v0:s)
+
+.input srcA
+.input srcB
+.input srcD
+
+.output O
+
+0.6::A(X) :- srcA(X).
+0.7::B(X) :- srcB(X).
+0.8::D(X) :- srcD(X).
+0.9::M(X) :- A(X).
+0.9::M(X) :- B(X).
+0.9::M(X) :- D(X).
+N(X) :- M(X).
+0.95::O(X) :- N(X).

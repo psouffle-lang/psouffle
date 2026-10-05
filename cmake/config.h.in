@@ -1,0 +1,8 @@
+#pragma once
+
+namespace souffle {
+constexpr char const* PACKAGE_VERSION = "${PACKAGE_VERSION}";
+constexpr char const* MCPP_EXECUTABLE = "${MCPP_EXECUTABLE}";
+constexpr char const* CUDD_INCLUDE_DIR = "${CUDD_INCLUDE_DIR}";
+constexpr char const* CUDD_LIBRARY = "${CUDD_LIBRARY}";
+}

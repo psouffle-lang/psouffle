@@ -1,0 +1,26 @@
+.type s <: number
+
+.decl assign(v0:s, v1:s)
+.decl andor_assign_left(v0:s, v1:s)
+.decl andor_assign_right(v0:s, v1:s)
+.decl BV_DIFF_REC(v0:s, v1:s, v2:number)
+.decl RAND(v0:s)
+.decl KEY_IND(v0:s)
+
+.input assign
+.input andor_assign_left
+.input andor_assign_right
+.input BV_DIFF_REC
+.input RAND
+
+.output RAND
+.output KEY_IND
+
+RAND(FROM2) :- RAND(FROM1), assign(FROM2, FROM1).
+KEY_IND(TO) :-
+    andor_assign_left(TO, FROM1),
+    andor_assign_right(TO, FROM2),
+    RAND(FROM1),
+    RAND(FROM2),
+    BV_DIFF_REC(FROM1, FROM2, INT_RES0),
+    INT_RES0 != 0.

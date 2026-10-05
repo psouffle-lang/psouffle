@@ -1,0 +1,51 @@
+name: artifact-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-regression:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf \
+            automake \
+            bison \
+            build-essential \
+            cmake \
+            curl \
+            flex \
+            libreadline-dev \
+            libtool \
+            mcpp \
+            python3
+
+      - name: Install CUDD
+        run: |
+          mkdir -p /tmp/cudd-src
+          curl -L 'https://github.com/cuddorg/cudd/archive/refs/tags/cudd-3.0.0.tar.gz' -o /tmp/cudd.tar.gz
+          tar -xzf /tmp/cudd.tar.gz -C /tmp/cudd-src --strip-components=1
+          cd /tmp/cudd-src
+          if [ ! -x ./configure ]; then
+            autoreconf -fi
+          fi
+          ./configure --prefix=/usr/local --enable-shared
+          make -j"$(nproc)"
+          sudo make install
+          sudo ldconfig
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Regression
+        run: ctest --test-dir build -L regression --output-on-failure --progress -j"$(nproc)"

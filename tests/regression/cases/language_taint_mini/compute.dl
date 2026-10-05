@@ -1,0 +1,21 @@
+.decl source(value:symbol)
+.input source
+
+.decl flow(src:symbol, dst:symbol)
+.input flow
+
+.decl sanitizer(value:symbol)
+.input sanitizer
+
+.decl sink(value:symbol)
+.input sink
+
+.decl tainted(value:symbol)
+tainted(Value) :- source(Value).
+tainted(Dst) :- tainted(Src), flow(Src, Dst), !sanitizer(Dst).
+
+.decl alarm(value:symbol)
+.output alarm
+0.80::alarm(Value) :- tainted(Value), sink(Value).
+
+query(alarm(_)).

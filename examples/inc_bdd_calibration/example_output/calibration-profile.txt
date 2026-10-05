@@ -1,0 +1,1 @@
+[inc-regional-calibration] head=o2(0) anchor=node:i2(0) var=0 old_node_prob=0.5 target_prob=0.7 p_when_false=0 p_when_true=1 old_weight=0.5 calibrated_weight=0.7 calibrated_neg_weight=0.3

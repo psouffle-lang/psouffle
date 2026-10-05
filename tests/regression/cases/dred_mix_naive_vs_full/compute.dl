@@ -1,0 +1,17 @@
+.decl edge(x:number, y:number)
+.input edge
+.decl bridge(x:number, y:number)
+.input bridge
+
+.decl hop(x:number, y:number)
+hop(x,y) :- edge(x,y).
+hop(x,y) :- bridge(x,y).
+
+.decl path(x:number, y:number)
+path(x,y) :- hop(x,y).
+path(x,z) :- path(x,y), hop(y,z).
+
+.decl alarm(y:number)
+.output alarm
+alarm(y) :- path(1,y).
+alarm(y) :- path(2,y).

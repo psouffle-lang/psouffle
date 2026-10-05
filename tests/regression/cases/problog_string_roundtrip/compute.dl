@@ -1,0 +1,13 @@
+.decl edge(src:symbol, dst:symbol)
+.input edge
+
+.decl marker(label:symbol)
+marker("path").
+
+.decl reach(src:symbol, dst:symbol, label:symbol)
+reach(X, Y, "path") :- edge(X, Y), marker("path").
+reach(X, Z, "path") :- edge(X, Y), reach(Y, Z, "path").
+
+query(reach("src", "dst", "path")).
+evidence(edge("src", "mid"), true).
+evidence(edge("mid", "dst"), true).

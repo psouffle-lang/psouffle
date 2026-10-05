@@ -1,0 +1,76 @@
+digraph IncrementalDerivationGraph {
+  rankdir=LR;
+  subgraph cluster_legend {
+    label="Legend";
+    style=filled;
+    color=lightgrey;
+    node [style=filled];
+    "Normal Node" [fillcolor=lightblue];
+    "Inserted Node" [fillcolor=lightgreen];
+    "Deleted Node" [fillcolor=pink, style="filled,dashed"];
+    "Normal Node" -> "Normal Edge" [color=black];
+    "Inserted Node" -> "Inserted Edge" [color=green];
+    "Deleted Node" -> "Deleted Edge" [color=red, style=dashed];
+    "Normal Edge" [shape=point, fillcolor=black, width=0.2];
+    "Inserted Edge" [shape=point, fillcolor=green, width=0.2];
+    "Deleted Edge" [shape=point, fillcolor=red, width=0.2];
+  }
+
+  // Regular nodes
+  node [shape=box, style=filled, fillcolor=lightblue];
+  node4 [label="source(0)\nP=0.99"];
+  node13 [label="edge(0,2)\nP=0.85"];
+  node12 [label="path(0,0)"];
+  node18 [label="path(0,2)"];
+
+  // Inserted nodes
+  node [shape=box, style=filled, fillcolor=lightgreen];
+  node1 [label="edge(3,4)\nP=0.5"];
+  node5 [label="edge(1,2)\nP=0.8"];
+  node2 [label="edge(3,1)\nP=0.6"];
+  node0 [label="edge(4,5)\nP=0.4"];
+  node22 [label="path(0,1)"];
+  node19 [label="edge(2,3)\nP=0.7"];
+  node20 [label="path(0,5)"];
+  node21 [label="path(0,4)"];
+  node23 [label="path(0,3)"];
+
+  // Deleted nodes
+  node [shape=box, style="filled,dashed", fillcolor=pink];
+
+  // Regular edges
+  node [shape=point, fillcolor=black, width=0.2];
+  edge12 [label="R2"];
+  node12 -> edge12;
+  node13 -> edge12;
+  edge12 -> node18;
+  edge6 [label="R1"];
+  node4 -> edge6;
+  edge6 -> node12;
+
+  // Inserted edges
+  node [shape=point, fillcolor=green, width=0.2];
+  edge13 [label="R2", color=green];
+  node21 -> edge13 [color=green];
+  node0 -> edge13 [color=green];
+  edge13 -> node20 [color=green];
+  edge14 [label="R2", color=green];
+  node22 -> edge14 [color=green];
+  node5 -> edge14 [color=green];
+  edge14 -> node18 [color=green];
+  edge15 [label="R2", color=green];
+  node23 -> edge15 [color=green];
+  node1 -> edge15 [color=green];
+  edge15 -> node21 [color=green];
+  edge16 [label="R2", color=green];
+  node23 -> edge16 [color=green];
+  node2 -> edge16 [color=green];
+  edge16 -> node22 [color=green];
+  edge17 [label="R2", color=green];
+  node18 -> edge17 [color=green];
+  node19 -> edge17 [color=green];
+  edge17 -> node23 [color=green];
+
+  // Deleted edges
+  node [shape=point, fillcolor=red, width=0.2];
+}

@@ -1,0 +1,7 @@
+.decl edge(src:symbol, dst:symbol)
+.input edge
+
+.decl q(src:symbol, dst:symbol)
+q(X, Y) :- edge(X, Y).
+
+query(q(X, X)).

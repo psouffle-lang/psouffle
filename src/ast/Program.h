@@ -1,0 +1,391 @@
+/*
+ * Souffle - A Datalog Compiler
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved
+ * Licensed under the Universal Permissive License v 1.0 as shown at:
+ * - https://opensource.org/licenses/UPL
+ * - <souffle root>/licenses/SOUFFLE-UPL.txt
+ */
+
+/************************************************************************
+ *
+ * @file Program.h
+ *
+ * Defines the program class
+ *
+ ***********************************************************************/
+
+#pragma once
+
+#include "Global.h"
+#include "ast/Clause.h"
+#include "ast/Component.h"
+#include "ast/ComponentInit.h"
+#include "ast/Directive.h"
+#include "ast/ProbQuery.h"
+#include "ast/Evidence.h"
+#include "ast/FunctorDeclaration.h"
+#include "ast/ItemContainer.h"
+#include "ast/Node.h"
+#include "ast/Pragma.h"
+#include "ast/QualifiedName.h"
+#include "ast/Relation.h"
+#include "ast/Type.h"
+#include "ast/utility/Utils.h"
+#include "souffle/utility/FunctionalUtil.h"
+#include "souffle/utility/Visitor.h"
+#include "souffle/utility/span.h"
+#include <iosfwd>
+#include <vector>
+
+namespace souffle {
+class ParserDriver;
+
+namespace ast {
+class Atom;
+class Program;
+
+namespace transform {
+class ComponentInstantiationTransformer;
+}
+}  // namespace ast
+
+// very common case optimisation: visiting every `Clause`
+template <typename F, typename = detail::visitor_enable_if_arg0<F, ast::Clause>>
+void visit(ast::Program&, F&&);
+template <typename F, typename = detail::visitor_enable_if_arg0<F, ast::Clause>>
+void visit(ast::Program const&, F&&);
+}  // namespace souffle
+
+namespace souffle::ast {
+
+struct GroundnessInfo {
+    bool allGroundRules;
+    bool hasInputRelations;
+    std::vector<Clause*> nonGroundClauses;
+    std::vector<Clause*> groundClauses;
+    std::vector<Clause*> facts;
+    std::vector<QualifiedName> inputRelationNames;
+    std::vector<QualifiedName>  outputRelationNames;
+    // std::vector<> queried terms;
+    // std::vector<> evidences;
+    // stdout
+    friend std::ostream& operator<<(std::ostream& out, const GroundnessInfo& info) {
+        out << "allGroundRules: " << info.allGroundRules << "\n";
+        out << "hasInputRelations: " << info.hasInputRelations << "\n";
+        out << "nonGroundClauses: ";
+        for (auto* clause : info.nonGroundClauses) {
+            out << clause->toString() << "; ";
+        }
+        out << "\n";
+        for (auto* clause : info.groundClauses) {
+            out << clause->toString() << "; ";
+        }
+        out << "\n";
+        out << "inputRelationNames: ";
+        for (auto& name : info.inputRelationNames) {
+            out << name.toString() << "; ";
+        }
+        out << "\n";
+        out << "outputRelationNames: ";
+        for (auto& name : info.outputRelationNames) {
+            out << name.toString() << "; ";
+        }
+        out << "\n";
+        out << "facts: ";
+        for (auto* clause : info.facts) {
+            out << clause->toString() << "; ";
+        }
+        out << "\n";
+        return out;
+    }
+};
+
+/**
+ * @class Program
+ * @brief The program class consists of relations, clauses and types.
+ */
+class Program : public Node, public ItemContainer {
+public:
+    // Requirements for storing top-level nodes:
+    // 1) remove-by-identity needs to be at least `O(lg n)`
+    // 2) traversal order must be stable (at least for pretty printing)
+    //
+    // This implies that top-level nodes need to be stored in a linked-set structure.
+    // Linked for stable traversal, and set for `O(lg n)` remove-by-identity.
+    //
+    // Furthermore, lookup of `Relation`, `Clause`, and `Directive` by name is a
+    // common operation.
+    // This is handled by storing `Relation`s, `Clause`s, and `Directive`s in a
+    // map keyed by the relation name. The remove-by-identity time is linear,
+    // but the size is much smaller, and this allows lookup by name w/o needing
+    // an analysis and avoids the issue of the analysis results becoming stale
+    // after common manipulations (e.g. `Clause` insertion).
+    //
+    // The downside is that the name must not be changed after the
+    // node is added to the program. This is sanchecked by assertions.
+    struct RelationInfo {
+        // A well formed program has exactly one declaration per relation.
+        // TODO:  Reject duplicate relation declarations in `SemanticChecker` instead of in the parser.
+        VecOwn<Relation> decls;
+        VecOwn<Clause> clauses;
+        VecOwn<Directive> directives;
+    };
+
+    using RelationInfoMap = OrderedQualifiedNameMap<RelationInfo>;
+
+    Program();
+
+    RelationInfoMap& getRelationInfo() {
+        return relations;
+    }
+
+    RelationInfoMap const& getRelationInfo() const {
+        return relations;
+    }
+
+    RelationInfo* getRelationInfo(QualifiedName const& name) {
+        auto it = relations.find(name);
+        return it == relations.end() ? nullptr : &it->second;
+    }
+
+    RelationInfo const* getRelationInfo(QualifiedName const& name) const {
+        auto it = relations.find(name);
+        return it == relations.end() ? nullptr : &it->second;
+    }
+
+    /** Return types */
+    std::vector<Type*> getTypes() const override;
+
+    /** Return lattices */
+    std::vector<Lattice*> getLattices() const override;
+
+    /** Return relations */
+    std::vector<Relation*> getRelations() const override;
+
+    /** Returns the first `Relation` declartion for a given name, if any */
+    Relation* getRelation(QualifiedName const&) const;
+    Relation* getRelation(Atom const&) const;
+    Relation* getRelation(Clause const&) const;
+    Relation* getRelation(Directive const&) const;
+
+    /**
+     * Returns all `Relation` declartions for a given name.
+     * If the program contains multiple declarations for a given name then it is malformed
+     * and it is reasonable to only consider the first declations.
+     */
+    std::vector<Relation*> getRelationAll(QualifiedName const&) const;
+
+    /** Return clauses */
+    std::vector<Clause*> getClauses() const override;
+
+    /** Return clauses for a given relation */
+    std::vector<Clause*> getClauses(QualifiedName const&) const;
+
+    /** Return clauses for a given relation */
+    auto getClauses(Relation const& r) const {
+        return getClauses(r.getQualifiedName());
+    }
+
+    /** Return functor declarations */
+    std::vector<FunctorDeclaration*> getFunctorDeclarations() const;
+
+    /** Return relation directives */
+    std::vector<Directive*> getDirectives() const override;
+
+    /** Return relation directives for a relation */
+    std::vector<Directive*> getDirectives(QualifiedName const&) const;
+
+    /** Return relation directives for a relation */
+    auto getDirectives(Relation const& r) const {
+        return getDirectives(r.getQualifiedName());
+    }
+
+    /** Add relation directive */
+    void addDirective(Own<Directive> directive) override;
+
+    VecOwn<ProbQuery> queries;
+
+    void addProbQueries(Own<ProbQuery> qr) {
+        queries.push_back(std::move(qr));
+    }
+
+    const VecOwn<ProbQuery>& getProbQueries() const {
+        return queries;
+    }
+
+    VecOwn<Evidence> evidences;
+      
+    void addEvidence(Own<Evidence> ev) {
+        evidences.push_back(std::move(ev));
+    }
+      
+    const VecOwn<Evidence>& getEvidences() const {
+        return evidences;
+    }
+
+    /** Return pragma directives */
+    const VecOwn<Pragma>& getPragmaDirectives() const {
+        return pragmas;
+    }
+
+    /* Add relation */
+    void addRelation(Own<Relation> relation) override;
+
+    /**
+     * Remove a relation entirely, including the declaration(s), clauses, and directives.
+     * @return true IFF the relation was found and removed
+     */
+    bool removeRelation(QualifiedName const&);
+
+
+    /**
+     * Remove a relation by identity. The relation must be owned by the program.
+     * It is not expected that there are useful cases where some are not owned, and it is often
+     * symptomatic of a bug to try to remove a clause that isn't part of the program.
+     */
+    void removeRelation(Relation const&);
+
+    /** Add a clause */
+    void addClause(Own<Clause> clause) override;
+
+    // Common case helper.
+    void addClauses(VecOwn<Clause> clauses);
+
+    /** Add a type declaration */
+    void addType(Own<Type> type) override;
+
+    /** Add a lattice declaration */
+    void addLattice(Own<Lattice> lattice) override;
+
+    /**
+     * Remove a clause by identity. The clause must be owned by the program.
+     * It is not expected that there are useful cases where some are not owned, and it is often
+     * symptomatic of a bug to try to remove a clause that isn't part of the program.
+     */
+    void removeClause(const Clause&);
+
+    /**
+     * Remove multiple clauses by identity. All of these clauses must be owned by the program.
+     * It is not expected that there are useful cases where some are not owned, and it is often
+     * symptomatic of a bug to try to remove a clause that isn't part of the program.
+     */
+    void removeClauses(span<Clause const* const>);
+
+    /**
+     * Remove a directive by identity.
+     * @return true IFF the directive was found and removed
+     */
+    void removeDirective(const Directive&);
+
+    GroundnessInfo isGround() const;
+    GroundnessInfo ground_info;
+    GroundnessInfo& getGroundnessInfo();
+
+    /** Return components */
+    std::vector<Component*> getComponents() const override;
+
+    /** Return component instantiation */
+    std::vector<ComponentInit*> getInstantiations() const override;
+
+    void addPragma(Own<Pragma> pragma);
+
+    void addFunctorDeclaration(Own<FunctorDeclaration> functor);
+
+    /** Add component */
+    void addComponent(Own<Component> component) override;
+
+    /** Add component instantiation */
+    void addInstantiation(Own<ComponentInit> instantiation) override;
+
+    /** Remove components and components' instantiations */
+    void clearComponents();
+
+    void apply(const NodeMapper& map) override;
+
+    static bool classof(const Node*);
+
+protected:
+    void print(std::ostream& os) const override;
+
+    NodeVec getChildren() const override;
+
+    friend class souffle::ParserDriver;
+
+private:
+    bool equal(const Node&) const override;
+
+    Program* cloning() const override;
+
+private:
+    /** Program types  */
+    VecOwn<Type> types;
+
+    /** Program lattices */
+    VecOwn<Lattice> lattices;
+
+    /** Program relation declartions, clauses, and directives */
+    RelationInfoMap relations;
+
+    /** External Functors */
+    VecOwn<FunctorDeclaration> functors;
+
+    /** Component definitions */
+    VecOwn<Component> components;
+
+    /** Component instantiations */
+    VecOwn<ComponentInit> instantiations;
+
+    /** Pragmas */
+    VecOwn<Pragma> pragmas;
+
+#ifndef NDEBUG
+    // SANCHECK - used to assert that the set of clauses isn't mutated mid visit
+    // (easy extra check b/c `visit` is specialised for `Program` and `Clause`s)
+    mutable uint32_t clause_visit_in_progress = 0;
+#endif
+
+    template <typename F, typename>
+    friend void souffle::visit(Program&, F&&);
+    template <typename F, typename>
+    friend void souffle::visit(Program const&, F&&);
+};
+
+}  // namespace souffle::ast
+
+namespace souffle {
+template <typename F, typename>
+void visit(ast::Program& program, F&& go) {
+#ifndef NDEBUG
+    program.clause_visit_in_progress++;
+#endif
+    for ([[maybe_unused]] auto&& [k, info] : program.relations)
+        for (auto&& cl : info.clauses) {
+            assert(k == ast::getName(*cl));
+            go(*cl);
+            // post-condition verify isn't robust; other `visit` calls could inadvertently modify head name
+            // e.g. `visit(program, [](Atom&) {})`
+            assert(k == ast::getName(*cl));
+        }
+#ifndef NDEBUG
+    program.clause_visit_in_progress--;
+#endif
+}
+
+template <typename F, typename>
+void visit(ast::Program const& program, F&& go) {
+#ifndef NDEBUG
+    program.clause_visit_in_progress++;
+#endif
+    for ([[maybe_unused]] auto&& [k, info] : program.relations)
+        for (auto&& cl : info.clauses) {
+            assert(k == ast::getName(*cl));
+            go(static_cast<ast::Clause const&>(*cl));
+            // post-condition verify isn't robust; other `visit` calls could inadvertently modify head name
+            // e.g. `visit(program, [](Atom&) {})`
+            assert(k == ast::getName(*cl));
+        }
+#ifndef NDEBUG
+    program.clause_visit_in_progress--;
+#endif
+}
+}  // namespace souffle

@@ -1,0 +1,20 @@
+.decl a(x:number)
+.input a
+
+.decl x(x:number)
+.input x
+
+.decl d(x:number)
+.input d
+
+.decl left(x:number)
+.decl r(x:number)
+.decl head(x:number)
+.decl sink(x:number)
+.output sink
+
+left(x) :- a(x).
+r(x) :- x(x).
+r(x) :- d(x).
+head(x) :- left(x), r(x).
+sink(x) :- head(x).

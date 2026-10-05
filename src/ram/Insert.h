@@ -1,0 +1,142 @@
+/*
+ * Souffle - A Datalog Compiler
+ * Copyright (c) 2021, The Souffle Developers. All rights reserved
+ * Licensed under the Universal Permissive License v 1.0 as shown at:
+ * - https://opensource.org/licenses/UPL
+ * - <souffle root>/licenses/SOUFFLE-UPL.txt
+ */
+
+/************************************************************************
+ *
+ * @file Insert.h
+ *
+ ***********************************************************************/
+
+#pragma once
+
+#include "ram/Expression.h"
+#include "ram/Node.h"
+#include "ram/Operation.h"
+#include "ram/Relation.h"
+#include "souffle/utility/ContainerUtil.h"
+#include "souffle/utility/MiscUtil.h"
+#include "souffle/utility/StreamUtil.h"
+#include <cassert>
+#include <iosfwd>
+#include <memory>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace souffle::ram {
+
+/**
+ * @class Insert
+ * @brief Insert a tuple into the target relation.
+ *
+ * For example:
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * FOR t0 IN A
+ *   ...
+ *     INSERT (t0.a, t0.b, t0.c) INTO @new_X
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+class Insert : public Operation {
+public:
+
+    Insert(std::string rel, VecOwn<Expression> expressions)
+            : Insert(NK_Insert, std::move(rel),
+                std::move(expressions), -1, "UNKNOWN CLAUSE", {}) {}
+
+    Insert(std::string rel, VecOwn<Expression> expressions,
+            std::size_t clauseID, std::string clauseStr)
+            : Insert(NK_Insert, std::move(rel), std::move(expressions)
+                , clauseID, std::move(clauseStr), {}) {}
+
+    Insert(std::string rel, VecOwn<Expression> expressions,
+            std::size_t clauseID, std::string clauseStr, std::map<std::string, Own<Expression>>&& varExprMap)
+            : Insert(NK_Insert, std::move(rel), std::move(expressions)
+                , clauseID, std::move(clauseStr), std::move(varExprMap)) {}
+
+
+    /** @brief Get relation */
+    const std::string& getRelation() const {
+        return relation;
+    }
+
+    /** @brief Get expressions */
+    std::vector<Expression*> getValues() const {
+        return toPtrVector(expressions);
+    }
+
+    std::size_t getClauseID() const {
+        return clauseID;
+    }
+
+    std::string getClauseStr() const {
+        return clauseStr;
+    }
+
+
+    Insert* cloning() const override {
+        VecOwn<Expression> newValues;
+        for (auto& expr : expressions) {
+            newValues.emplace_back(expr->cloning());
+        }
+        std::map<std::string, Own<ram::Expression>> newVarExprMap{};
+        for (auto& [var, expr] : varExprMap) {
+            newVarExprMap.emplace(var, expr->cloning());
+        }
+        return new Insert(NK_Insert, relation, std::move(newValues), clauseID, clauseStr, std::move(newVarExprMap));
+    }
+
+    void apply(const NodeMapper& map) override {
+        for (auto& expr : expressions) {
+            expr = map(std::move(expr));
+        }
+    }
+
+    static bool classof(const Node* n) {
+        const NodeKind kind = n->getKind();
+        return (kind >= NK_Insert && kind < NK_LastInsert);
+    }
+
+
+// protected:
+    Insert(NodeKind kind, std::string rel, VecOwn<Expression> expressions,
+        std::size_t clauseID, std::string clauseStr, std::map<std::string, Own<ram::Expression>>&& varExprMap) //
+            : Operation(kind), relation(std::move(rel)), expressions(std::move(expressions)),
+            clauseID(clauseID), clauseStr(std::move(clauseStr)), varExprMap(std::move(varExprMap)) {
+            // clauseID(std::move(clauseID)), clauseStr(std::move(clauseStr)) {
+        assert(allValidPtrs(expressions));
+        assert(kind >= NK_Insert && kind < NK_LastInsert);
+    }
+
+    void print(std::ostream& os, int tabpos) const override {
+        os << times(" ", tabpos);
+        os << "INSERT (" << join(expressions, ", ", print_deref<Own<Expression>>()) << ") INTO " << relation
+           << " BY RULE (" << std::to_string(clauseID) << ")" << clauseStr << std::endl;
+    }
+
+    bool equal(const Node& node) const override {
+        const auto& other = asAssert<Insert>(node);
+        return relation == other.relation && equal_targets(expressions, other.expressions);
+    }
+
+    NodeVec getChildren() const override {
+        return toPtrVector<Node const>(expressions);
+    }
+
+    /** Relation name */
+    std::string relation;
+
+    /* Arguments of insert operation */
+    VecOwn<Expression> expressions;
+
+    const std::size_t clauseID;
+    const std::string clauseStr;
+    std::map<std::string, Own<ram::Expression>> varExprMap;  // TODO
+};
+
+}  // namespace souffle::ram

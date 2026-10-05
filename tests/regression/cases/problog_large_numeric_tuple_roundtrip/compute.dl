@@ -1,0 +1,7 @@
+.decl big(x:number)
+.input big
+
+.decl keep(x:number)
+.output keep
+
+keep(X) :- big(X).

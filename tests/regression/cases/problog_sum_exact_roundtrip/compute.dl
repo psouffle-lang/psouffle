@@ -1,0 +1,12 @@
+.decl w(x:number, v:number)
+.input w
+
+.decl base(x:number)
+base(1).
+
+.decl total(x:number, s:number)
+.output total
+
+total(X, S) :-
+    base(X),
+    S = sum V : { w(X, V) }.

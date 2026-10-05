@@ -1,0 +1,16 @@
+.decl edge(src:symbol, dst:symbol)
+.input edge
+
+.decl bucket(label:symbol)
+bucket("many").
+
+.decl rich(src:symbol, label:symbol)
+.output rich
+
+rich(Src, Label) :-
+    Count = count : { edge(Src, Dst) },
+    Count >= 2,
+    bucket(Label),
+    edge(Src, _).
+
+query(rich("src", "many")).

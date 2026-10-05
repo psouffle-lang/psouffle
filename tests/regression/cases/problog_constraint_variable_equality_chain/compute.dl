@@ -1,0 +1,10 @@
+.decl seed(x:number)
+.input seed
+
+.decl keep(x:number)
+.output keep
+
+keep(Z) :-
+    X = Y,
+    Y = Z,
+    seed(X).
