@@ -40,6 +40,7 @@ def main():
         source = generated.read_text()
         if kind == 'full':
             assert 'stratum_inc_table_update' not in source
+            assert '$inc_delta_tuple_delete_' not in source
             assert 'runFullPipeline(opt' in source
             assert 'runPipeline(opt' not in source
         if kind == 'inc':

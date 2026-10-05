@@ -4519,8 +4519,13 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
         loadAllExcept.body() << "}\n";
         loadAllExcept.body() << "IOSystem::getInstance().getReader(";
         loadAllExcept.body() << "directiveMap, symTable, recordTable";
-        loadAllExcept.body() << ")->readAllExcept(*" << getRelationName(lookup(load->getRelation())) << ", *";
-        loadAllExcept.body() << getRelationName(lookup("$inc_delta_tuple_delete_" + load->getRelation()));
+        if (glb.config().has("full-only")) {
+            // Full-only programs have no incremental deletion filters.
+            loadAllExcept.body() << ")->readAll(*" << getRelationName(lookup(load->getRelation()));
+        } else {
+            loadAllExcept.body() << ")->readAllExcept(*" << getRelationName(lookup(load->getRelation())) << ", *";
+            loadAllExcept.body() << getRelationName(lookup("$inc_delta_tuple_delete_" + load->getRelation()));
+        }
         loadAllExcept.body() << ");\n";
         loadAllExcept.body() << "} catch (std::exception& e) {std::cerr << \"Error loading with filter" << load->getRelation()
                        << " data: \" << e.what() << "
