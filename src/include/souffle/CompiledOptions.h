@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
@@ -205,6 +206,19 @@ inline const char* incReorderPolicyOptionSyntax() {
 }
 
 inline std::string trimModeSpecToken(const std::string& value);
+
+inline bool parseLiftedThreshold(const std::string& token, std::size_t& value) {
+    if (token.empty()) return false;
+    std::size_t parsed = 0;
+    for (const char digit : token) {
+        if (digit < '0' || digit > '9') return false;
+        const auto next = static_cast<std::size_t>(digit - '0');
+        if (parsed > (std::numeric_limits<std::size_t>::max() - next) / 10) return false;
+        parsed = parsed * 10 + next;
+    }
+    value = parsed;
+    return true;
+}
 
 inline std::string joinOutputPath(const std::string& dir, const std::string& filename) {
     if (dir.empty()) {
@@ -601,7 +615,13 @@ protected:
     bool derivation_only = false;
     bool merge_bi_imp = false;
     bool prune_extra = false;
+    bool lifted_wmc = false;
+    std::size_t lifted_threshold = 1024;
 public:
+    bool isLiftedWmcEnabled() const { return lifted_wmc; }
+    void setLiftedWmcEnabled(bool enabled) { lifted_wmc = enabled; }
+    std::size_t getLiftedWmcThreshold() const { return lifted_threshold; }
+    void setLiftedWmcThreshold(std::size_t threshold) { lifted_threshold = threshold; }
     // all argument constructor
     CmdOptions(const char* s, const char* id, const char* od, bool pe, const char* pfn, std::size_t nj,
             std::string lfn = "log.txt", const std::string& mode = "inc-naive",
@@ -932,6 +952,8 @@ public:
                 {"derv-only", optional_argument, nullptr, 'd'},
                 {"merge-bi-imp", false, nullptr, 'e'},
                 {"prune-extra", false, nullptr, 1050},
+                {"lifted-wmc", false, nullptr, 1051},
+                {"lifted-threshold", true, nullptr, 1052},
                 // the terminal option -- needs to be null
                 {nullptr, false, nullptr, 0}};
 
@@ -1099,6 +1121,13 @@ public:
                 case 'S': dump_stat = true; break;
                 case 'e': merge_bi_imp = true; break;
                 case 1050: prune_extra = true; break;
+                case 1051: lifted_wmc = true; break;
+                case 1052:
+                    if (!parseLiftedThreshold(optarg, lifted_threshold)) {
+                        std::cerr << "Invalid value for --lifted-threshold: " << optarg << '\n';
+                        ok = false;
+                    }
+                    break;
                 case 'd':
                     if (!optarg || std::string(optarg) == "true") {
                         derivation_only = true;
@@ -1126,6 +1155,10 @@ public:
         }
         if (online_execution && enable_rewrite) {
             std::cerr << "Rewrite is supported only in standalone full execution; online baseline and recomputation use the original graph\n";
+            ok = false;
+        }
+        if (online_execution && lifted_wmc) {
+            std::cerr << "--lifted-wmc requires standalone full execution\n";
             ok = false;
         }
         if (online_execution && (derivation_only || merge_bi_imp || prune_extra)) {
@@ -1161,6 +1194,9 @@ private:
         std::cerr << "    --rewrite                    -- Rewrite standalone full inference\n";
         std::cerr << "    --explicit-rewrite           -- Force graph rewrite\n";
         std::cerr << "    --implicit-rewrite           -- Force implicit split rewrite\n";
+        std::cerr << "    --lifted-wmc                 -- Enable the exact pointwise fastpath\n";
+        std::cerr << "    --lifted-threshold=<N>       -- Minimum output cardinality (default: "
+                  << lifted_threshold << ")\n";
         std::cerr << "    --derv-only[=true|false]     -- Build the full derivation graph without inference\n";
         std::cerr << "    --merge-bi-imp, --prune-extra -- Opt-in standalone full pruning passes\n";
         std::cerr << "    -D <DIR>, --output=<DIR>     -- Specify directory for output relations\n";

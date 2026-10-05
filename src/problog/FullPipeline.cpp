@@ -6,6 +6,7 @@
 #include "souffle/problog/GraphAnalyzer.h"
 #include "souffle/problog/GraphRewriter.h"
 #include "souffle/problog/ImplicitSplitRewrite.h"
+#include "souffle/problog/LiftedWmc.h"
 #include "souffle/problog/PipelineComponents.h"
 #include "souffle/problog/QueryManager.h"
 #include "souffle/problog/RuleManager.h"
@@ -1971,6 +1972,71 @@ void runPipeline(
     precomputedProbResult.clear();
     precomputedTupleProbResult.clear();
 
+    std::map<std::string, double> liftedProbabilities;
+    std::unordered_set<std::string> liftedOutputs;
+    auto concreteOutputs = program.getOutputRelations();
+    if (opt.isLiftedWmcEnabled()) {
+        debugger.startStage(StageKind::LIFTED_WMC);
+        auto lifted = tryEvaluateLiftedPointwise(opt, program, ruleManager, factProb, evidences);
+        liftedOutputs.insert(lifted.handledOutputRelations.begin(), lifted.handledOutputRelations.end());
+        // Explicit queries outside the lifted outputs still need concrete WMC.
+        for (const auto* query : queryManager.getAllQuery()) {
+            if (query && liftedOutputs.count(query->getRelationName()) == 0) lifted.complete = false;
+        }
+        if (lifted.handled && !lifted.complete) lifted.reason = "partial_pointwise_lifted";
+        debugger.addInfo("lifted_handled", lifted.handled ? "true" : "false");
+        debugger.addInfo("lifted_complete", lifted.complete ? "true" : "false");
+        debugger.addInfo("lifted_reason", lifted.reason);
+        debugger.addInfo("lifted_execution_mode", lifted.executionMode);
+        debugger.addInfo("lifted_output_tuples", std::to_string(lifted.liftedOutputTuples));
+        debugger.addInfo("lifted_concrete_output_tuples", std::to_string(lifted.concreteOutputTuples));
+        debugger.addInfo("lifted_relation_templates", std::to_string(lifted.relationTemplates));
+        debugger.addInfo("lifted_abstract_nodes", std::to_string(lifted.abstractNodes));
+        debugger.addInfo("lifted_abstract_edges", std::to_string(lifted.abstractEdges));
+        debugger.addInfo("lifted_symbolic_variables", std::to_string(lifted.symbolicVariables));
+        debugger.addInfo("lifted_bdd_nodes", std::to_string(lifted.bddNodes));
+        debugger.addInfo("lifted_closed_form_tuples", std::to_string(lifted.closedFormTuples));
+        debugger.addInfo("lifted_eligibility_ms", std::to_string(lifted.eligibilityMs));
+        debugger.addInfo("lifted_abstract_graph_ms", std::to_string(lifted.abstractGraphMs));
+        debugger.addInfo("lifted_symbolic_dd_ms", std::to_string(lifted.symbolicDdMs));
+        debugger.addInfo("lifted_instantiate_wmc_ms", std::to_string(lifted.instantiateWmcMs));
+        std::cout << "[lifted-wmc] handled=" << lifted.handled << " complete=" << lifted.complete
+                  << " lifted_output_tuples=" << lifted.liftedOutputTuples
+                  << " closed_form_tuples=" << lifted.closedFormTuples
+                  << " reason=" << lifted.reason << '\n';
+        for (const auto& [relation, reason] : lifted.rejectedOutputReasons) {
+            debugger.addInfo("lifted_rejected_" + relation, reason);
+            std::cout << "[lifted-wmc] concrete_output=" << relation << " reason=" << reason << '\n';
+        }
+        if (!lifted.abstractGraph.empty()) {
+            std::ofstream out(joinOutputPath(opt.getOutputFileDir(), "abstract-derivation-graph.tsv"));
+            out << lifted.abstractGraph;
+        }
+        if (!lifted.abstractGraphDot.empty()) {
+            std::ofstream out(joinOutputPath(opt.getOutputFileDir(), "abstract-derivation-graph.dot"));
+            out << lifted.abstractGraphDot;
+        }
+        debugger.endStage();
+        if (lifted.handled) {
+            liftedProbabilities = std::move(lifted.probabilities);
+            concreteOutputs.erase(std::remove_if(concreteOutputs.begin(), concreteOutputs.end(),
+                    [&](const auto* relation) {
+                        return relation && liftedOutputs.count(relation->getName()) > 0;
+                    }), concreteOutputs.end());
+            if (lifted.complete) {
+                precomputedTupleProbResult.insert(liftedProbabilities.begin(), liftedProbabilities.end());
+                debugger.startStage(StageKind::IO_DUMP);
+                std::unordered_map<NodePtr, double> noConcreteProbabilities;
+                dumpProbabilities(noConcreteProbabilities, opt.getOutputFileDir());
+                debugger.endStage();
+                debugger.endTurn();
+                dumpInitialInputRelations(opt.getOutputFileDir() + "/initial-input-relations-iter0.txt");
+                setActiveSymbolTable(nullptr);
+                return;
+            }
+        }
+    }
+
     debugger.startStage(StageKind::CREATE_GRAPH);
     debugger.addInfo("input_fact_size", std::to_string(countInitialInputFacts()));
     auto t0 = std::chrono::steady_clock::now();
@@ -1982,6 +2048,17 @@ void runPipeline(
               << " ms\n";
     debugger.endStage();
 
+    // Keep the full provenance of lifted tuples when concrete outputs depend
+    // on them. Only remove their output-root status, never substitute marginals.
+    if (!liftedOutputs.empty()) {
+        for (const auto& node : graph->getNodes()) {
+            if (liftedOutputs.count(node->getTuple().relation_name) > 0) {
+                node->needOutput = false;
+                node->isQuery = false;
+            }
+        }
+    }
+
     if (opt.isDumpDotEnabled()) {
         graph->dumpDot(makeOutputPath(opt, "before_prune.dot"));
     }
@@ -1990,7 +2067,7 @@ void runPipeline(
     debugger.addInfo("before_prune_nodes", std::to_string(graph->getNodes().size()));
     debugger.addInfo("before_prune_edges", std::to_string(graph->getEdges().size()));
     auto t2 = std::chrono::steady_clock::now();
-    auto prunedView = graph->prune(program.getOutputRelations());
+    auto prunedView = graph->prune(concreteOutputs);
     auto view = buildWorkingViewLocal(prunedView.getNodes(), prunedView.getEdges());
     const GraphSummary afterPruneSummary = summarizeGraphLight(view);
     addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
@@ -2439,6 +2516,7 @@ void runPipeline(
         std::cout << "[pipeline] derivation-only mode; skip rewrite" << std::endl;
     }
 
+    precomputedTupleProbResult.insert(liftedProbabilities.begin(), liftedProbabilities.end());
     if (program.getKnowledge() == souffle::Knowledge::BDD) {
         runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, evidences, rewriteHybridStage);
     } else {

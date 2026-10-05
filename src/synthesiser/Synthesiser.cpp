@@ -4752,6 +4752,8 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
          << (glb.config().has("explicit-rewrite") ? "true" : "false") << ", "
          << (glb.config().has("implicit-rewrite") ? "true" : "false") << ");\n";
     hook << "opt.setDerivationOnly(" << (glb.config().has("derv-only") ? "true" : "false") << ");\n";
+    hook << "opt.setLiftedWmcEnabled(" << (glb.config().has("lifted-wmc") ? "true" : "false") << ");\n";
+    hook << "opt.setLiftedWmcThreshold(" << glb.config().get("lifted-threshold") << "ULL);\n";
     hook << "opt.setLogFileName(R\"("
          << (glb.config().has("logfile") ? glb.config().get("logfile") : std::string("log.txt"))
          << ")\");\n";

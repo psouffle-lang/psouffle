@@ -649,6 +649,10 @@ std::vector<MainOption> getMainOptions() {
           "Force graph rewrite for standalone full inference."},
       {"implicit-rewrite", nextOptChar++, "", "", false,
           "Force implicit split rewrite for standalone full inference."},
+      {"lifted-wmc", nextOptChar++, "", "", false,
+          "Enable the exact pointwise lifted fastpath for standalone full inference."},
+      {"lifted-threshold", nextOptChar++, "N", "1024", false,
+          "Minimum output cardinality for the lifted fastpath."},
       {"det-opt", nextOptChar++, "", "", false,
           "Enable deterministic-relation analysis (already enabled by default)."},
       {"derv-only", 'd', "", "", false, "Only compute the standalone full derivation graph."},
@@ -737,6 +741,14 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     if (online && rewrite) {
         throw std::runtime_error("Rewrite is supported only in standalone full execution");
     }
+    if (online && config.has("lifted-wmc")) {
+        throw std::runtime_error("--lifted-wmc requires standalone full execution");
+    }
+    std::size_t liftedThreshold = 0;
+    if (!parseLiftedThreshold(config.get("lifted-threshold"), liftedThreshold)) {
+        throw std::runtime_error("Invalid value for --lifted-threshold: " + config.get("lifted-threshold"));
+    }
+    config.set("lifted-threshold", std::to_string(liftedThreshold));
     if (online && config.has("derv-only")) {
         throw std::runtime_error("--derv-only requires standalone full execution");
     }

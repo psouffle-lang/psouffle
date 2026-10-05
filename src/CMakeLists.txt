@@ -233,6 +233,7 @@ add_library(compiled STATIC dummy.cpp)
 target_sources(compiled PRIVATE
   Derivation.cpp
   problog/Atom.cpp
+  problog/LiftedWmc.cpp
   problog/Pipeline.cpp
   problog/QueryManager.cpp
   problog/Rule.cpp

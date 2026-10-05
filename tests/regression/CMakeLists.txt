@@ -61,6 +61,13 @@ add_test(NAME regression.execution_contract
 set_tests_properties(regression.execution_contract PROPERTIES
     LABELS "regression;execution_contract" TIMEOUT 600)
 
+add_test(NAME regression.lifted_fastpath
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/run_lifted_fastpath.py"
+        --souffle-bin "$<TARGET_FILE:souffle>"
+        --work-root "${CMAKE_CURRENT_BINARY_DIR}")
+set_tests_properties(regression.lifted_fastpath PROPERTIES
+    LABELS "regression;lifted_fastpath" TIMEOUT 600)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression

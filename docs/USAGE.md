@@ -41,7 +41,22 @@ Deterministic-relation analysis, BDD, and variable-index reuse are enabled by
 default. `--det-opt` remains an accepted compatibility flag. Old full-artifact
 dump/profile arguments (`--dumpjson`, `--dumpdot`, `--dumpstat`, `--fc-profile`,
 `--profile-wmc`, `--profile-dep-graph`) remain runtime aliases for the canonical
-selectors below. Lifted and approximate inference are unavailable.
+selectors below. Approximate inference is unavailable.
+
+## Naive Lift Fastpath
+
+`--lifted-wmc` enables exact pointwise lift before standalone full graph
+construction. `--lifted-threshold=N` sets the minimum output relation size
+(default `1024`, nonnegative integer). Both are compiler defaults and runtime
+options; online execution rejects enabled lift. Graph-only execution skips it.
+
+The fastpath supports nonrecursive positive rules with distinct head variables
+and connected, unique runtime witnesses. It shares a symbolic formula across
+tuples, uses direct products for distinct-event conjunctions, and instantiates
+exact BDDs for disjunctions or repeated events. Unsupported outputs retain
+their complete concrete dependencies, including events shared with lifted
+outputs; evidence falls back to ordinary exact inference.
+See [the example and diagnostics](../README.md#naive-lift-fastpath).
 
 ## Source References
 
@@ -170,7 +185,8 @@ deterministic-relation analysis files.
 
 ## Diagnostic Counts
 
-Standalone full runs record `before_prune_nodes`/`before_prune_edges` and the
+Standalone full runs that construct a concrete graph record
+`before_prune_nodes`/`before_prune_edges` and the
 existing `after_prune_*` graph summaries in the `PRUNING` debugger stage.
 These counters do not require dump or profiling flags.
 

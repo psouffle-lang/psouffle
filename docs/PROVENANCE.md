@@ -14,6 +14,7 @@ history is not imported into this repository.
 | --- | --- | --- |
 | Full inference and rewrite | `d2e28cbdd26b305c1ce97d57f29c49f58530df9f` | `full-artifact-ae`, tag `full-artifact-ae-checkpoint-2026-04-25` |
 | Incremental inference | `e0539757c3c4ef789fd375634910d7760d9d1e8e` | `inc-artifact-ae`, tag `inc-artifact-ae-final` |
+| Naive pointwise lift | `7fc02a9e6f6e232f7bd382cf986f00a6adee416d` | Selective port from the local `Lifted` branch |
 
 The incremental snapshot provides the shared baseline. Full graph working
 views, aggregate replay, tuple/symbol rendering, query matching, component
@@ -43,9 +44,19 @@ confirmed that its artifact refs were current.
   The older `full-artifact-opt`, aggregate worktree, and symbol/string worktree
   branches diverge in git history; their aggregate and symbol ports were
   consolidated into `full-artifact-opt-unified` before the AE cleanup.
-- `online`, `approx*`, `query`, `evidence*`, and `Lifted` are not artifact
-  import sources. Approximate inference, graph-query experiments, and lifted
-  inference are outside this repository's requested scope.
+- `online`, `approx*`, `query`, and `evidence*` are not artifact import sources.
+  Approximate inference and graph-query experiments remain outside this
+  repository's requested scope.
+
+## Naive Lift Port
+
+The optional lifted fastpath selectively ports the cleaned pointwise evaluator
+from the local `Lifted` tip above, including the conjunction-product fastpath
+from source revision `2762a0f3c`. Experimental witness-indexed evaluation,
+template export/boundary composition, pre-graph exploration, family caches, and
+profiling scripts are excluded. Mixed outputs retain their full concrete
+dependency graphs, preserving correlations with lifted outputs. This is a
+separate opt-in extension; the bundled paper runners keep their existing modes.
 
 ## Paper And Benchmark Records
 

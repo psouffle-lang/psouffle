@@ -23,7 +23,9 @@ drivers from [problog-benchmark](https://github.com/Hughshine/problog-benchmark)
 are bundled under [evaluation/](evaluation/README.md):
 [incremental experiments](evaluation/inc/README.md) and
 [full/rewrite experiments](evaluation/full/README.md).
-Lifted inference is excluded.
+An optional naive lifted fastpath accelerates eligible pointwise output
+relations. It is disabled by default; the paper experiment settings use the
+full/rewrite and incremental paths above.
 
 The compiler generates both execution paths by default. A generated binary
 runs standalone full inference and exits by default. `--setmode` or `--inc-only`
@@ -167,6 +169,8 @@ Execution selection and generated runtime defaults:
 | `--setmode=MODE` | Set the online mode and default the binary to online execution. The online mode defaults to `inc-naive`; accepted modes are described below. |
 | `--rewrite` | Enable automatic rewrite dispatch for standalone full execution by default. Off by default. |
 | `--explicit-rewrite`, `--implicit-rewrite` | Enable rewrite and force the corresponding implementation by default. |
+| `--lifted-wmc` | Enable the exact pointwise lifted fastpath for standalone full inference. Off by default. |
+| `--lifted-threshold=N` | Minimum output relation cardinality to attempt lift; default `1024`. Nonnegative integer. |
 | `-d`, `--derv-only` | Default to standalone derivation-graph construction without probability inference. Off by default. |
 | `--det-opt` | Compatibility flag for deterministic-relation analysis, which is already enabled. |
 | `--dump=LIST` | Bake a default set of graph/statistic dumps; none enabled by default. |
@@ -196,6 +200,8 @@ dump kinds. There is no `--no-rewrite` flag to undo a baked rewrite default;
 | `-m MODE`, `--setmode=MODE` | Start an online session and select its commit mode; default online mode `inc-naive`, unless changed at compilation. Even `--setmode=full` selects an online session. |
 | `-r`, `--rewrite` | Enable automatic rewrite dispatch for standalone full inference. |
 | `--explicit-rewrite`, `--implicit-rewrite` | Enable rewrite and force explicit graph rewrite or implicit split rewrite. |
+| `--lifted-wmc` | Attempt exact pointwise lift before constructing the full graph; off by default. Requires standalone full execution. |
+| `--lifted-threshold=N` | Override the minimum output relation cardinality for lift; default `1024`. |
 | `-d`, `--derv-only[=true\|false]` | Build the standalone full graph without probability inference. A bare flag means `true`; use `--derv-only=false` to enable inference. |
 | `-e`, `--merge-bi-imp` | Enable the full artifact's deterministic bi-implication merging; off by default, standalone full only. |
 | `--prune-extra` | Enable extra pruning of outputless graph components; off by default, standalone full only. |
@@ -291,14 +297,41 @@ inference semantics and are useful for profiling and artifact ablations.
 | Compiler `--inc-only` plus `--online` or `--setmode` | Keep online-only capabilities and set the requested online default mode. |
 | `--full-only` plus `--inc-only`, `--online`, or explicit `--setmode` | Error at either parser, independent of argument order. |
 | Online execution plus any rewrite flag | Error. Online initialization and online full recomputation never rewrite. This also applies to baked rewrite defaults. |
+| Online execution plus `--lifted-wmc` | Error, including a baked lifted default. |
 | `--explicit-rewrite` plus `--implicit-rewrite` | Error, independent of argument order. |
 | `--rewrite` plus one forced rewrite flag | Use the forced implementation. |
 | Online execution plus enabled `--derv-only`, `--merge-bi-imp`, or `--prune-extra` | Error; these controls require standalone full execution. Runtime `--derv-only=false` disables graph-only execution. The pruning flags are runtime-only. |
 | Standalone `--derv-only` plus rewrite | Construct the graph and skip rewrite/probability inference. |
 
 BDD, deterministic-relation analysis, and variable-index reuse are fixed
-defaults. Lifted and approximate backends have no command-line selector in
-this codebase.
+defaults. Approximate backends have no command-line selector in this codebase.
+
+## Naive Lift Fastpath
+
+Enable the pointwise fastpath on an existing program:
+
+```bash
+./build/src/souffle --full-only program.dl -o compute
+mkdir -p output
+./compute --lifted-wmc --lifted-threshold=1 -F input -D output
+```
+
+Both lifted parameters are also compiler arguments that set runtime defaults.
+Lift is opt-in; the default threshold is `1024` tuples per output relation.
+It shares a parameterized Boolean formula across eligible nonrecursive,
+positive rules with distinct head variables. Free body variables require a
+connected binding path and at most one runtime witness per rule/head tuple.
+
+Conjunctions of distinct concrete events use a direct probability product.
+Disjunctions and repeated events instantiate an exact per-tuple BDD.
+Unsupported outputs continue through the existing full/rewrite pipeline,
+retaining the complete provenance of shared dependencies. Evidence uses the
+ordinary exact pipeline. When all outputs and queries are covered, lift skips
+concrete graph construction and rewrite entirely.
+
+The `LIFTED_WMC` debugger stage reports coverage, rejection reasons, formula
+sizes, closed-form tuple counts, and phase times. `--dump=dot` writes
+`abstract-derivation-graph.dot`; `--dump=stat` writes its TSV form.
 
 ## Rewrite Example: Full Inference On A Fixed Graph
 

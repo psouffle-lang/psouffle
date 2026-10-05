@@ -13,9 +13,11 @@ Read [README.md](README.md) first.
 
 ## Scope
 
-- Keep changes focused on the full/rewrite and incremental compiler/runtime surface.
+- Keep changes focused on full/rewrite, incremental execution, and the exact
+  pointwise lifted fastpath.
 - Online initialization and full recomputation must never rewrite the graph.
-- Keep Lifted and approximate backends out of this artifact.
+- Keep approximate backends and experimental lifted template/boundary machinery
+  out of this artifact.
 - Keep generated outputs, logs, timing data, and local run files out of git.
 - Update [docs/INDEX.md](docs/INDEX.md) when adding, deleting, or renaming documentation.
 - Do not modify unrelated local research workspaces unless explicitly requested.

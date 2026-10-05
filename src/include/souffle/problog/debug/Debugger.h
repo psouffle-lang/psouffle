@@ -31,6 +31,7 @@ enum class StageKind {
     FORWARD_COMPILATION,
     WEIGHTED_MODEL_COUNTING,
     FC_WMC_HYBRID,
+    LIFTED_WMC,
     IO_DUMP,
     IO_LOAD_FULL,
     CONSTRUCT_RULE_FULL,
@@ -61,6 +62,7 @@ inline std::string stageKindToString(const StageKind kind) {
         case StageKind::FORWARD_COMPILATION: return "FORWARD_COMPILATION";
         case StageKind::WEIGHTED_MODEL_COUNTING: return "WEIGHTED_MODEL_COUNTING";
         case StageKind::FC_WMC_HYBRID: return "FC_WMC_HYBRID";
+        case StageKind::LIFTED_WMC: return "LIFTED_WMC";
         case StageKind::IO_DUMP: return "IO_DUMP";
         case StageKind::IO_LOAD_FULL: return "IO_LOAD_FULL";
         case StageKind::CONSTRUCT_RULE_FULL: return "CONSTRUCT_RULE_FULL";
