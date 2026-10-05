@@ -1,0 +1,10 @@
+.git
+.worktree
+.codex
+/build
+/build-*
+**/__pycache__
+**/*.pyc
+/evaluation/full/artifact
+/evaluation/full/out
+/evaluation/inc/benchmarks/side_channel/runs

@@ -27,6 +27,16 @@ dispatch, strings, numeric tuples, aggregate replay, query equalities, language
 examples, graph dumps, and debugger logs. The execution contract compares
 standalone rewrite variants and online updates, checks compiler capability
 selection, and rejects invalid flag combinations before facts are loaded.
+It also checks raw pruning counts, completed per-pattern rewrite counts, and
+the simple/general net contribution sums for explicit and implicit rewrite.
+A shared-fact fixture exercises nonzero general-SISO mutation counters and
+checks the exact result `(a & b) | (a & b & c) = a & b` at probability `0.42`.
+
+Container builds run [docker/smoke.py](../docker/smoke.py) against the installed
+compiler with tiny full/rewrite and online inputs. The evaluation image also
+checks ProbLog BDD/SDD availability, VProbLog loader/help output, and Scallop
+exact inference plus the patched bitwise-and function. These tool checks do
+not run paper benchmarks.
 
 The unified integration passed all 30 regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and

@@ -41,6 +41,14 @@ struct GraphRewriteStats {
     size_t totalDetectedRegionEdges = 0;  ///< Total edge count summed over detected SISO regions
     size_t numRegionsRewritten = 0;    ///< Total SISO regions rewritten
     size_t numGeneralRegionsRewritten = 0;  ///< Regions summarized via general rewrite
+    size_t numAllFactsRegionsRewritten = 0;
+    size_t numSingleHyperedgeRegionsRewritten = 0;
+    size_t numLinearRegionsRewritten = 0;
+    size_t numParallelRegionsRewritten = 0;
+    size_t numFanOutRegionsRewritten = 0;
+    size_t numGeneralNodesRemoved = 0;
+    size_t numGeneralEdgesRemoved = 0;
+    size_t numGeneralEdgesAdded = 0;
     size_t numFastGeneralRegions = 0;       ///< General regions summarized by conjunctive fast path
     size_t numNodesRemoved = 0;        ///< Internal nodes removed from the view
     size_t numEdgesRemoved = 0;        ///< Internal edges removed from the view
@@ -511,7 +519,7 @@ public:
 
                         markDirtyAllFactsResult(exit);
                         ++rewrittenThisRound;
-                        ++stats.numRegionsRewritten;
+                        ++stats.numAllFactsRegionsRewritten;
                         continue;
                     }
                     case SISORegionKind::SingleHyperedge: {
@@ -582,7 +590,7 @@ public:
                         markDirtyRegion(region);
                         markDirtyEdgeEndpoints(newEdge);
                         ++rewrittenThisRound;
-                        ++stats.numRegionsRewritten;
+                        ++stats.numSingleHyperedgeRegionsRewritten;
                         continue;
                     }
                     case SISORegionKind::LinearTwoEdge: {
@@ -660,7 +668,7 @@ public:
                         markDirtyRegion(region);
                         markDirtyEdgeEndpoints(newEdge);
                         ++rewrittenThisRound;
-                        ++stats.numRegionsRewritten;
+                        ++stats.numLinearRegionsRewritten;
                         continue;
                     }
                     case SISORegionKind::ParallelEdge: {
@@ -740,7 +748,7 @@ public:
                         markDirtyRegion(region);
                         markDirtyEdgeEndpoints(newEdge);
                         ++rewrittenThisRound;
-                        ++stats.numRegionsRewritten;
+                        ++stats.numParallelRegionsRewritten;
                         continue;
                     }
                     case SISORegionKind::FanOutConverge: {
@@ -813,7 +821,7 @@ public:
                             view.invalidateCaches();
                             markDirtyRegion(region);
                             ++rewrittenThisRound;
-                            ++stats.numRegionsRewritten;
+                            ++stats.numFanOutRegionsRewritten;
                             continue;
                         }
                         double pEntry = entryNode->getProbability();
@@ -871,7 +879,7 @@ public:
                             markDirtyEdgeEndpoints(newEdge);
                         }
                         ++rewrittenThisRound;
-                        ++stats.numRegionsRewritten;
+                        ++stats.numFanOutRegionsRewritten;
                         continue;
                     }
                     case SISORegionKind::General:
@@ -984,6 +992,9 @@ public:
                 }
 
                 auto applyStart = std::chrono::steady_clock::now();
+                const auto nodesRemovedBefore = stats.numNodesRemoved;
+                const auto edgesRemovedBefore = stats.numEdgesRemoved;
+                const auto edgesAddedBefore = stats.numEdgesAdded;
                 EdgePtr newEdge = applyRegionRewrite(graph, view, region, condProb, stats, dumpStats, isSimple);
                 double applyMs = toMs(std::chrono::steady_clock::now() - applyStart);
                 timing.applyMs = applyMs;
@@ -991,6 +1002,9 @@ public:
                 if (!isSimple) {
                     stats.totalApplyMs += applyMs;
                     ++stats.numGeneralRegionsRewritten;
+                    stats.numGeneralNodesRemoved += stats.numNodesRemoved - nodesRemovedBefore;
+                    stats.numGeneralEdgesRemoved += stats.numEdgesRemoved - edgesRemovedBefore;
+                    stats.numGeneralEdgesAdded += stats.numEdgesAdded - edgesAddedBefore;
                     if (usedFastGeneralSummary) {
                         ++stats.numFastGeneralRegions;
                     }

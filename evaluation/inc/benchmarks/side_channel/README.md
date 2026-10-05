@@ -92,6 +92,10 @@ temporary final input and then executing one full turn.
   center near `1.0`. The current single-run P19 probe still shows visible
   wall-clock spread: `inc0p5_5=1.099124`, `inc1p0_5=1.016003`,
   `inc1p5_5=1.031644` (`arith_mean=1.048924`, `geom_mean=1.048312`).
+  This probe predates the deletion-only preparation-path alignment in source
+  commit `cd6d067fc`, which is included in PSouffle. Repeated timing checks on
+  the integrated compiler are still pending; the old ratios do not establish
+  that the same spread remains in the current version.
   Do not normalize this in the collector; follow up with repeated runs and
   lightweight profiling to explain scheduler/cache/BDD-manager noise and reduce
   or report the variance.

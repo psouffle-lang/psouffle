@@ -68,8 +68,9 @@ writes engine logs and `run.meta.json` for the collectors.
 
 RQ1 reads the graph sizes after pruning and at the rewrite/backend handoff.
 It accepts both `rewrite_final_*` and newer `after_rewrite_*` log fields.
-The extra `Nodes_Before_Prune`/`Edges_Before_Prune` columns stay blank when
-the compiler does not emit raw graph counts before pruning.
+`Nodes_Before_Prune`/`Edges_Before_Prune` use the raw counts emitted by this
+compiler's `PRUNING` stage. They stay blank when collecting older logs that
+do not contain those fields.
 
 ## External Engines
 
@@ -113,9 +114,20 @@ python3 scripts/run_t2_taint_vproblog_chained.py --out artifact/taint-chained --
 ```
 
 `rewrite_contribution.py` summarizes simple-pattern and general-SISO graph
-reductions from profiles containing the detailed per-pattern counters. It
-reports unavailable counters instead of treating missing fields as zero;
-use the RQ1 collector for aggregate reductions from this compiler's logs.
+reductions from this compiler's logs, for both explicit and implicit rewrite:
+
+```bash
+python3 evaluation/full/rewrite_contribution.py evaluation/full/artifact/RQ1
+```
+
+It uses completed rewrite counts and signed net graph contributions, including
+the implicit direct-commit path. The simple group also includes splitting,
+compaction, cleanup, and output recovery; general contributions count the
+general rewriter's actual mutations. Both groups sum to the observed total
+graph reduction. Net growth remains negative, and geometric means of negative
+shares are reported as `nan`. Older detailed logs remain supported; unavailable
+counters are reported rather than replaced with zero. See the
+[diagnostic reference](../../docs/USAGE.md#diagnostic-counts) for field meanings.
 `rewrite_timing_summary.py` reports rewrite/BDD
 time contributions from its named profile directories (run it from
 `evaluation/full/`). `split_ablation_summary.py` checks probabilities and

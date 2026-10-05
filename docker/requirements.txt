@@ -1,0 +1,4 @@
+pyeda==0.29.0
+pysdd==1.0.5
+psutil==5.9.8
+scons==4.8.1

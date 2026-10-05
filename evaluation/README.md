@@ -16,6 +16,11 @@ experiments require the built compiler. Full engine comparisons additionally
 require the selected external engines: ProbLog, VProbLog (`vlog`), or Scallop
 (`scli`). See the full evaluation README for engine selection and setup.
 
+The repository's [container targets](../README.md#containers) provide either
+the compiler alone or the compiler with all comparison engines, using pinned
+source/dependency revisions. Building the images runs only tiny tool checks;
+paper experiments remain explicit runner commands.
+
 ## Incremental Smoke Run
 
 ```bash

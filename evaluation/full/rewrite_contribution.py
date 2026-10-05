@@ -38,6 +38,7 @@ def stage_info(path: Path):
         if stage.get("name") == "PRUNING":
             prune = info
         if stage.get("name") == "FC_WMC_HYBRID" and (
+                "rewrite_simple_regions" in info or
                 "implicit_graph_general_regions" in info or
                 "graph_rewrite_general_nodes_removed" in info):
             hybrid = info
@@ -68,6 +69,18 @@ def case_key(path: Path):
 
 
 def values(prune, info):
+    net_keys = ("rewrite_simple_regions", "rewrite_general_regions",
+                "rewrite_simple_nodes_net_removed", "rewrite_general_nodes_net_removed",
+                "rewrite_simple_edges_net_removed", "rewrite_general_edges_net_removed")
+    if "rewrite_simple_regions" in info:
+        if not all(key in info for key in net_keys) or not all(
+                key in prune for key in ("after_prune_nodes", "after_prune_edges")):
+            return None
+        return dict(zip(("simple_regions", "general_regions", "simple_nodes_removed",
+                         "general_nodes_removed", "simple_net_edges_removed", "general_net_edges_removed"),
+                        (int(info[key]) for key in net_keys)),
+                    initial_nodes=int(prune["after_prune_nodes"]),
+                    initial_edges=int(prune["after_prune_edges"]))
     required = ("graph_rewrite_general_nodes_removed", "graph_rewrite_general_edges_removed",
                 "graph_rewrite_general_edges_added") if "graph_rewrite_general_nodes_removed" in info else (
                     "implicit_materialized_nodes_after", "implicit_materialized_edges_after")
@@ -215,9 +228,11 @@ def main():
             continue
         am_s = sum(simple_shares) / len(simple_shares)
         am_g = sum(general_shares) / len(general_shares)
-        gm_s = (0.0 if any(v == 0 for v in simple_shares) else
+        gm_s = (float("nan") if any(v < 0 for v in simple_shares) else
+                0.0 if any(v == 0 for v in simple_shares) else
                 math.exp(sum(math.log(v) for v in simple_shares) / len(simple_shares)))
-        gm_g = (0.0 if any(v == 0 for v in general_shares) else
+        gm_g = (float("nan") if any(v < 0 for v in general_shares) else
+                0.0 if any(v == 0 for v in general_shares) else
                 math.exp(sum(math.log(v) for v in general_shares) / len(general_shares)))
         print(f"case_average_{metric}\tarithmetic={100*am_s:.6f}/{100*am_g:.6f}"
               f"\tgeometric={100*gm_s:.6f}/{100*gm_g:.6f}"

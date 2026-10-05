@@ -167,3 +167,36 @@ and `stat` is a broad diagnostic dump: graph counters, `graph-*.json`, SEM/DRed
 summaries, and regional scope console diagnostics for `inc-regional`. When
 enabled before startup graph construction, `stat` also writes
 deterministic-relation analysis files.
+
+## Diagnostic Counts
+
+Standalone full runs record `before_prune_nodes`/`before_prune_edges` and the
+existing `after_prune_*` graph summaries in the `PRUNING` debugger stage.
+These counters do not require dump or profiling flags.
+
+With rewrite enabled, `FC_WMC_HYBRID` includes:
+
+- `rewrite_all_facts_regions`, `rewrite_single_regions`,
+  `rewrite_linear_regions`, `rewrite_parallel_regions`,
+  `rewrite_fan_out_regions`, and `rewrite_simple_fact_regions`: completed
+  simple-pattern rewrites, including implicit overlay rewrites.
+- `rewrite_simple_regions` and `rewrite_general_regions`: completed regions,
+  counted once, rather than detected candidates.
+- `graph_rewrite_rewritten_regions` and `graph_rewrite_general_*`: completed
+  graph rewrites and the general pass's gross node/edge removals and edge additions.
+- `implicit_overlay_*_regions`, `implicit_graph_*`, and
+  `implicit_materialized_*`: overlay counts and physical graph sizes before
+  and after the residual graph pass, including the direct-commit path.
+- `implicit_graph_detect_ms`, `implicit_graph_rewrite_ms`, and
+  `implicit_total_ms`: detection, residual rewriting, and combined pipeline
+  times; direct commits include the physical graph rewrite.
+- `rewrite_simple_nodes_net_removed`, `rewrite_general_nodes_net_removed`,
+  `rewrite_simple_edges_net_removed`, and `rewrite_general_edges_net_removed`:
+  signed contributions to the reduction from `after_prune_*` to `rewrite_final_*`.
+
+General contributions come from the general rewriter's actual mutations.
+The simple group includes all remaining graph changes: overlay commits,
+splitting, compaction, cleanup, and output recovery. Its net contribution may
+be negative when these operations add graph structure. The two groups sum
+exactly to the observed node/edge reduction; they are not independent ablation
+measurements.

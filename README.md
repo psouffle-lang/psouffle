@@ -76,6 +76,38 @@ cmake --build build -j${JOBS}
 Lower `JOBS` on machines with limited memory; `JOBS=2` was used for the local
 integration checks.
 
+### Containers
+
+The [Dockerfile](Dockerfile) builds the compiler from this checkout. The
+`compiler` target includes PSouffle and CUDD; the default `evaluation` target
+also includes the paper's ProbLog profiling fork, VProbLog, and patched Scallop.
+
+```bash
+docker build --target compiler -t psouffle:compiler .
+docker build -t psouffle:evaluation .
+docker run --rm psouffle:compiler souffle --help
+docker run --rm psouffle:evaluation python3 evaluation/full/FMCAD.py --help
+```
+
+Build parallelism defaults to two jobs; override it with
+`--build-arg BUILD_JOBS=4`. The base image digest, CUDD and comparison-engine
+revisions, Python package versions, and Rust toolchain are pinned. Scallop's
+transitive dependencies are recorded in [docker/scallop.Cargo.lock](docker/scallop.Cargo.lock);
+[docker/clone_pinned.py](docker/clone_pinned.py) fixes VProbLog's recursive
+Trident/Kognac/sparsehash/LZ4 downloads. Container builds check the tools using
+tiny inputs and do not execute paper benchmarks.
+
+The workspace in each image is `/opt/psouffle`, and `SOUFFLE_BIN` selects the
+installed compiler. To keep future experiment outputs on the host:
+
+```bash
+mkdir -p evaluation/full/artifact evaluation/inc/benchmarks/side_channel/runs
+docker run --rm -it --user "$(id -u):$(id -g)" \
+  -v "$PWD/evaluation/full/artifact:/opt/psouffle/evaluation/full/artifact" \
+  -v "$PWD/evaluation/inc/benchmarks/side_channel/runs:/opt/psouffle/evaluation/inc/benchmarks/side_channel/runs" \
+  psouffle:evaluation bash
+```
+
 ## Command-Line Reference
 
 Compiler arguments are passed to `build/src/souffle`; runtime arguments are

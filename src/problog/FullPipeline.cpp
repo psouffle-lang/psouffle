@@ -1987,10 +1987,13 @@ void runPipeline(
     }
 
     debugger.startStage(StageKind::PRUNING);
+    debugger.addInfo("before_prune_nodes", std::to_string(graph->getNodes().size()));
+    debugger.addInfo("before_prune_edges", std::to_string(graph->getEdges().size()));
     auto t2 = std::chrono::steady_clock::now();
     auto prunedView = graph->prune(program.getOutputRelations());
     auto view = buildWorkingViewLocal(prunedView.getNodes(), prunedView.getEdges());
-    addGraphSummaryInfo(debugger, "after_prune_", summarizeGraphLight(view));
+    const GraphSummary afterPruneSummary = summarizeGraphLight(view);
+    addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
     auto t3 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] pruning took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count()
@@ -2012,6 +2015,7 @@ void runPipeline(
     if (opt.isRewriteEnabled() && !opt.isDerivationOnly()) {
         auto rewriteStart = std::chrono::steady_clock::now();
         GraphRewriteStats rewriteStats;
+        ImplicitSplitOverlayStats overlayRewriteStats;
         rewriteDecision = chooseRewriteDispatch(opt, ruleManager);
         haveRewriteDecision = true;
         std::cout << "[pipeline] rewrite dispatch"
@@ -2058,6 +2062,7 @@ void runPipeline(
             rewriteStats = rewriter.rewriteUntilFixpoint(*graph, view, opt.isProfiling(), rewriteFlags);
         };
         if (rewriteDecision.useImplicit) {
+            const auto implicitRewriteStart = std::chrono::steady_clock::now();
             std::unordered_set<UntypedTuple> originalOutputTuples;
             std::unordered_set<std::string> originalOutputRelations;
             for (const auto& node : view.getNodes()) {
@@ -2075,6 +2080,10 @@ void runPipeline(
             rewriteOptions.collectPatternStats = false;
             rewriteOptions.iterateSplitRewrite = false;
             auto implicitResult = runImplicitSplitRewritePipeline(view, rewriteOptions);
+            overlayRewriteStats = implicitResult.stats.overlayStats;
+            auto implicitNodesBefore = implicitResult.stats.materializedNodesBefore;
+            auto implicitEdgesBefore = implicitResult.stats.materializedEdgesBefore;
+            double implicitGraphRewriteMs = implicitResult.stats.graphRewriteMs;
             precomputedTupleProbResult.clear();
             for (const auto& [tupleStr, prob] : implicitResult.carriedPrecomputedTupleProbs) {
                 precomputedTupleProbResult[tupleStr] = prob;
@@ -2091,7 +2100,12 @@ void runPipeline(
                           << " recovered_isolated_output_facts=" << recoveredIsolatedFacts
                           << " recovered_tuple_output_facts=" << recoveredOutputFacts
                           << std::endl;
+                implicitNodesBefore = view.getNodes().size();
+                implicitEdgesBefore = view.getEdges().size();
+                const auto residualRewriteStart = std::chrono::steady_clock::now();
                 runGraphRewrite();
+                implicitGraphRewriteMs = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - residualRewriteStart).count();
                 const auto [postRewriteRecoveredIsolatedFacts, postRewriteRecoveredOutputFacts] =
                         recoverImplicitOutputFactsLocal(*graph, view, originalOutputTuples, originalOutputRelations);
                 if (postRewriteRecoveredIsolatedFacts > 0 || postRewriteRecoveredOutputFacts > 0) {
@@ -2116,6 +2130,9 @@ void runPipeline(
                 }
             }
             const GraphSummary implicitHandoffSummary = summarizeGraphLight(view);
+            const double implicitGraphDetectMs = rewriteStats.totalDetectMs;
+            const double implicitTotalMs = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - implicitRewriteStart).count();
             std::cout << "[pipeline] implicit handoff"
                       << " nodes=" << implicitHandoffSummary.nodes
                       << " edges=" << implicitHandoffSummary.edges
@@ -2124,17 +2141,17 @@ void runPipeline(
                       << " precomputed_nodes=" << precomputedProbResult.size()
                       << " precomputed_tuples=" << precomputedTupleProbResult.size()
                       << std::endl;
-            std::cout << "[pipeline] implicit rewrite total_ms=" << implicitResult.stats.totalMs
+            std::cout << "[pipeline] implicit rewrite total_ms=" << implicitTotalMs
                       << " overlay_prep_ms=" << implicitResult.stats.overlayPrepMs
                       << " overlay_split_ms=" << implicitResult.stats.overlaySplitMs
                       << " overlay_fastpath_ms=" << implicitResult.stats.overlayFastPathMs
                       << " overlay_siso_detect_ms=" << implicitResult.stats.overlayStats.fastPathDetectMs
                       << " overlay_siso_summarize_ms=" << implicitResult.stats.overlayStats.fastPathSummarizeMs
                       << " materialize_ms=" << implicitResult.stats.materializeMs
-                      << " detect_ms=" << implicitResult.stats.graphDetectMs
-                      << " graph_rewrite_ms=" << implicitResult.stats.graphRewriteMs
-                      << " graph_bdd_compile_ms=" << implicitResult.stats.graphRewriteStats.totalBddBuildMs
-                      << " graph_detected_regions=" << implicitResult.stats.graphRewriteStats.numRegionsDetected
+                      << " detect_ms=" << implicitGraphDetectMs
+                      << " graph_rewrite_ms=" << implicitGraphRewriteMs
+                      << " graph_bdd_compile_ms=" << rewriteStats.totalBddBuildMs
+                      << " graph_detected_regions=" << rewriteStats.numRegionsDetected
                       << " overlay_aliases=" << implicitResult.stats.overlayStats.aliasesCreated
                       << " overlay_active_alias_refs=" << implicitResult.stats.activeAliasRefs
                       << " overlay_active_aliased_edges=" << implicitResult.stats.activeAliasedEdges
@@ -2157,10 +2174,38 @@ void runPipeline(
                     debugger.addInfo(key, value);
                     rewriteHybridStage->logMessage(Level::INFO, key + "=" + value);
                 };
-                const auto& implicitGraphStats = implicitResult.stats.graphRewriteStats;
+                const auto& implicitGraphStats = rewriteStats;
+                addImplicitTextInfo("implicit_overlay_all_facts_regions",
+                        std::to_string(overlayRewriteStats.allFactsRewrites));
+                addImplicitTextInfo("implicit_overlay_single_regions",
+                        std::to_string(overlayRewriteStats.singleHyperedgeRewrites));
+                addImplicitTextInfo("implicit_overlay_linear_regions",
+                        std::to_string(overlayRewriteStats.linearTwoEdgeRewrites));
+                addImplicitTextInfo("implicit_overlay_parallel_regions",
+                        std::to_string(overlayRewriteStats.parallelEdgeRewrites));
+                addImplicitTextInfo("implicit_overlay_fan_out_regions",
+                        std::to_string(overlayRewriteStats.fanOutConvergeRewrites));
+                addImplicitTextInfo("implicit_graph_rewritten_regions",
+                        std::to_string(implicitGraphStats.numRegionsRewritten));
+                addImplicitTextInfo("implicit_graph_nodes_removed",
+                        std::to_string(implicitGraphStats.numNodesRemoved));
+                addImplicitTextInfo("implicit_graph_edges_removed",
+                        std::to_string(implicitGraphStats.numEdgesRemoved));
+                addImplicitTextInfo("implicit_graph_edges_added",
+                        std::to_string(implicitGraphStats.numEdgesAdded));
+                addImplicitTextInfo("implicit_general_nodes_removed",
+                        std::to_string(implicitGraphStats.numGeneralNodesRemoved));
+                addImplicitTextInfo("implicit_general_edges_removed",
+                        std::to_string(implicitGraphStats.numGeneralEdgesRemoved));
+                addImplicitTextInfo("implicit_general_edges_added",
+                        std::to_string(implicitGraphStats.numGeneralEdgesAdded));
+                addImplicitTextInfo("implicit_materialized_nodes_before", std::to_string(implicitNodesBefore));
+                addImplicitTextInfo("implicit_materialized_edges_before", std::to_string(implicitEdgesBefore));
+                addImplicitTextInfo("implicit_materialized_nodes_after", std::to_string(implicitHandoffSummary.nodes));
+                addImplicitTextInfo("implicit_materialized_edges_after", std::to_string(implicitHandoffSummary.edges));
                 debugger.addInfo("rewrite_impl", rewriteDecision.impl);
                 rewriteHybridStage->logMessage(Level::INFO, "rewrite_impl=" + rewriteDecision.impl);
-                addImplicitInfo("implicit_total_ms", implicitResult.stats.totalMs);
+                addImplicitInfo("implicit_total_ms", implicitTotalMs);
                 addImplicitInfo("implicit_overlay_prep_ms", implicitResult.stats.overlayPrepMs);
                 addImplicitInfo("implicit_overlay_split_ms", implicitResult.stats.overlaySplitMs);
                 addImplicitInfo("implicit_overlay_fastpath_ms", implicitResult.stats.overlayFastPathMs);
@@ -2191,8 +2236,8 @@ void runPipeline(
                 addImplicitInfo("implicit_overlay_fastpath_allfacts_ms",
                         implicitResult.stats.overlayStats.fastPathAllFactsMs);
                 addImplicitInfo("implicit_materialize_ms", implicitResult.stats.materializeMs);
-                addImplicitInfo("implicit_graph_detect_ms", implicitResult.stats.graphDetectMs);
-                addImplicitInfo("implicit_graph_rewrite_ms", implicitResult.stats.graphRewriteMs);
+                addImplicitInfo("implicit_graph_detect_ms", implicitGraphDetectMs);
+                addImplicitInfo("implicit_graph_rewrite_ms", implicitGraphRewriteMs);
                 addImplicitInfo("implicit_graph_detect_total_ms",
                         implicitGraphStats.totalDetectMs);
                 addImplicitInfo("implicit_graph_bdd_manager_init_ms",
@@ -2254,6 +2299,38 @@ void runPipeline(
             debugger.addInfo("rewrite_split_policy", rewriteDecision.splitPolicy);
             debugger.addInfo("rewrite_ms", std::to_string(rewriteMs));
             addGraphSummaryInfo(debugger, "rewrite_final_", rewriteFinalSummary);
+            const auto allFactsRegions = rewriteStats.numAllFactsRegionsRewritten + overlayRewriteStats.allFactsRewrites;
+            const auto singleRegions = rewriteStats.numSingleHyperedgeRegionsRewritten + overlayRewriteStats.singleHyperedgeRewrites;
+            const auto linearRegions = rewriteStats.numLinearRegionsRewritten + overlayRewriteStats.linearTwoEdgeRewrites;
+            const auto parallelRegions = rewriteStats.numParallelRegionsRewritten + overlayRewriteStats.parallelEdgeRewrites;
+            const auto fanOutRegions = rewriteStats.numFanOutRegionsRewritten + overlayRewriteStats.fanOutConvergeRewrites;
+            debugger.addInfo("rewrite_all_facts_regions", std::to_string(allFactsRegions));
+            debugger.addInfo("rewrite_single_regions", std::to_string(singleRegions));
+            debugger.addInfo("rewrite_linear_regions", std::to_string(linearRegions));
+            debugger.addInfo("rewrite_parallel_regions", std::to_string(parallelRegions));
+            debugger.addInfo("rewrite_fan_out_regions", std::to_string(fanOutRegions));
+            debugger.addInfo("rewrite_simple_fact_regions", std::to_string(rewriteStats.simpleFactRegions));
+            debugger.addInfo("rewrite_simple_regions", std::to_string(allFactsRegions + singleRegions +
+                    linearRegions + parallelRegions + fanOutRegions + rewriteStats.simpleFactRegions));
+            debugger.addInfo("rewrite_general_regions", std::to_string(rewriteStats.numGeneralRegionsRewritten));
+            // Net contributions include overlay commits, splitting, compaction,
+            // cleanup, and output recovery. Preserve signed graph growth.
+            const auto generalNodesRemoved = static_cast<long long>(rewriteStats.numGeneralNodesRemoved);
+            const auto generalEdgesRemoved = static_cast<long long>(rewriteStats.numGeneralEdgesRemoved) -
+                    static_cast<long long>(rewriteStats.numGeneralEdgesAdded);
+            debugger.addInfo("rewrite_general_nodes_net_removed", std::to_string(generalNodesRemoved));
+            debugger.addInfo("rewrite_general_edges_net_removed", std::to_string(generalEdgesRemoved));
+            debugger.addInfo("rewrite_simple_nodes_net_removed", std::to_string(
+                    static_cast<long long>(afterPruneSummary.nodes) -
+                    static_cast<long long>(rewriteFinalSummary.nodes) - generalNodesRemoved));
+            debugger.addInfo("rewrite_simple_edges_net_removed", std::to_string(
+                    static_cast<long long>(afterPruneSummary.edges) -
+                    static_cast<long long>(rewriteFinalSummary.edges) - generalEdgesRemoved));
+            debugger.addInfo("graph_rewrite_rewritten_regions", std::to_string(rewriteStats.numRegionsRewritten));
+            debugger.addInfo("graph_rewrite_general_regions", std::to_string(rewriteStats.numGeneralRegionsRewritten));
+            debugger.addInfo("graph_rewrite_general_nodes_removed", std::to_string(rewriteStats.numGeneralNodesRemoved));
+            debugger.addInfo("graph_rewrite_general_edges_removed", std::to_string(rewriteStats.numGeneralEdgesRemoved));
+            debugger.addInfo("graph_rewrite_general_edges_added", std::to_string(rewriteStats.numGeneralEdgesAdded));
             debugger.addInfo("rewrite_nodes_removed", std::to_string(rewriteStats.numNodesRemoved));
             debugger.addInfo("rewrite_edges_removed", std::to_string(rewriteStats.numEdgesRemoved));
             debugger.addInfo("rewrite_edges_added", std::to_string(rewriteStats.numEdgesAdded));

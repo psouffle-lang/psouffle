@@ -2793,14 +2793,6 @@ public:
         }
     }
 
-    void setBuildInsertImpacts(bool enable) {
-        buildInsertImpacts_ = enable;
-    }
-
-    bool getBuildInsertImpacts() const {
-        return buildInsertImpacts_;
-    }
-
     void clearDeltaMetadata() {
         deltaInsertNodes.clear();
         deltaInsertEdges.clear();
@@ -2833,10 +2825,6 @@ public:
     std::unordered_map<NodePtr, std::unordered_set<EdgePtr>> insertedFactImpactedEdges;
     std::unordered_set<NodePtr> deltaInsertReachableNodes;
     std::unordered_set<EdgePtr> deltaInsertReachableEdges;
-    // TODO(inc-region): Compatibility hook only. Current prune code does not
-    // read this flag after regional reach filtering moved into IncRegionAnalyzer.
-    bool buildInsertImpacts_ = true;
-
     const std::set<NodePtr>& getDeltaInsertNodes() const {
         return deltaInsertNodes;
     }

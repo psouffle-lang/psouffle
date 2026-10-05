@@ -2,6 +2,10 @@
 
 - [PROVENANCE.md](PROVENANCE.md): imported artifact revisions and branch audit.
 - [USAGE.md](USAGE.md): full/online selectors and rewrite interaction contract.
+- [../README.md#containers](../README.md#containers): compiler and evaluation
+  containers, pinned dependencies, and output mounts.
+- [USAGE.md#diagnostic-counts](USAGE.md#diagnostic-counts): pruning and rewrite
+  counters in debugger JSON.
 - [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
   and experiment automation.
 - [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental

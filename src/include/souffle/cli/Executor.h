@@ -265,10 +265,6 @@ private:
         }
         IncSubgraphView view = [&] {
             FunctionTimer timer("PRUNING_INC: prune");
-            // TODO(inc-region): This hook is currently a no-op after the regional
-            // reach-filter path moved into IncRegionAnalyzer. Remove it after the
-            // split-mode pruning pipeline is re-audited.
-            cli.graph->setBuildInsertImpacts(useRegionalCompute);
             return cli.graph->prune(cli.program->getOutputRelations(), deltaPolicy);
         }();
         if (cli.opt.isDumpDotEnabled()) {

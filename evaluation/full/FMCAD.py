@@ -1861,8 +1861,7 @@ def _rq1_first_float(
 
 
 def _rq1_turn_info(log_path: Path) -> Dict[str, str]:
-    """before_prune_* counts are emitted at the turn level (outside any stage),
-    so parse_souffle_stage_data does not surface them. Read them directly."""
+    """Read the turn-level fallback for legacy before_prune_* counters."""
     try:
         data = json.loads(log_path.read_text(encoding="utf-8"))
     except Exception:
