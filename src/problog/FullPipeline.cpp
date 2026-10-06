@@ -656,13 +656,16 @@ static void runBddPipeline(
                 calls++;
                 return res;
             };
-            auto computeWmcProfile = [&](const BddNodeRef& node, double& ms, std::size_t& calls) {
+            auto computeWmcProfile = [&](const BddNodeRef& node, double& ms, std::size_t& calls,
+                                         bool logarithmic = false) {
                 calls++;
                 if (!wmcProfile) {
-                    return bddManager->computeWeightedModelCount(node);
+                    return logarithmic ? bddManager->computeLogWeightedModelCount(node) :
+                            bddManager->computeWeightedModelCount(node);
                 }
                 auto wmcStart = Clock::now();
-                double res = bddManager->computeWeightedModelCount(node);
+                double res = logarithmic ? bddManager->computeLogWeightedModelCount(node) :
+                        bddManager->computeWeightedModelCount(node);
                 ms += toMs(wmcStart);
                 return res;
             };
@@ -1086,9 +1089,13 @@ static void runBddPipeline(
                 evidenceBuildMs += evidenceBuildMsComp;
 
                 auto wmcStart = std::chrono::steady_clock::now();
-                double evidenceWeight = 1.0;
+                double evidenceLogWeight = 0.0;
                 if (!componentEvs.empty()) {
-                    evidenceWeight = computeWmcProfile(evidenceBdd, evidenceWmcComputeMs, evidenceWmcCalls);
+                    evidenceLogWeight = computeWmcProfile(
+                            evidenceBdd, evidenceWmcComputeMs, evidenceWmcCalls, true);
+                    if (!std::isfinite(evidenceLogWeight)) {
+                        throw std::runtime_error("Inconsistent evidence: observations have zero probability");
+                    }
                 }
                 auto evidenceWmcMsComp = std::chrono::duration_cast<std::chrono::milliseconds>(
                                                  std::chrono::steady_clock::now() - wmcStart)
@@ -1108,12 +1115,10 @@ static void runBddPipeline(
                     double prob = 0.0;
                     if (componentEvs.empty()) {
                         prob = computeWmcProfile(bdd, nodeWmcComputeMs, nodeWmcCalls);
-                    } else if (evidenceWeight == 0.0) {
-                        prob = 0.0;
                     } else {
                         auto joint = makeAndProfile(bdd, evidenceBdd, nodeMakeAndMs, nodeMakeAndCalls);
-                        double jointW = computeWmcProfile(joint, nodeWmcComputeMs, nodeWmcCalls);
-                        prob = jointW / evidenceWeight;
+                        double jointLogWeight = computeWmcProfile(joint, nodeWmcComputeMs, nodeWmcCalls, true);
+                        prob = std::exp(std::min(0.0, jointLogWeight - evidenceLogWeight));
                     }
                     probResult[node] = prob;
                 }
@@ -1266,13 +1271,16 @@ static void runBddPipeline(
                 calls++;
                 return res;
             };
-            auto computeWmcProfile = [&](const BddNodeRef& node, double& ms, std::size_t& calls) {
+            auto computeWmcProfile = [&](const BddNodeRef& node, double& ms, std::size_t& calls,
+                                         bool logarithmic = false) {
                 calls++;
                 if (!wmcProfile) {
-                    return bddManager->computeWeightedModelCount(node);
+                    return logarithmic ? bddManager->computeLogWeightedModelCount(node) :
+                            bddManager->computeWeightedModelCount(node);
                 }
                 auto wmcStart = Clock::now();
-                double res = bddManager->computeWeightedModelCount(node);
+                double res = logarithmic ? bddManager->computeLogWeightedModelCount(node) :
+                        bddManager->computeWeightedModelCount(node);
                 ms += toMs(wmcStart);
                 return res;
             };
@@ -1299,9 +1307,13 @@ static void runBddPipeline(
                                            .count();
 
                 auto wmcStart = std::chrono::steady_clock::now();
-                double evidenceWeight = 1.0;
+                double evidenceLogWeight = 0.0;
                 if (!componentEvs.empty()) {
-                    evidenceWeight = computeWmcProfile(evidenceBdd, evidenceWmcComputeMs, evidenceWmcCalls);
+                    evidenceLogWeight = computeWmcProfile(
+                            evidenceBdd, evidenceWmcComputeMs, evidenceWmcCalls, true);
+                    if (!std::isfinite(evidenceLogWeight)) {
+                        throw std::runtime_error("Inconsistent evidence: observations have zero probability");
+                    }
                 }
                 evidenceWmcMs += std::chrono::duration_cast<std::chrono::milliseconds>(
                                          std::chrono::steady_clock::now() - wmcStart)
@@ -1320,12 +1332,10 @@ static void runBddPipeline(
                     double prob = 0.0;
                     if (componentEvs.empty()) {
                         prob = computeWmcProfile(bdd, nodeWmcComputeMs, nodeWmcCalls);
-                    } else if (evidenceWeight == 0.0) {
-                        prob = 0.0;
                     } else {
                         auto joint = makeAndProfile(bdd, evidenceBdd, nodeMakeAndMs, nodeMakeAndCalls);
-                        double jointW = computeWmcProfile(joint, nodeWmcComputeMs, nodeWmcCalls);
-                        prob = jointW / evidenceWeight;
+                        double jointLogWeight = computeWmcProfile(joint, nodeWmcComputeMs, nodeWmcCalls, true);
+                        prob = std::exp(std::min(0.0, jointLogWeight - evidenceLogWeight));
                     }
                     probResult[node] = prob;
                 }
@@ -2042,6 +2052,7 @@ void runPipeline(
     auto t0 = std::chrono::steady_clock::now();
     auto graph = std::unique_ptr<WorkingDerivationGraph>(WorkingDerivationGraph::createFrom(
             DerivationManager::untypedTuple2RuleApplications, ruleManager, queryManager, factProb, evidences));
+    const auto graphEvidences = graph->getEvidences();
     auto t1 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] create graph took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
@@ -2518,7 +2529,7 @@ void runPipeline(
 
     precomputedTupleProbResult.insert(liftedProbabilities.begin(), liftedProbabilities.end());
     if (program.getKnowledge() == souffle::Knowledge::BDD) {
-        runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, evidences, rewriteHybridStage);
+        runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, graphEvidences, rewriteHybridStage);
     } else {
         std::cerr << "Unknown knowledge representation" << std::endl;
     }

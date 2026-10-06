@@ -397,6 +397,14 @@ ImplicitSplitOverlay::ImplicitSplitOverlay(const WorkingDerivationGraphViewInter
         }
     }
 
+    if (std::any_of(nodeState_.begin(), nodeState_.end(),
+                [](const auto& entry) { return entry.second.hasEvidence; })) {
+        const auto& dependencies = view_.getCycleDependencyGraph();
+        for (auto& [node, state] : nodeState_) {
+            state.evidenceAffected = !dependencies.getComponentEvidencesForNode(node).empty();
+        }
+    }
+
     for (const auto& edge : view_.getEdges()) {
         if (!edge) {
             continue;
@@ -530,7 +538,8 @@ bool ImplicitSplitOverlay::canSplitFact(const NodePtr& fact) const {
         return false;
     }
     const auto& state = itState->second;
-    return state.originalIsFact && state.currentIsFact && !state.needOutput && !state.hasEvidence;
+    return state.originalIsFact && state.currentIsFact && !state.needOutput &&
+            !state.hasEvidence && !state.evidenceAffected;
 }
 
 void ImplicitSplitOverlay::factifyNode(const NodePtr& node, double probability, std::vector<SupportToken> supportTokens) {
@@ -669,7 +678,7 @@ std::vector<std::vector<std::size_t>> ImplicitSplitOverlay::partitionFactOutgoin
     std::vector<std::vector<std::size_t>> groups;
     auto itState = nodeState_.find(fact);
     if (itState == nodeState_.end() || !itState->second.currentIsFact || !itState->second.originalIsFact ||
-            itState->second.needOutput || itState->second.hasEvidence) {
+            itState->second.needOutput || itState->second.hasEvidence || itState->second.evidenceAffected) {
         return groups;
     }
 
@@ -953,7 +962,7 @@ bool ImplicitSplitOverlay::buildAllFactsCandidate(std::size_t edgeIndex, AllFact
             return false;
         }
         const auto& inputState = nodeState_.at(ref.base);
-        if (inputState.hasEvidence || inputState.needOutput) {
+        if (inputState.hasEvidence || inputState.needOutput || inputState.evidenceAffected) {
             return false;
         }
         if (inputState.originalIsFact) {
@@ -1052,7 +1061,7 @@ bool ImplicitSplitOverlay::buildDirectSingleHyperedgeCandidate(
             return false;
         }
         const auto& inputState = nodeState_.at(ref.base);
-        if (inputState.hasEvidence || inputState.needOutput) {
+        if (inputState.hasEvidence || inputState.needOutput || inputState.evidenceAffected) {
             return false;
         }
         if (inputState.originalIsFact) {
@@ -1217,7 +1226,7 @@ bool ImplicitSplitOverlay::classifyLinearTwoEdge(std::size_t edgeIndex, SplitNod
         return false;
     }
     const auto& midState = nodeState_.at(mid);
-    if (midState.needOutput || midState.hasEvidence) {
+    if (midState.needOutput || midState.hasEvidence || midState.evidenceAffected) {
         return false;
     }
     const auto& incomingMid = activeIncomingEdges(mid);
@@ -1264,7 +1273,8 @@ bool ImplicitSplitOverlay::classifyFanOutConverge(
         return false;
     }
     const auto& entryState = nodeState_.at(entryRef.base);
-    if (!entryState.originalIsFact || !entryState.currentIsFact || entryState.needOutput || entryState.hasEvidence) {
+    if (!entryState.originalIsFact || !entryState.currentIsFact || entryState.needOutput ||
+            entryState.hasEvidence || entryState.evidenceAffected) {
         return false;
     }
     const auto& outs = activeOutgoingEdges(entryRef);
@@ -1285,7 +1295,7 @@ bool ImplicitSplitOverlay::classifyFanOutConverge(
             return false;
         }
         const auto& xiState = nodeState_.at(fanEdge.output);
-        if (xiState.needOutput || xiState.hasEvidence) {
+        if (xiState.needOutput || xiState.hasEvidence || xiState.evidenceAffected) {
             return false;
         }
         if (!xiSet.insert(fanEdge.output).second) {
@@ -1392,6 +1402,9 @@ ImplicitSplitOverlay::GenericFastPathRoundPlan ImplicitSplitOverlay::buildGeneri
     }
     if (options.enableParallelEdge) {
         for (const auto& [output, incoming] : activeIncomingEdgeIdsByNode_) {
+            if (nodeState_.at(output).evidenceAffected) {
+                continue;
+            }
             struct ParallelKey {
                 SplitNodeRef ref;
                 bool negated = false;
@@ -1797,7 +1810,7 @@ std::vector<OverlayOutputProbability> ImplicitSplitOverlay::collectDirectOutputP
             continue;
         }
         const auto& state = it->second;
-        if (state.hasEvidence) {
+        if (state.hasEvidence || state.evidenceAffected) {
             continue;
         }
         if (state.currentIsFact) {
@@ -2015,6 +2028,12 @@ MaterializedImplicitSplitGraph ImplicitSplitOverlay::materializeToGraph(
             continue;
         }
         ensureBaseNode(output);
+    }
+
+    for (const auto& [node, state] : nodeState_) {
+        if (state.hasEvidence) {
+            ensureBaseNode(node);
+        }
     }
 
     for (const auto& edge : edges_) {
@@ -2310,7 +2329,9 @@ ImplicitSplitPipelineResult runImplicitSplitRewritePipeline(
     result.inactiveBaseEdges = overlay.collectInactiveBaseEdges();
     const auto overlayGraphStats = overlay.computeStats();
     const bool allOutputsDirect = directOutputs.size() == overlay.getOutputs().size();
-    const bool needsResidualGraph = overlayGraphStats.activeEdges > 0 || !allOutputsDirect;
+    const bool hasEvidence = std::any_of(view.getNodes().begin(), view.getNodes().end(),
+            [](const auto& node) { return node && node->hasEvidence(); });
+    const bool needsResidualGraph = overlayGraphStats.activeEdges > 0 || !allOutputsDirect || hasEvidence;
     result.needsResidualGraph = needsResidualGraph;
     if (!needsResidualGraph) {
         precomputedProbResult.clear();

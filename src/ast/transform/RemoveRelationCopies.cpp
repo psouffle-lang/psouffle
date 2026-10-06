@@ -44,6 +44,10 @@ bool RemoveRelationCopiesTransformer::removeRelationCopies(TranslationUnit& tran
     auto& ioType = translationUnit.getAnalysis<analysis::IOTypeAnalysis>();
 
     Program& program = translationUnit.getProgram();
+    UnorderedQualifiedNameSet evidenceRelations;
+    for (const auto& evidence : program.getEvidences()) {
+        evidenceRelations.insert(evidence->getAtomName());
+    }
 
     // search for relations only defined by a single rule ..
     for (Relation* rel : program.getRelations()) {
@@ -58,7 +62,8 @@ bool RemoveRelationCopiesTransformer::removeRelationCopies(TranslationUnit& tran
         }
         const auto& clauses = program.getClauses(*rel);
 
-        if (!ioType.isIO(rel) && clauses.size() == 1u) {
+        if (!ioType.isIO(rel) && !contains(evidenceRelations, rel->getQualifiedName()) &&
+                clauses.size() == 1u) {
             // .. of shape r(x,y,..) :- s(x,y,..)
             Clause* cl = clauses[0];
 

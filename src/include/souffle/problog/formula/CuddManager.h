@@ -1,6 +1,7 @@
 #ifndef CUDDMANAGER_H
 #define CUDDMANAGER_H
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -668,6 +669,7 @@ public:
     FormulaManager<BddNodeRef>::VariableWeight getVariableWeight(int varIndex) const override;
     bool hasVariableWeight(int varIndex) const override;
     double computeWeightedModelCount(const BddNodeRef& node) override;
+    double computeLogWeightedModelCount(const BddNodeRef& node);
 
     // Utility functions
     void printInfo(const BddNodeRef& node, const std::string& name) override;
@@ -1397,6 +1399,44 @@ inline double WeightedBDDManager::computeWeightedModelCount(const BddNodeRef& no
         wmcCacheEpoch_ = weightsEpoch_;
     }
     return recursiveWeightedModelCount(node.get(), wmcCache_);
+}
+
+inline double WeightedBDDManager::computeLogWeightedModelCount(const BddNodeRef& node) {
+    // Conditioning can have a nonzero denominator far below double's range.
+    // Keep complemented cofactors explicit: log(1 - WMC(f)) is unstable too.
+    std::unordered_map<DdNode*, double> cache;
+    const double zero = -std::numeric_limits<double>::infinity();
+    auto logWeight = [zero](double weight) {
+        if (!std::isfinite(weight) || weight < 0.0 || weight > 1.0) {
+            throw std::runtime_error("Invalid probability weight in evidence inference");
+        }
+        return weight == 0.0 ? zero : std::log(weight);
+    };
+    auto count = [&](const auto& self, DdNode* current) -> double {
+        if (Cudd_IsConstant(current)) {
+            return Cudd_IsComplement(current) ? zero : 0.0;
+        }
+        const auto found = cache.find(current);
+        if (found != cache.end()) {
+            return found->second;
+        }
+        DdNode* regular = Cudd_Regular(current);
+        DdNode* thenNode = Cudd_T(regular);
+        DdNode* elseNode = Cudd_E(regular);
+        if (Cudd_IsComplement(current)) {
+            thenNode = Cudd_Not(thenNode);
+            elseNode = Cudd_Not(elseNode);
+        }
+        const auto weight = getVariableWeight(Cudd_NodeReadIndex(regular));
+        const double thenWeight = logWeight(weight.posWeight) + self(self, thenNode);
+        const double elseWeight = logWeight(weight.negWeight) + self(self, elseNode);
+        const double high = std::max(thenWeight, elseWeight);
+        const double result = high == zero ? zero :
+                high + std::log1p(std::exp(std::min(thenWeight, elseWeight) - high));
+        cache.emplace(current, result);
+        return result;
+    };
+    return count(count, node.get());
 }
 
 inline double WeightedBDDManager::recursiveWeightedModelCount(

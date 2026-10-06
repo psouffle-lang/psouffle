@@ -1142,6 +1142,13 @@ public:
             std::vector<NodePtr> evidenceNodes = {})
             : SubgraphView(std::move(nodes), std::move(edges)),
             evidenceNodes_(std::move(evidenceNodes)) {
+            if (evidenceNodes_.empty()) {
+                for (const auto& node : nodes_) {
+                    if (node && node->hasEvidence()) {
+                        evidenceNodes_.push_back(node);
+                    }
+                }
+            }
         }
 
     WorkingSubgraphView(const WorkingSubgraphView& other)
@@ -1542,20 +1549,23 @@ public:
         return resolved;
     }
     void attachEvidence(const std::vector<std::pair<UntypedTuple,bool>>& evidenceList) {
-        evidences = evidenceList;
+        evidences.clear();
         for (const auto& [tuple, value] : evidenceList) {
             NodePtr node = findNode(tuple);
             if (node) {
-                node ->setEvidence(value);
+                if (node->hasEvidence() && node->getEvidenceValue() != value) {
+                    throw std::runtime_error("Inconsistent evidence: conflicting values for " + tuple.toString());
+                }
+                node->setEvidence(value);
+                evidences.emplace_back(tuple, value);
                 if (DerivationGraphViewInterface::isVerboseEnabled()) {
                     std::cout << "[Info] Attached evidence (" << tuple.toString() << ","
                                           << (value ? "true" : "false")
                                           << ") to node " << node->toString() << std::endl;
                 }
-            } else {
-                std::cerr << "Evidence (" << tuple.toString() << ","
-                                      << (value ? "true" : "false")
-                                      << ") does not match any node" << std::endl;
+            } else if (value) {
+                throw std::runtime_error("Inconsistent evidence: " + tuple.toString() +
+                        " is deterministically false");
             }
         }
     }
@@ -4270,7 +4280,7 @@ void DerivationGraph::pruneOutputlessComponents(
     }
     std::vector<bool> componentHasOutput(componentCount, false);
     for (const auto& node : liveNodes) {
-        if (node->needOutput) {
+        if (node->needOutput || node->hasEvidence()) {
             componentHasOutput[depGraph.getComponentId(node)] = true;
         }
     }

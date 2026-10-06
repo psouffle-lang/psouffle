@@ -133,8 +133,6 @@ std::size_t TranslatorContext::getClauseNum(const ast::Clause* clause) const {
 }
 
 void TranslatorContext::dumpClauseNums(std::ostream& o) const {
-    assert(!clauseNums.empty() && "clauseNums is empty");
-
     for (const auto& [clause, clauseId] : clauseNums) {
         o << clauseId << " ";
         clause->getSrcLoc().print(o);

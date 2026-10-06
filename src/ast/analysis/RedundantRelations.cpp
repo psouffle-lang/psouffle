@@ -45,6 +45,12 @@ void RedundantRelationsAnalysis::run(const TranslationUnit& translationUnit) {
             work.insert(r);
         }
     }
+    // Observations are inference roots even when they are not queried.
+    for (const auto& evidence : program.getEvidences()) {
+        if (const auto* relation = program.getRelation(evidence->getAtom())) {
+            work.insert(relation);
+        }
+    }
 
     /* Find all relations which are not redundant for the computations of the
        output relations. */

@@ -44,6 +44,10 @@ bool RemoveEmptyRelationsTransformer::removeEmptyRelations(TranslationUnit& tran
     });
 
     UnorderedQualifiedNameSet emptyRelations;
+    UnorderedQualifiedNameSet evidenceRelations;
+    for (const auto& evidence : program.getEvidences()) {
+        evidenceRelations.insert(evidence->getAtomName());
+    }
     bool changed = false;
     for (auto rel : program.getRelations()) {
         if (ioTypes.isInput(rel)) continue;
@@ -53,7 +57,8 @@ bool RemoveEmptyRelationsTransformer::removeEmptyRelations(TranslationUnit& tran
         emptyRelations.insert(rel->getQualifiedName());
 
         bool usedInAggregate = contains(atoms_in_aggs, rel->getQualifiedName());
-        if (!usedInAggregate && !ioTypes.isOutput(rel)) {
+        if (!usedInAggregate && !ioTypes.isOutput(rel) &&
+                !contains(evidenceRelations, rel->getQualifiedName())) {
             program.removeRelation(*rel);
             changed = true;
         }

@@ -437,7 +437,9 @@ public:
 
             // Regions produced by GraphAnalyzer are non-overlapping.
             for (const auto& region : regions) {
-                if (!region.valid) {
+                // Marginal summaries can underflow before conditioning. Keep
+                // the original events in observation components for log WMC.
+                if (!region.valid || evidenceAffectedNodes.count(region.exit)) {
                     continue;
                 }
 
@@ -1475,7 +1477,7 @@ private:
         std::unordered_set<NodePtr> affected;
         // Most benchmark/timing runs do not use evidence at all. In that common
         // case, avoid constructing the cycle-dependency graph just to discover
-        // that no SCC is evidence-constrained.
+        // that no component is evidence-constrained.
         if (view.getEvidenceNodes().empty()) {
             return affected;
         }

@@ -71,6 +71,10 @@ bool ReduceExistentialsTransformer::transform(TranslationUnit& translationUnit) 
 
     auto& ioType = translationUnit.getAnalysis<analysis::IOTypeAnalysis>();
 
+    for (const auto& evidence : program.getEvidences()) {
+        minimalIrreducibleRelations.insert(evidence->getAtomName());
+    }
+
     for (Relation* relation : program.getRelations()) {
         // No I/O relations can be transformed
         if (ioType.isIO(relation)) {

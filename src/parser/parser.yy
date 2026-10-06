@@ -830,7 +830,7 @@ fact
 	{
 	  @$ = @$.from(@2);
 	  auto atm = $atom;
-	  auto prob = std::stof($FLOAT);
+	  auto prob = std::stod($FLOAT);
 	  atm->setProbability(prob);  // Store probability in the atom
 	  $$ = mk<ast::Clause>(std::move(atm), VecOwn<ast::Literal> {}, nullptr, @$);
 	  $$->setProbability(prob);
@@ -840,7 +840,7 @@ fact
 	{
 	  @$ = @$.from(@qualified_name);
 	  auto atm = mk<ast::Atom>($qualified_name, VecOwn<ast::Argument>{}, @$);
-	  auto prob = std::stof($FLOAT);
+	  auto prob = std::stod($FLOAT);
 	  atm->setProbability(prob);
 	  $$ = mk<ast::Clause>(std::move(atm), VecOwn<ast::Literal> {}, nullptr, @$);
 	  $$->setProbability(prob);
@@ -962,7 +962,7 @@ head
       @$ = @$.from(@atom);
       auto atom = $atom;
       atom->setAnnotations($annotations);
-	  atom->setProbability(std::stof($FLOAT));  // Store probability in the atom
+	  atom->setProbability(std::stod($FLOAT));  // Store probability in the atom
       $$.emplace_back(std::move(atom));
     }
   | annotations FLOAT DOUBLECOLON qualified_name  // New rule for 0-arity atoms in heads
@@ -970,7 +970,7 @@ head
       @$ = @$.from(@qualified_name);
       auto atom = mk<ast::Atom>($qualified_name, VecOwn<ast::Argument>{}, @$);
       atom->setAnnotations($annotations);
-      atom->setProbability(std::stof($FLOAT));
+      atom->setProbability(std::stod($FLOAT));
       $$.emplace_back(std::move(atom));
     }
   | head COMMA annotations atom
@@ -985,7 +985,7 @@ head
       $$ = $1;
       auto atom = $atom;
       atom->setAnnotations($annotations);
-	  atom->setProbability(std::stof($FLOAT));  // Store probability in the atom
+	  atom->setProbability(std::stod($FLOAT));  // Store probability in the atom
       $$.emplace_back(std::move(atom));
     }
   ;

@@ -469,8 +469,8 @@ Own<ast::transform::PipelineTransformer> astTransformationPipeline(Global& glb) 
             mk<ast::transform::RemoveEmptyRelationsTransformer>(),
             mk<ast::transform::RemoveRedundantRelationsTransformer>(), clone(equivalencePipeline));
     auto pipeline = mk<ast::transform::PipelineTransformer>(mk<ast::transform::ComponentChecker>(),
-            mk<ast::transform::EvidenceSemanticChecker>(),
             mk<ast::transform::ComponentInstantiationTransformer>(),
+            mk<ast::transform::EvidenceSemanticChecker>(),
             mk<ast::transform::ProbQueryChecker>(),
             mk<ast::transform::DebugDeltaRelationTransformer>(),
             mk<ast::transform::IODefaultsTransformer>(),

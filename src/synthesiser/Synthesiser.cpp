@@ -778,7 +778,7 @@ void Synthesiser::emitRules (std::ostream& out) {
         << ", {" << join(atomNames, ", ") << "}, "
         << "{" << join(map(clause->getVariables(),
             [](const std::string& s) { return "\"" + s + "\"";}), ", ") << "}, "
-        << std::to_string(clause->getProbability())
+        << std::setprecision(std::numeric_limits<double>::max_digits10) << clause->getProbability()
         << ", " << std::to_string(clause->isRecursive())
         << ", " << std::to_string(clause->isInRecursiveStratum())
         << ", " << (isEqrelHead ? "true" : "false")
@@ -4023,12 +4023,18 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
                         break;
                     }
                     case 'f':
-                        ss << "souffle::ramBitCast<souffle::RamDomain>(static_cast<souffle::RamFloat>("
-                           << token << "))";
+                        ss << "souffle::ramBitCast<souffle::RamDomain>(souffle::RamUnsigned("
+                           << souffle::ramBitCast<souffle::RamUnsigned>(souffle::RamFloatFromString(token))
+                           << "ULL))";
                         break;
                     case 'u':
+                        ss << "souffle::ramBitCast<souffle::RamDomain>(souffle::RamUnsigned("
+                           << souffle::RamUnsignedFromString(token, nullptr, 0) << "ULL))";
+                        break;
                     case 'i':
-                        ss << token;
+                        ss << "souffle::ramBitCast<souffle::RamDomain>(souffle::RamUnsigned("
+                           << souffle::ramBitCast<souffle::RamUnsigned>(
+                                      souffle::RamSignedFromString(token, nullptr, 0)) << "ULL))";
                         break;
                     default:
                         assert(false && "Evidence codegen only supports primitive ground fields");

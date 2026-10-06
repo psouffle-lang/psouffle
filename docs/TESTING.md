@@ -38,13 +38,22 @@ outputs, extra queries, evidence and multi-witness fallbacks, compiler defaults,
 threshold validation, and rejection of online lift. It compares all lifted
 variants against ordinary exact probabilities on tiny inputs.
 
+The `evidence_correctness` case checks posteriors against exhaustive possible
+worlds on tiny inputs under plain, explicit, implicit, automatic rewrite,
+extra pruning, and lifted fallback. It covers unqueried observation relations,
+shared events and distinct probabilistic rules with identical bodies,
+negative and absent observations,
+disconnected evidence components, contradictory observations, a positive
+`P(E)=1e-400`, typed input-only programs, and source diagnostics for invalid
+evidence literals.
+
 Container builds run [docker/smoke.py](../docker/smoke.py) against the installed
 compiler with tiny full/rewrite and online inputs. The evaluation image also
 checks ProbLog BDD/SDD availability, VProbLog loader/help output, and Scallop
 exact inference plus the patched bitwise-and function. These tool checks do
 not run paper benchmarks.
 
-The maintained suite contains 31 tests. The initial unified integration passed
+The maintained suite contains 32 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

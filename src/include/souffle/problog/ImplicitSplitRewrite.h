@@ -215,6 +215,7 @@ private:
         double factProbability = 0.0;
         bool needOutput = false;
         bool hasEvidence = false;
+        bool evidenceAffected = false;
         bool hasOwnedFactSupportTokens = false;
         const std::vector<SupportToken>* factSupportTokensView = nullptr;
         std::vector<SupportToken> factSupportTokens;

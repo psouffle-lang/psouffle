@@ -83,10 +83,37 @@ Rules may also carry ProbLog-style probabilities:
 0.7::path(x,y) :- edge(x,y).
 ```
 
+Rule probability annotations retain double precision through parsing and code
+generation, independently of the tuple RAM domain size.
+
 Full-artifact evidence and exact sum aggregate replay are available in standalone
 full execution. The incremental artifact does not maintain these features
 across updates; online execution rejects evidence and aggregate replay with
 an explicit error.
+
+### Evidence
+
+Observations condition all query probabilities on their joint event:
+
+```souffle
+evidence(alarm(1), true).
+evidence(fault("sensor"), false).
+```
+
+Evidence targets and their dependencies are retained without `.output` or
+`query` declarations. Arguments must be ground primitive literals matching
+the declared attribute types: numbers, unsigned integers, floats, or quoted
+symbols. Variables, expressions, records, and algebraic data types are rejected
+with a source diagnostic; numeric literals must fit the configured RAM domain.
+
+A tuple absent from the deterministic evaluation is false: observing it as
+false adds no constraint, while observing it as true fails. Conflicting or
+jointly impossible observations also fail with `Inconsistent evidence`, even
+when their component is independent of every query. Successful inference uses
+`P(query AND evidence) / P(evidence)`. BDD counting uses logarithms for conditioned
+components so a positive evidence probability below double's range remains
+usable. Rewrite preserves shared events in components containing observations,
+and `--prune-extra` retains evidence components.
 
 ## Compile
 

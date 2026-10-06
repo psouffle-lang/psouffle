@@ -218,8 +218,6 @@ bool MinimiseProgramTransformer::areBijectivelyEquivalent(
         return false;
     }
 
-    // TODO: should only eliminate rules with probability 1.0
-
     // head atoms must have the same arity (names do not matter)
     if (leftElements[0].params.size() != rightElements[0].params.size()) {
         return false;
@@ -268,6 +266,10 @@ bool MinimiseProgramTransformer::reduceLocallyEquivalentClauses(TranslationUnit&
 
         for (auto&& cl : program.getClauses(*rel)) {
             auto* clause = &*cl;
+            // Each probabilistic clause denotes its own random event.
+            if (clause->getProbability() != 1.0) {
+                continue;
+            }
             bool added = false;
 
             for (std::vector<Clause*>& eqClass : equivalenceClasses) {
@@ -306,8 +308,12 @@ bool MinimiseProgramTransformer::reduceSingletonRelations(TranslationUnit& trans
 
     // Find all singleton relations to consider
     std::vector<Clause*> singletonRelationClauses;
+    UnorderedQualifiedNameSet evidenceRelations;
+    for (const auto& evidence : program.getEvidences()) {
+        evidenceRelations.insert(evidence->getAtomName());
+    }
     for (Relation* rel : program.getRelations()) {
-        if (ioTypes.isIO(rel)) continue;
+        if (ioTypes.isIO(rel) || contains(evidenceRelations, rel->getQualifiedName())) continue;
 
         auto clauses = program.getClauses(*rel);
         if (clauses.size() == 1 && clauses[0]->getProbability() == 1.0) {
