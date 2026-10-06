@@ -1,5 +1,8 @@
 # Usage
 
+For the complete compiler and runtime parameter lists, defaults, and option
+interactions, see the [command-line reference](COMMAND_LINE.md).
+
 ## Execution And Rewrite Contract
 
 There are two independent execution paths. Standalone full inference can use
@@ -56,7 +59,42 @@ tuples, uses direct products for distinct-event conjunctions, and instantiates
 exact BDDs for disjunctions or repeated events. Unsupported outputs retain
 their complete concrete dependencies, including events shared with lifted
 outputs; evidence falls back to ordinary exact inference.
-See [the example and diagnostics](../README.md#naive-lift-fastpath).
+The `LIFTED_WMC` debugger stage reports coverage, rejection reasons, formula
+sizes, closed-form tuple counts, and phase times. `--dump=dot` writes
+`abstract-derivation-graph.dot`; `--dump=stat` writes its TSV form.
+See the [quick example](../README.md#naive-lift-fastpath).
+
+## Containers
+
+The [Dockerfile](../Dockerfile) builds the compiler from this checkout. The
+`compiler` target includes PSouffle and CUDD; the default `evaluation` target
+also includes the paper's ProbLog profiling fork, VProbLog, and patched Scallop.
+
+```bash
+docker build --target compiler -t psouffle:compiler .
+docker build -t psouffle:evaluation .
+docker run --rm psouffle:compiler souffle --help
+docker run --rm psouffle:evaluation python3 evaluation/full/FMCAD.py --help
+```
+
+Build parallelism defaults to two jobs; override it with
+`--build-arg BUILD_JOBS=4`. The base image digest, CUDD and comparison-engine
+revisions, Python package versions, and Rust toolchain are pinned. Scallop's
+transitive dependencies are recorded in [docker/scallop.Cargo.lock](../docker/scallop.Cargo.lock);
+[docker/clone_pinned.py](../docker/clone_pinned.py) fixes VProbLog's recursive
+Trident/Kognac/sparsehash/LZ4 downloads. Container builds check the tools using
+tiny inputs and do not execute paper benchmarks.
+
+The workspace in each image is `/opt/psouffle`, and `SOUFFLE_BIN` selects the
+installed compiler. To keep future experiment outputs on the host:
+
+```bash
+mkdir -p evaluation/full/artifact evaluation/inc/benchmarks/side_channel/runs
+docker run --rm -it --user "$(id -u):$(id -g)" \
+  -v "$PWD/evaluation/full/artifact:/opt/psouffle/evaluation/full/artifact" \
+  -v "$PWD/evaluation/inc/benchmarks/side_channel/runs:/opt/psouffle/evaluation/inc/benchmarks/side_channel/runs" \
+  psouffle:evaluation bash
+```
 
 ## Source References
 
@@ -189,6 +227,11 @@ Example:
 
 ```bash
 ./compute -F input -D output --setmode inc-regional
+```
+
+Then enter these commands in the online session:
+
+```text
 insert 0.3::edge(1,2)
 delete edge(3,4)
 commit

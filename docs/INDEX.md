@@ -2,6 +2,8 @@
 
 - [PROVENANCE.md](PROVENANCE.md): imported artifact revisions and branch audit.
 - [USAGE.md](USAGE.md): full/online selectors and rewrite interaction contract.
+- [COMMAND_LINE.md](COMMAND_LINE.md): complete compiler/runtime parameters,
+  defaults, aliases, and option interactions.
 - [USAGE.md#evidence](USAGE.md#evidence): observation syntax, conditional
   probabilities, impossible evidence, and literal restrictions.
 - [../README.md#naive-lift-fastpath](../README.md#naive-lift-fastpath): opt-in
