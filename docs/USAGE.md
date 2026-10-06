@@ -101,7 +101,10 @@ evidence(fault("sensor"), false).
 ```
 
 Evidence targets and their dependencies are retained without `.output` or
-`query` declarations. Arguments must be ground primitive literals matching
+`query` declarations, including tuples derived by deterministic rules and
+nullary facts. Zero-weight sources contribute no probability, even when the
+RAM evaluation derives their heads and descendants.
+Arguments must be ground primitive literals matching
 the declared attribute types: numbers, unsigned integers, floats, or quoted
 symbols. Variables, expressions, records, and algebraic data types are rejected
 with a source diagnostic; numeric literals must fit the configured RAM domain.

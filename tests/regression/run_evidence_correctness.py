@@ -105,6 +105,36 @@ def main():
         expected = posterior([0.2, 0.3], lambda w: (w[0] or w[1]) == value, queries)
         check(binary, facts, expected)
 
+    # Nullary heads must record every clause and witness, even after their RAM
+    # relation becomes nonempty. Recursive proofs use the same fixed-point guard.
+    nullary = (
+        '.decl a(x:number)\n.input a\n.output a\nquery(a(_)).\n'
+        '.decl b(x:number)\n.input b\n.output b\nquery(b(_)).\n'
+        '.decl obs()\nobs() :- a(1).\nobs() :- b(1).\n')
+    for recursive in (False, True):
+        for value in (True, False):
+            extra = ('.decl echo()\nquery(echo()).\n'
+                     '0.4::echo() :- obs().\nobs() :- echo().\n' if recursive else '')
+            binary, facts = compile_program(f'nullary_{recursive}_{value}', nullary + extra +
+                f'evidence(obs(),{str(value).lower()}).\n', inputs)
+            nullary_queries = dict(queries)
+            if recursive:
+                nullary_queries['echo()'] = lambda w: (w[0] or w[1]) and w[2]
+            expected = posterior([0.2, 0.3, 0.4] if recursive else [0.2, 0.3],
+                lambda w: (w[0] or w[1]) == value, nullary_queries)
+            check(binary, facts, expected)
+
+    for value in (True, False):
+        binary, facts = compile_program('nullary_witness_' + str(value).lower(),
+            '.decl a(x:number)\n.input a\n.output a\nquery(a(_)).\n'
+            '.decl obs()\n0.4::obs() :- a(X).\n' +
+            f'evidence(obs(),{str(value).lower()}).\n',
+            {'a': ('1\n2\n', '0.2\n0.3\n')})
+        expected = posterior([0.2, 0.3, 0.4, 0.4],
+            lambda w: ((w[0] and w[2]) or (w[1] and w[3])) == value,
+            {'a(1)': lambda w: w[0], 'a(2)': lambda w: w[1]})
+        check(binary, facts, expected)
+
     weighted = disjunction.replace('helper(X) :- a(X).',
         '0.4::helper(X) :- a(X).\n0.5::helper(X) :- a(X).')
     binary, facts = compile_program('duplicate_probabilistic_rules', weighted +
@@ -144,6 +174,41 @@ def main():
     (facts / 'd.facts').write_text('')
     (facts / 'd.prob').write_text('')
     check(binary, facts, label='absent_true', error='Inconsistent evidence')
+
+    # Provenance elision must not erase deterministic observation roots,
+    # including nullary facts and tuples outside every query component.
+    deterministic = (
+        '.decl ids(x:number)\n.input ids\n'
+        '.decl obs(x:number)\nobs(X) :- ids(X).\n'
+        '.decl present()\npresent().\n'
+        '.decl q(x:number)\n.input q\n.output q\nquery(q(_)).\n'
+        'evidence(present(),true).\nevidence(obs(2),false).\n')
+    for value in (True, False):
+        binary, facts = compile_program('deterministic_' + str(value).lower(), deterministic +
+            f'evidence(obs(1),{str(value).lower()}).\n',
+            {'ids': ('1\n', None), 'q': ('1\n', '0.2\n')})
+        if value:
+            check(binary, facts, {'q(1)': 0.2})
+        else:
+            check(binary, facts, error='Inconsistent evidence')
+
+    # RAM still derives zero-weight heads. Their descendants must retain the
+    # zero event instead of treating those heads as deterministic true facts.
+    for zero_source in ('fact', 'rule'):
+        prefix = ('.decl a(x:number)\n.input a\n'
+                  '.decl obs(x:number)\n' +
+                  ('obs(X) :- a(X).\n' if zero_source == 'fact' else
+                   '0.0::obs(X) :- a(X).\n') +
+                  '.decl q(x:number)\n.output q\nquery(q(_)).\n'
+                  '0.5::q(X) :- obs(X).\n')
+        for value in (True, False):
+            binary, facts = compile_program('zero_' + zero_source + '_' + str(value).lower(), prefix +
+                f'evidence(obs(1),{str(value).lower()}).\n',
+                {'a': ('1\n', '0\n' if zero_source == 'fact' else None)})
+            if value:
+                check(binary, facts, error='Inconsistent evidence')
+            else:
+                check(binary, facts, {'q(1)': 0.0})
 
     conjunction = ','.join(f'a({i})' for i in range(8))
     binary, facts = compile_program('underflow',

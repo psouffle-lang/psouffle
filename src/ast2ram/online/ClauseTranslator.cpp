@@ -341,17 +341,6 @@ Own<ram::Operation> ClauseTranslator::createInsertion(const ast::Clause& clause)
                         std::move(cloneClauseVarMap(clauseVarMap)), std::move(cloneVarExprs(varExprs)), false, true);
 
 
-    // Propositions
-    if (head->getArity() == 0) {
-        return mk<ram::Filter>(
-            mk<ram::EmptinessCheck>(headRelationName),
-            mk<ram::SequentialOperation>(
-                mk<ram::Insert>(headRelationName, std::move(values),
-                    context.getClauseNum(&clause), clauseStr,
-                    std::move(cloneClauseVarMap(clauseVarMap))),
-                    std::move(recordDerivation)));
-    }
-
     // Relations with functional dependency constraints
     if (auto guardedConditions = getFunctionalDependencies(clause)) {
         return mk<ram::SequentialOperation>(mk<ram::GuardedInsert>(headRelationName,
@@ -368,8 +357,6 @@ Own<ram::Operation> ClauseTranslator::createInsertion(const ast::Clause& clause)
 
 Own<ram::Operation> ClauseTranslator::addAtomScan(Own<ram::Operation> op, const ast::Atom* atom,
         const ast::Clause& clause, std::size_t curLevel) const {
-    const ast::Atom* head = clause.getHead();
-
     // add constraints
     op = addConstantConstraints(curLevel, atom->getArguments(), std::move(op));
 
@@ -383,11 +370,6 @@ Own<ram::Operation> ClauseTranslator::addAtomScan(Own<ram::Operation> op, const 
 
     // add a scan level
     if (atom->getArity() != 0 && !isAllArgsUnnamed) {
-        if (head->getArity() == 0) {
-            op = mk<ram::Break>(mk<ram::Negation>(mk<ram::EmptinessCheck>(getClauseAtomName(clause, head))),
-                    std::move(op));
-        }
-
         std::stringstream ss;
         if (context.getGlobal()->config().has("profile")) {
             ss << "@frequency-atom" << ';';
@@ -707,10 +689,9 @@ Own<ram::Operation> ClauseTranslator::addBodyLiteralConstraints(
     }
 
     if (isRecursive()) {
-        if (clause.getHead()->getArity() > 0) {
-            // also negate the head
-            op = addNegatedAtomDerived(std::move(op), clause, clause.getHead());
-        }
+        // Check complete derivations for every head, including propositions.
+        // Tuple existence alone would discard alternate proofs of a nullary.
+        op = addNegatedAtomDerived(std::move(op), clause, clause.getHead());
         // also add in prev stuff
         for (std::size_t i = version + 1; i < sccAtoms.size(); i++) {
             op = addNegatedDeltaAtom(std::move(op), sccAtoms.at(i));
@@ -720,14 +701,7 @@ Own<ram::Operation> ClauseTranslator::addBodyLiteralConstraints(
     return op;
 }
 
-Own<ram::Condition> ClauseTranslator::createCondition(const ast::Clause& clause) const {
-    const auto head = clause.getHead();
-
-    // add stopping criteria for nullary relations
-    // (if it contains already the null tuple, don't re-compute)
-    if (isRecursive() && head->getArity() == 0) {
-        return mk<ram::EmptinessCheck>(getConcreteRelationName(head->getQualifiedName()));
-    }
+Own<ram::Condition> ClauseTranslator::createCondition(const ast::Clause&) const {
     return nullptr;
 }
 

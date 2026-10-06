@@ -41,6 +41,8 @@ variants against ordinary exact probabilities on tiny inputs.
 The `evidence_correctness` case checks posteriors against exhaustive possible
 worlds on tiny inputs under plain, explicit, implicit, automatic rewrite,
 extra pruning, and lifted fallback. It covers unqueried observation relations,
+deterministic and nullary observation roots, zero-weight facts and rules,
+nullary disjunctions, distinct witnesses and recursive proofs,
 shared events and distinct probabilistic rules with identical bodies,
 negative and absent observations,
 disconnected evidence components, contradictory observations, a positive

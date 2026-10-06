@@ -336,7 +336,6 @@ struct DetOptMeta {
     std::vector<std::vector<std::size_t>> sccSucc;
     std::vector<std::size_t> sccTopo;
     std::vector<int> ruleSeed;
-    std::vector<std::string> evidenceRels;
 };
 
 static DetOptMeta buildDetOptMeta(const ast::Program& program, Global& glb) {
@@ -372,7 +371,9 @@ static DetOptMeta buildDetOptMeta(const ast::Program& program, Global& glb) {
             continue;
         }
         double p = clause->getProbability();
-        if (p <= 0.0 || p >= 1.0) {
+        // A zero-weight rule also needs provenance: the RAM evaluation
+        // derives its head, but that tuple is false in every possible world.
+        if (p == 1.0) {
             continue;
         }
         const auto* headAtom = as<ast::Atom>(clause->getHead());
@@ -394,15 +395,6 @@ static DetOptMeta buildDetOptMeta(const ast::Program& program, Global& glb) {
     }
     meta.sccTopo = topo.order();
 
-    std::unordered_set<std::string> evidenceSet;
-    for (const auto& evi : prog.getEvidences()) {
-        if (!evi) {
-            continue;
-        }
-        evidenceSet.insert(evi->getAtomName().toString());
-    }
-    meta.evidenceRels.assign(evidenceSet.begin(), evidenceSet.end());
-    std::sort(meta.evidenceRels.begin(), meta.evidenceRels.end());
     return meta;
 }
 
@@ -3217,7 +3209,6 @@ void Synthesiser::emitCode(std::ostream& out, const Statement& stmt) {
             auto relName = synthesiser.getRelationName(rel);
             auto ctxName = "READ_OP_CONTEXT(" + synthesiser.getOpContextName(*rel) + ")";
             auto arity = rel->getArity();
-            assert(arity > 0 && "AstToRamTranslator failed");
             std::string after;
             // if (glb.config().has("profile") && glb.config().has("profile-frequency") &&
             //         !synthesiser.lookup(derivationCheck.getRelation())->isTemp()) {
@@ -3230,7 +3221,13 @@ void Synthesiser::emitCode(std::ostream& out, const Statement& stmt) {
                 const std::string baseRelName = getBaseRelationName(derivationCheck.getRelation());
                 out << "(" << relName << "->"
                     << "contains(Tuple<RamDomain," << arity << ">{{" << join(derivationCheck.getValues(), ",", rec)
-                    << "}}," << ctxName << ")" << ")";
+                    << "}}";
+                // Nullary guards may be hoisted outside the query's context
+                // scope, and their relation lookup needs no index hints.
+                if (arity != 0) {
+                    out << "," << ctxName;
+                }
+                out << ")" << ")";
                 out << "&& ";
                 out << "(";
                 out << "(detOptEnabled && isDetRelation(\"" << baseRelName << "\"))";
@@ -4722,7 +4719,6 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
     emitSccSucc("det_scc_succ", detMeta.sccSucc);
     emitSizeVector("det_scc_topo", detMeta.sccTopo);
     emitIntVector("det_rule_seed", detMeta.ruleSeed);
-    emitStringVector("det_evidence_rels", detMeta.evidenceRels);
 
     hook << "int main(int argc, char** argv)\n{\n";
     hook << "try{\n";
@@ -4995,7 +4991,7 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
         hook << "        std::vector<souffle::RamDomain> tupleFields(ramDomain, ramDomain + "
              << qualifiedRelationValueTypeName << "::Arity);\n";
         hook << "        factProb.insert_or_assign(UntypedTuple{relationName, std::move(tupleFields)}, prob);\n";
-        hook << "        if (prob > 0.0 && prob < 1.0) {\n";
+        hook << "        if (prob != 1.0) {\n";
         hook << "            relationHasProb[relationName] = true;\n";
         hook << "        }\n";
         hook << "    }\n";
@@ -5011,11 +5007,6 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
     hook << "}\n";
     hook << "{\n";
     hook << "auto analyzeStart = std::chrono::steady_clock::now();\n";
-    hook << "std::unordered_map<std::string, std::size_t> detRelIndex;\n";
-    hook << "detRelIndex.reserve(det_rel_names.size());\n";
-    hook << "for (std::size_t i = 0; i < det_rel_names.size(); ++i) {\n";
-    hook << "    detRelIndex.emplace(det_rel_names[i], i);\n";
-    hook << "}\n";
     hook << "std::vector<bool> probScc(det_scc_succ.size(), false);\n";
     hook << "for (std::size_t i = 0; i < det_rel_names.size(); ++i) {\n";
     hook << "    if (det_rule_seed[i]) { probScc[det_rel_to_scc[i]] = true; }\n";
@@ -5033,12 +5024,6 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
     hook << "std::vector<bool> relIsDet(det_rel_names.size(), false);\n";
     hook << "for (std::size_t i = 0; i < det_rel_names.size(); ++i) {\n";
     hook << "    relIsDet[i] = !probScc[det_rel_to_scc[i]];\n";
-    hook << "}\n";
-    hook << "for (const auto& rel : det_evidence_rels) {\n";
-    hook << "    auto it = detRelIndex.find(rel);\n";
-    hook << "    if (it != detRelIndex.end()) {\n";
-    hook << "        relIsDet[it->second] = true;\n";
-    hook << "    }\n";
     hook << "}\n";
     hook << "relationIsDet.clear();\n";
     hook << "relationIsDet.reserve(det_rel_names.size());\n";

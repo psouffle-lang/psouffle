@@ -2051,7 +2051,26 @@ void runPipeline(
     debugger.addInfo("input_fact_size", std::to_string(countInitialInputFacts()));
     auto t0 = std::chrono::steady_clock::now();
     auto graph = std::unique_ptr<WorkingDerivationGraph>(WorkingDerivationGraph::createFrom(
-            DerivationManager::untypedTuple2RuleApplications, ruleManager, queryManager, factProb, evidences));
+            DerivationManager::untypedTuple2RuleApplications, ruleManager, queryManager, factProb));
+    // Deterministic derivations omit provenance. Materialize an observed tuple
+    // only when it actually exists in the evaluated RAM relation.
+    for (const auto& [observed, value] : evidences) {
+        if (!detOptEnabled || !isDetRelation(observed.relation_name) || graph->findNode(observed)) {
+            continue;
+        }
+        const auto* relation = program.getRelation(observed.relation_name);
+        if (!relation) {
+            continue;
+        }
+        souffle::tuple tuple(relation);
+        for (std::size_t i = 0; i < observed.fields.size(); ++i) {
+            tuple[i] = observed.fields[i];
+        }
+        if (relation->contains(tuple)) {
+            graph->createQuery(graph->createNode(observed), queryManager);
+        }
+    }
+    graph->attachEvidence(evidences);
     const auto graphEvidences = graph->getEvidences();
     auto t1 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] create graph took "
