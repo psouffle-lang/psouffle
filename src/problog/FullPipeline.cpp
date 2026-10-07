@@ -383,6 +383,7 @@ struct GraphSummary {
     std::size_t maxInDegree = 0;
     std::size_t maxOutDegree = 0;
     std::size_t maxHyperedgeInputs = 0;
+    std::size_t inputAssociations = 0;
 };
 
 static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view) {
@@ -403,6 +404,7 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
 
     for (const auto& e : edges) {
         const auto inputs = view.getInputs(e);
+        s.inputAssociations += inputs.size();
         s.maxHyperedgeInputs = std::max(s.maxHyperedgeInputs, inputs.size());
         NodePtr out = view.getOutput(e);
         if (out) {
@@ -464,6 +466,7 @@ static void addGraphSummaryInfo(
     };
     add("nodes", s.nodes);
     add("edges", s.edges);
+    add("input_associations", s.inputAssociations);
     add("fact_nodes", s.factNodes);
     add("derived_nodes", s.derivedNodes);
     add("query_nodes", s.queryNodes);
@@ -477,6 +480,57 @@ static void addGraphSummaryInfo(
     add("max_in_degree", s.maxInDegree);
     add("max_out_degree", s.maxOutDegree);
     add("max_hyperedge_inputs", s.maxHyperedgeInputs);
+}
+
+static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivationGraph& graph,
+        WorkingSubgraphView& view, const std::vector<souffle::Relation*>& outputs,
+        const GraphSummary& before) {
+    if (!opt.isAndInputRedundancyEnabled()) return before;
+    auto& debugger = Debugger::getInstance();
+    debugger.startStage(StageKind::AND_INPUT_REDUNDANCY);
+    const auto start = std::chrono::steady_clock::now();
+    const auto stats = eliminateAndInputRedundancy(view, true);
+    const auto pruningStart = std::chrono::steady_clock::now();
+    if (stats.deletedInputAssociations != 0) {
+        // The original graph still owns the same edges/events. Re-prune before
+        // any SISO summary or formula fastpath, preserving queries and evidence.
+        graph.invalidateCaches();
+        auto pruned = graph.prune(outputs);
+        view = buildWorkingViewLocal(pruned.getNodes(), pruned.getEdges());
+    }
+    const double pruningMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - pruningStart).count();
+    const auto after = summarizeGraphLight(view);
+    const double totalMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - start).count();
+    addGraphSummaryInfo(debugger, "and_input_redundancy_before_", before);
+    addGraphSummaryInfo(debugger, "and_input_redundancy_after_", after);
+    auto addCount = [&](const std::string& key, std::size_t value) {
+        debugger.addInfo("and_input_redundancy_" + key, std::to_string(value));
+    };
+    auto addTime = [&](const std::string& key, double value) {
+        debugger.addInfo("and_input_redundancy_" + key, std::to_string(value));
+    };
+    addCount("deleted_input_associations", stats.deletedInputAssociations);
+    addCount("affected_edges", stats.affectedEdges);
+    addCount("rounds", stats.rounds);
+    addCount("remaining_input_associations", stats.remainingInputAssociations);
+    addCount("remaining_proven_input_associations", stats.remainingInputAssociations);
+    addCount("initial_input_associations", before.inputAssociations);
+    addCount("final_input_associations", after.inputAssociations);
+    addCount("cleaned_nodes", before.nodes - after.nodes);
+    addCount("cleaned_hyperedges", before.edges - after.edges);
+    addTime("detection_ms", stats.detectionMs);
+    addTime("mutation_ms", stats.mutationMs);
+    addTime("pruning_ms", pruningMs);
+    addTime("total_ms", totalMs);
+    std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
+              << " cleaned_nodes=" << before.nodes - after.nodes
+              << " cleaned_hyperedges=" << before.edges - after.edges
+              << " remaining_proven_input_associations=" << stats.remainingInputAssociations
+              << " total_ms=" << totalMs << '\n';
+    debugger.endStage();
+    return after;
 }
 
 static void recordFcHeartbeat(
@@ -2017,7 +2071,13 @@ void runPipeline(
     std::map<std::string, double> liftedProbabilities;
     std::unordered_set<std::string> liftedOutputs;
     auto concreteOutputs = program.getOutputRelations();
-    if (opt.isLiftedWmcEnabled()) {
+    if (opt.isLiftedWmcEnabled() && opt.isAndInputRedundancyEnabled()) {
+        // An explicitly requested concrete graph pass must precede fastpaths.
+        // Retain concrete provenance instead of returning from pointwise lift.
+        debugger.addInfo("lifted_handled", "false");
+        debugger.addInfo("lifted_reason", "and_input_redundancy_requires_concrete_graph");
+    }
+    if (opt.isLiftedWmcEnabled() && !opt.isAndInputRedundancyEnabled()) {
         debugger.startStage(StageKind::LIFTED_WMC);
         auto lifted = tryEvaluateLiftedPointwise(opt, program, ruleManager, factProb, evidences);
         liftedOutputs.insert(lifted.handledOutputRelations.begin(), lifted.handledOutputRelations.end());
@@ -2141,6 +2201,9 @@ void runPipeline(
 
     reportAndInputRedundancy(opt, view, "before-rewrite");
 
+    const GraphSummary rewriteInitialSummary = runAndInputRedundancy(
+            opt, *graph, view, concreteOutputs, afterPruneSummary);
+
     if (opt.isDumpDotEnabled()) {
         view.dumpDot(makeOutputPath(opt, "after_prune.dot"));
     }
@@ -2155,6 +2218,7 @@ void runPipeline(
     }
     if (opt.isRewriteEnabled() && !opt.isDerivationOnly()) {
         auto rewriteStart = std::chrono::steady_clock::now();
+        addGraphSummaryInfo(debugger, "rewrite_initial_", rewriteInitialSummary);
         GraphRewriteStats rewriteStats;
         ImplicitSplitOverlayStats overlayRewriteStats;
         rewriteDecision = chooseRewriteDispatch(opt, ruleManager);
@@ -2462,10 +2526,10 @@ void runPipeline(
             debugger.addInfo("rewrite_general_nodes_net_removed", std::to_string(generalNodesRemoved));
             debugger.addInfo("rewrite_general_edges_net_removed", std::to_string(generalEdgesRemoved));
             debugger.addInfo("rewrite_simple_nodes_net_removed", std::to_string(
-                    static_cast<long long>(afterPruneSummary.nodes) -
+                    static_cast<long long>(rewriteInitialSummary.nodes) -
                     static_cast<long long>(rewriteFinalSummary.nodes) - generalNodesRemoved));
             debugger.addInfo("rewrite_simple_edges_net_removed", std::to_string(
-                    static_cast<long long>(afterPruneSummary.edges) -
+                    static_cast<long long>(rewriteInitialSummary.edges) -
                     static_cast<long long>(rewriteFinalSummary.edges) - generalEdgesRemoved));
             debugger.addInfo("graph_rewrite_rewritten_regions", std::to_string(rewriteStats.numRegionsRewritten));
             debugger.addInfo("graph_rewrite_general_regions", std::to_string(rewriteStats.numGeneralRegionsRewritten));

@@ -645,6 +645,8 @@ std::vector<MainOption> getMainOptions() {
           "Default the generated binary to online execution."},
       {"rewrite", nextOptChar++, "", "", false,
           "Enable rewrite by default for standalone full inference."},
+      {"and-input-redundancy", nextOptChar++, "", "", false,
+          "Eliminate proven redundant AND inputs after pruning and before SISO/graph fastpaths."},
       {"explicit-rewrite", nextOptChar++, "", "", false,
           "Force graph rewrite for standalone full inference."},
       {"implicit-rewrite", nextOptChar++, "", "", false,
@@ -740,6 +742,9 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     const bool rewrite = config.has("rewrite") || config.has("explicit-rewrite") || config.has("implicit-rewrite");
     if (online && rewrite) {
         throw std::runtime_error("Rewrite is supported only in standalone full execution");
+    }
+    if (online && config.has("and-input-redundancy")) {
+        throw std::runtime_error("--and-input-redundancy requires standalone full execution");
     }
     if (online && config.has("lifted-wmc")) {
         throw std::runtime_error("--lifted-wmc requires standalone full execution");

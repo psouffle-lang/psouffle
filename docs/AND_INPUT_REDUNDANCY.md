@@ -1,8 +1,13 @@
-# Read-only AND-input redundancy audit
+# AND-input redundancy elimination and audit
 
-The opt-in detector measures opportunities for conservative AND-input redundancy
-elimination. It does not rewrite the graph, estimate probabilities, remove random
-events, or invoke extra SISO passes. It runs only in standalone full execution.
+`--and-input-redundancy` enables a conservative elimination pass in standalone
+full execution. The default remains off. Its order is initial query/evidence
+pruning, AND-input elimination, query/evidence re-pruning, then ordinary SISO
+rewrite and graph/formula fastpaths. `--rewrite` is independent: the input pass
+can run alone or before explicit, implicit, or automatic rewrite.
+
+The separate `--dump=and-redundancy` selector measures opportunities and writes
+proof certificates without performing any deletion itself.
 
 For an input `c` of an edge `e`, it requires a single nonempty deterministic
 definition `A -> c` and no fact source for `c`. Other positive inputs collectively
@@ -35,6 +40,15 @@ Post-rewrite certificates describe the residual graph's event model, including
 existing SISO summaries; they do not reconstruct original event formulas hidden
 by those summaries or establish identities across snapshots.
 
+The elimination pass re-proves each deletion against the current edge bodies
+and necessary-input sets. It updates `Must_1` immediately when a body changes
+and performs fresh detection rounds until no opportunities remain. It erases
+aligned input/negation entries in the existing `Hyperedge` object, retaining
+edge ID, rule application, probability and probabilistic support. Edge and
+view caches are invalidated, and outgoing adjacency retains a dependency while
+any duplicate input occurrence survives. No SAT, BDD or probability estimate
+is used to prove a deletion.
+
 ## Run
 
 ```bash
@@ -43,6 +57,9 @@ mkdir -p build/and-input-audit/results
   -F evaluation/full/symbolization/readelf/input \
   evaluation/full/symbolization/symbolization.dl \
   -o build/and-input-audit/symbolization
+./build/and-input-audit/symbolization --rewrite --and-input-redundancy \
+  -F evaluation/full/symbolization/readelf/input \
+  -D build/and-input-audit/results
 python3 evaluation/full/and_input_redundancy.py \
   --binary build/and-input-audit/symbolization \
   --output-root build/and-input-audit/results
@@ -63,6 +80,13 @@ Plain execution and `--derv-only` produce only the first report. A fully handled
 lifted execution does not construct a concrete graph and has no such report.
 Online execution rejects the selector before loading facts.
 
+`--and-input-redundancy` can also be baked at compilation. Online execution
+rejects it before loading facts. `--derv-only` still applies an explicitly
+requested input pass, then skips inference and SISO. When combined with
+`--lifted-wmc`, the early pointwise fastpath yields to concrete graph construction
+so that pruning and this pass precede graph fastpaths. The debugger records
+`lifted_reason=and_input_redundancy_requires_concrete_graph`.
+
 ## Read the measurements
 
 Each report contains graph sizes, body input associations, eligible definitions,
@@ -73,11 +97,11 @@ its provider, and all provider source edges when using `Must_1`. Node and edge
 IDs are snapshot-local strings; rule IDs, probabilities, signs and support tokens
 are included for inspection.
 
-**Certificates are independent opportunities, not a batch deletion plan.** For
+**Audit certificates are independent opportunities, not a batch deletion plan.** For
 `c1 := a`, `c2 := a`, and `e(c1,c2)`, either occurrence can be removed but both
-cannot. A future mutation pass must rebuild or update evidence after each
-removal. A future random-edge mutation must preserve the existing `Hyperedge`
-object: the BDD backend keys rule events by its identity.
+cannot. The mutation pass re-proves after each removal and keeps one necessary
+input. It preserves the existing `Hyperedge` object because the BDD backend
+keys rule events by its identity.
 
 The debugger records `and_input_redundancy_{before_rewrite|after_rewrite}_`
 `analysis_ms`, `write_ms`, and opportunity counters. Runner wall time includes
@@ -86,19 +110,51 @@ existing sum of CUDD live node counts after compilation of the slow components;
 it is not a count of the derivation graph or the last manager alone. Missing
 metrics stay blank rather than being reported as zero.
 
-Deleted input associations, cleaned nodes/edges, and additional SISO rewrites
-caused by this detector are all zero. Measuring those effects and any net
-compilation/WMC benefit requires the later mutation pass and repeated baseline,
-SISO, and SISO-plus-pass runs. Pre/post opportunity counts alone do not establish
-a performance improvement.
+The `AND_INPUT_REDUNDANCY` debugger stage sits after `PRUNING` and before
+`FC_WMC_HYBRID` or plain formula compilation. Its `and_input_redundancy_*`
+counters include deleted input associations, affected edges, detection rounds,
+cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
+times. `remaining_proven_input_associations` counts opportunities at the pass's
+fixpoint **before SISO**; SISO may subsequently expose new opportunities.
+`initial_input_associations` and `final_input_associations` count all body links
+before the pass and after cleanup. Their difference includes links on pruned
+edges as well as explicitly deleted inputs. The core pass alone removes no
+nodes or edges; the existing query/evidence-aware pruning does that cleanup.
+
+`rewrite_initial_*` describes the graph after this pass and cleanup. Simple and
+general SISO contribution counters use that snapshot, while `after_prune_*`
+retains the initial pruning counts. Additional SISO rewrites require comparing
+completed SISO region counts against a paired SISO-only run; they are not an
+invented per-pass counter. Read-only audit runs have zero mutation effects.
+
+Benchmark all cases without proof dumps or verbose formula profiling:
+
+```bash
+python3 evaluation/full/and_input_redundancy.py --mode benchmark --runs 3 \
+  --binary build/and-input-audit/symbolization \
+  --output-root build/and-input-audit/benchmark
+```
+
+This compares plain baseline, SISO, and SISO plus the input pass. It checks
+query keys/probabilities, includes detection costs in wall time, records BDD
+node counts and signed changes in completed SISO counts, and retains failures
+and timeouts. Use `--variants siso,siso_and_pass` for just the paired rewrite
+runs and `--resume --variants baseline` to append baseline trials later with
+the same binary. `--mem-limit-mb 4096` caps each benchmark child's address space
+at 4096 MiB; the default is uncapped. Resource limits and failed trials remain
+in the collected records. Probability comparisons use the printed decimal
+values with an absolute tolerance of `1e-8`, avoiding binary subtraction errors
+at that boundary. Pre/post opportunity counts alone do not establish a speedup.
 
 ## Verification
 
 `regression.and_input_redundancy` enumerates random worlds for tiny acyclic
 graphs and compares every node's truth value after each individually certified
-removal. It covers collective witnesses, random rule events, alternative
+removal and after the actual pass reaches its fixpoint. It covers collective witnesses, random rule events, alternative
 sources, facts, exact determinism, empty bodies, negative literals, recursion,
 aliases, incomplete snapshots, independent events, report serialization and
-the unsafe batch-deletion example. The execution-contract regression checks
-runtime reports, unchanged probabilities/graph counts, opt-in behavior and
-online rejection.
+the unsafe batch-deletion example, stale necessary-input evidence, duplicate
+occurrences, and preserved random-event/cache/adjacency identities. The
+execution-contract regression checks runtime reports, stage ordering, actual
+deletion/cleanup, correlated evidence-conditioned outputs, opt-in behavior,
+both rewrite dispatchers and online rejection.

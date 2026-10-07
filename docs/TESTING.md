@@ -55,10 +55,12 @@ checks ProbLog BDD/SDD availability, VProbLog loader/help output, and Scallop
 exact inference plus the patched bitwise-and function. These tool checks do
 not run paper benchmarks.
 
-The `and_input_redundancy` case checks individually certified deletions against
-every random world on small graphs, conservative rejection cases, graph/event
-identity preservation and certificate serialization. The execution contract
-also checks the opt-in read-only runtime reports and online rejection.
+The `and_input_redundancy` case checks individually certified deletions and the
+actual mutated graph against every random world on small graphs, conservative
+rejection cases, graph/event identity, cache invalidation, duplicate adjacency,
+stale proof updates and certificate serialization. The execution contract also
+checks pass placement after pruning and before SISO/fastpaths, correlated
+evidence-conditioned outputs, read-only reports and online rejection.
 
 The maintained suite contains 33 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a

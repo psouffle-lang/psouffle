@@ -6,6 +6,12 @@ component solving. Online inference builds a plain baseline graph, accepts
 insert/delete turns, and writes probabilities after each commit. Online full
 recomputation always uses the original graph.
 
+The opt-in `--and-input-redundancy` pass runs on the complete standalone working
+graph immediately after initial pruning. It deletes locally proven redundant
+AND inputs in place, re-proves after each deletion, and reaches a fixpoint.
+Query/evidence-aware re-pruning then cleans unreachable definitions before
+SISO or graph fastpaths run. See [the pass and audit guide](AND_INPUT_REDUNDANCY.md).
+
 The local correctness comparison is `full` versus `inc-naive` or `inc-regional`.
 `full` is the exact recomputation oracle; incremental modes must produce
 matching tuple keys and probabilities on the same delta stream.

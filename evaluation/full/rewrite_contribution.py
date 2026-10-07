@@ -69,25 +69,28 @@ def case_key(path: Path):
 
 
 def values(prune, info):
+    # AND-input cleanup precedes SISO. Its graph reduction belongs to that pass;
+    # older profiles without the explicit rewrite start still use initial prune.
+    initial = {kind: info.get("rewrite_initial_" + kind, prune.get("after_prune_" + kind))
+               for kind in ("nodes", "edges")}
     net_keys = ("rewrite_simple_regions", "rewrite_general_regions",
                 "rewrite_simple_nodes_net_removed", "rewrite_general_nodes_net_removed",
                 "rewrite_simple_edges_net_removed", "rewrite_general_edges_net_removed")
     if "rewrite_simple_regions" in info:
-        if not all(key in info for key in net_keys) or not all(
-                key in prune for key in ("after_prune_nodes", "after_prune_edges")):
+        if not all(key in info for key in net_keys) or any(value is None for value in initial.values()):
             return None
         return dict(zip(("simple_regions", "general_regions", "simple_nodes_removed",
                          "general_nodes_removed", "simple_net_edges_removed", "general_net_edges_removed"),
                         (int(info[key]) for key in net_keys)),
-                    initial_nodes=int(prune["after_prune_nodes"]),
-                    initial_edges=int(prune["after_prune_edges"]))
+                    initial_nodes=int(initial["nodes"]),
+                    initial_edges=int(initial["edges"]))
     required = ("graph_rewrite_general_nodes_removed", "graph_rewrite_general_edges_removed",
                 "graph_rewrite_general_edges_added") if "graph_rewrite_general_nodes_removed" in info else (
                     "implicit_materialized_nodes_after", "implicit_materialized_edges_after")
     if not all(key in info for key in required):
         return None
-    initial_nodes = int(float(prune.get("after_prune_nodes", 0)))
-    initial_edges = int(float(prune.get("after_prune_edges", 0)))
+    initial_nodes = int(float(initial["nodes"] or 0))
+    initial_edges = int(float(initial["edges"] or 0))
     if "graph_rewrite_general_nodes_removed" in info:
         get = lambda k: int(float(info.get(k, 0)))
         general = get("graph_rewrite_general_regions")

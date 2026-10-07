@@ -183,6 +183,11 @@ Inherited Souffle options such as `--jobs`, `--include-dir`, `--profile`,
 
 Public generated runtime options for this branch:
 
+- `--and-input-redundancy`: opt-in standalone full AND-input elimination after
+  initial pruning and before SISO/graph fastpaths. Re-pruning preserves query
+  and evidence roots. The compiler accepts it to bake the same default. It can
+  run alone or with `--rewrite`; online execution rejects it.
+
 - `-F, --facts, --input-dir <DIR>`: fact directory.
 - `-D, --output, --output-dir <DIR>`: output directory.
 - `-m, --setmode=<MODE>`: turn mode, one of `inc-naive`, `inc-regional`, `full`.

@@ -12,8 +12,8 @@
   containers, pinned dependencies, and output mounts.
 - [USAGE.md#diagnostic-counts](USAGE.md#diagnostic-counts): pruning and rewrite
   counters in debugger JSON.
-- [AND_INPUT_REDUNDANCY.md](AND_INPUT_REDUNDANCY.md): read-only before/after
-  rewrite opportunity detection, proof certificates and Symbolization audit.
+- [AND_INPUT_REDUNDANCY.md](AND_INPUT_REDUNDANCY.md): exact input elimination
+  after pruning and before SISO, proof certificates and Symbolization benchmarks.
 - [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
   and experiment automation.
 - [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental

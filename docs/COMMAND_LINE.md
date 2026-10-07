@@ -62,6 +62,7 @@ Execution selection and generated runtime defaults:
 | `-d`, `--derv-only` | Default to standalone derivation-graph construction without probability inference. Off by default. |
 | `--det-opt` | Compatibility flag for deterministic-relation analysis, which is already enabled. |
 | `--dump=LIST` | Bake a default set of graph/statistic dumps; none enabled by default. |
+| `--and-input-redundancy` | Enable exact AND-input elimination after pruning and before SISO/graph fastpaths. Off by default; standalone full only. |
 | `--profile-stage=LIST` | Bake default pipeline diagnostic stages; none enabled by default. These diagnostics can be used without `-p`. |
 | `--log-file=FILE` | Set the generated runtime's debugger log base name; default `log.txt`. |
 | `-v`, `--verbose` | Enable compiler diagnostics and default runtime informational diagnostics to on. Off by default. |
@@ -95,6 +96,7 @@ dump kinds. There is no `--no-rewrite` flag to undo a baked rewrite default;
 | `--prune-extra` | Enable extra pruning of outputless graph components; off by default, standalone full only. |
 | `-Z`, `--det-opt` | Compatibility flag; deterministic-relation analysis is already enabled. |
 | `--dump=LIST` | Enable selected graph/statistic outputs; off by default unless baked at compilation. |
+| `--and-input-redundancy` | Delete individually proven redundant AND inputs after pruning, re-prune query/evidence roots, then run ordinary SISO/graph fastpaths. Independent of `--rewrite`; off by default. |
 | `--profile-stage=LIST` | Enable selected pipeline diagnostics; off by default unless baked at compilation. |
 | `-l FILE`, `--logfile=FILE`, `--log-file=FILE` | Override the debugger JSON log base name. Logs are written in the runtime output directory with a timestamped filename. |
 | `-v`, `--verbose` | Enable informational runtime diagnostics. |

@@ -30,18 +30,23 @@ def check_diagnostics(payload, *, rewrite=False):
     overlay_regions = sum(int(value) for key, value in info.items()
                           if key.startswith('implicit_overlay_') and key.endswith('_regions'))
     assert total_regions == int(info['graph_rewrite_rewritten_regions']) + overlay_regions, info
+    rewrite_input = dict(prune)
+    for kind in ('nodes', 'edges'):
+        rewrite_input['after_prune_' + kind] = info.get('rewrite_initial_' + kind,
+                                                       prune['after_prune_' + kind])
     row = contribution.values(prune, info)
     assert row is not None, info
     assert row['simple_regions'] + row['general_regions'] == total_regions, row
     for kind in ('nodes', 'edges'):
-        before = int(prune['after_prune_' + kind])
+        before = int(rewrite_input['after_prune_' + kind])
+        assert row['initial_' + kind] == before, row
         after = int(info['rewrite_final_' + kind])
         assert int(info['rewrite_simple_' + kind + '_net_removed']) + int(
             info['rewrite_general_' + kind + '_net_removed']) == before - after, info
     assert row['simple_nodes_removed'] + row['general_nodes_removed'] == (
-        int(prune['after_prune_nodes']) - int(info['rewrite_final_nodes'])), row
+        int(rewrite_input['after_prune_nodes']) - int(info['rewrite_final_nodes'])), row
     assert row['simple_net_edges_removed'] + row['general_net_edges_removed'] == (
-        int(prune['after_prune_edges']) - int(info['rewrite_final_edges'])), row
+        int(rewrite_input['after_prune_edges']) - int(info['rewrite_final_edges'])), row
 
 
 def execution_log(out):
@@ -80,6 +85,41 @@ def check_and_redundancy(out, baseline, *, rewrite=False):
             assert stats[kind] == int(expected), (phase, stats, expected)
 
 
+def mutation_info(payload):
+    turn = payload['turns'][0]
+    info = dict(turn.get('info', {}))
+    for stage in turn['stages']:
+        info.update(stage.get('info', {}))
+    return info
+
+
+def check_mutation(payload, *, positive=False, rewrite=False):
+    stages = {stage['name']: stage.get('info', {}) for stage in payload['turns'][0]['stages']}
+    names = [stage['name'] for stage in payload['turns'][0]['stages']]
+    assert names.index('AND_INPUT_REDUNDANCY') == names.index('PRUNING') + 1, names
+    for name in ('FC_WMC_HYBRID', 'FORWARD_COMPILATION'):
+        if name in names:
+            assert names.index(name) > names.index('AND_INPUT_REDUNDANCY'), names
+    info = mutation_info(payload)
+    prefix = 'and_input_redundancy_'
+    for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
+                'remaining_input_associations', 'total_ms'):
+        assert float(info[prefix + key]) >= 0, info
+    if positive:
+        assert int(info[prefix + 'deleted_input_associations']) > 0, info
+    assert int(info[prefix + 'remaining_input_associations']) == 0, info
+    assert int(info[prefix + 'initial_input_associations']) - int(
+        info[prefix + 'final_input_associations']) >= int(info[prefix + 'deleted_input_associations']), info
+    for kind in ('nodes', 'edges'):
+        before = int(info[prefix + 'before_' + kind])
+        after = int(info[prefix + 'after_' + kind])
+        assert before == int(stages['PRUNING']['after_prune_' + kind]), info
+        assert after <= before, info
+        if rewrite:
+            assert after == int(stages['FC_WMC_HYBRID']['rewrite_initial_' + kind]), info
+    return info
+
+
 def run(args, *, stdin=None, success=True):
     result = subprocess.run([str(a) for a in args], input=stdin, text=True,
                             capture_output=True, timeout=180)
@@ -104,7 +144,7 @@ def main():
     binaries = {}
     for kind, flags in [('hybrid', []), ('full', ['--full-only']),
                         ('inc', ['--inc-only']),
-                        ('baked', ['--rewrite', '--dump=and-redundancy'])]:
+                        ('baked', ['--rewrite', '--dump=and-redundancy', '--and-input-redundancy'])]:
         binary = root / kind
         generated = root / (kind + '.cpp')
         run([args.souffle_bin, *flags, '-F', facts, '-D', default_out,
@@ -120,6 +160,7 @@ def main():
             assert 'runFullPipeline(opt' not in source
         if kind == 'baked':
             assert 'setDumpAndRedundancyEnabled(true)' in source
+            assert 'setAndInputRedundancyEnabled(true)' in source
         run([args.souffle_bin, *flags, '-F', facts, '-D', default_out,
              root / 'compute.dl', '-o', binary])
         binaries[kind] = binary
@@ -155,6 +196,7 @@ def main():
         rewrite_payloads[label] = payload
         if kind == 'baked':
             check_and_redundancy(out, rewrite_payloads['full_rewrite'], rewrite=True)
+            check_mutation(payload, rewrite=True)
         else:
             assert not list(out.glob('and-redundancy-*.json'))
 
@@ -260,6 +302,21 @@ def main():
     assert 'Enabled dump and-redundancy' not in result.stdout, result.stdout
     assert not list(out.glob('and-redundancy-*.json')), out
 
+    mutation_error = '--and-input-redundancy requires standalone full execution'
+    for kind, flags in [('hybrid', ['--online']), ('hybrid', ['--setmode', 'full']), ('inc', [])]:
+        out = root / ('and_pass_invalid_' + kind + '_' + str(len(flags)))
+        out.mkdir()
+        result = run([binaries[kind], '-F', missing_facts, '-D', out,
+                      '--and-input-redundancy', *flags], stdin='q\n', success=False)
+        assert mutation_error in result.stderr, result.stderr
+        assert not list(out.iterdir()), out
+    for flags in (['--online'], ['--inc-only'], ['--setmode', 'full']):
+        generated = root / 'and_pass_online_invalid.cpp'
+        result = run([args.souffle_bin, '-F', missing_facts, '--and-input-redundancy',
+                      *flags, root / 'compute.dl', '-g', generated], success=False)
+        assert mutation_error in result.stderr, result.stderr
+        assert not generated.exists(), generated
+
     aggregate = Path(__file__).parent / 'cases' / 'problog_sum_exact_roundtrip'
     binary = root / 'unsupported_online_aggregate'
     run([args.souffle_bin, '--inc-only', '-F', aggregate / 'input', '-D', default_out,
@@ -301,6 +358,64 @@ def main():
                 assert float(info['implicit_graph_detect_ms']) > 0, info
                 assert float(info['implicit_graph_rewrite_ms']) > 0, info
                 assert float(info['implicit_total_ms']) >= float(info['implicit_graph_rewrite_ms']), info
+
+    # TotalX and TotalY jointly imply the deterministic Conflict. Independent
+    # witness/target rule events and correlated joint queries must survive the
+    # actual input deletion under evidence TotalX=true.
+    and_facts = root / 'and_pass_input'
+    and_facts.mkdir()
+    for relation, probability in [('a', 0.6), ('b', 0.7), ('q', 0.2)]:
+        (and_facts / (relation + '.facts')).write_text('1\n')
+        (and_facts / (relation + '.prob')).write_text(str(probability) + '\n')
+    and_program = root / 'and_pass.dl'
+    and_program.write_text(
+        ''.join(f'.decl {name}(k:number)\n' for name in ('a', 'b', 'q', 'tx', 'ty', 'conflict', 'y', 'jb', 'jz')) +
+        '.input a\n.input b\n.input q\n' +
+        ''.join(f'.output {name}\n' for name in ('a', 'b', 'q', 'tx', 'ty', 'y', 'jb', 'jz')) +
+        'conflict(k) :- a(k),b(k).\n0.8::tx(k) :- a(k).\n0.9::ty(k) :- b(k).\n'
+        '0.5::y(k) :- conflict(k),tx(k),ty(k).\n0.3::y(k) :- q(k).\n'
+        'jb(k) :- y(k),b(k).\njz(k) :- y(k),ty(k).\nevidence(tx(1),true).\n')
+    and_binary = root / 'and_pass'
+    run([args.souffle_bin, '--full-only', '-F', and_facts, and_program, '-o', and_binary])
+    expected = {'a(1)': 1.0, 'b(1)': 0.7, 'q(1)': 0.2, 'tx(1)': 1.0,
+                'ty(1)': 0.63, 'y(1)': 0.3561, 'jb(1)': 0.3381, 'jz(1)': 0.3339}
+    baseline = None
+    for variant, flags in [
+            ('plain', []), ('rewrite', ['--rewrite']),
+            ('pass', ['--and-input-redundancy']),
+            ('pass_explicit', ['--and-input-redundancy', '--explicit-rewrite']),
+            ('pass_implicit', ['--and-input-redundancy', '--implicit-rewrite']),
+            ('pass_lift', ['--and-input-redundancy', '--rewrite', '--lifted-wmc', '--lifted-threshold=0'])]:
+        out = root / ('and_pass_' + variant)
+        out.mkdir()
+        run([and_binary, '-F', and_facts, '-D', out, *flags])
+        probabilities = parse_prob_file(out / 'facts.prob')
+        assert probabilities.keys() == expected.keys(), (variant, probabilities)
+        for key, value in expected.items():
+            assert abs(probabilities[key] - value) <= 1e-8, (variant, key, probabilities[key], value)
+        if baseline is None:
+            baseline = out
+        else:
+            assert_prob_close(baseline / 'facts.prob', out / 'facts.prob', label=variant)
+        payload = execution_log(out)
+        rewriting = any(flag in flags for flag in ('--rewrite', '--explicit-rewrite', '--implicit-rewrite'))
+        check_diagnostics(payload, rewrite=rewriting)
+        if '--and-input-redundancy' in flags:
+            info = check_mutation(payload, positive=True, rewrite=rewriting)
+            assert int(info['and_input_redundancy_deleted_input_associations']) == 1, info
+            assert int(info['and_input_redundancy_cleaned_nodes']) == 1, info
+            assert int(info['and_input_redundancy_cleaned_hyperedges']) == 1, info
+        else:
+            assert 'and_input_redundancy_deleted_input_associations' not in mutation_info(payload), payload
+
+    out = root / 'and_pass_graph_only'
+    out.mkdir()
+    run([and_binary, '-F', and_facts, '-D', out, '--and-input-redundancy', '--derv-only', '--dumpjson'])
+    assert (out / 'derivation.json').exists() and not (out / 'facts.prob').exists(), out
+    # Graph dumps and runtime logs coexist in derivation-only execution.
+    payload = next(json.loads(path.read_text()) for path in out.glob('*.json')
+                   if path.name != 'derivation.json')
+    check_mutation(payload, positive=True)
     print('Execution capabilities, rewrite equivalence, and online isolation passed')
 
 

@@ -592,6 +592,7 @@ protected:
     bool dump_dot = false;  // dump derivation graph DOT after prune
     bool dump_stat = false;  // dump derivation graph stats after prune
     bool dump_and_redundancy = false;  // read-only standalone full AND-input certificates
+    bool and_input_redundancy = false;  // exact standalone full input elimination before SISO
     bool dred_profile = false;  // enable detailed DRed profiling
     bool inc_profile = false;  // enable incremental stage profiling
     bool fc_profile = false;  // enable detailed forward-compilation profiling
@@ -657,6 +658,8 @@ public:
     }
     bool isOnlineExecution() const { return online_execution; }
     bool isRewriteEnabled() const { return enable_rewrite; }
+    bool isAndInputRedundancyEnabled() const { return and_input_redundancy; }
+    void setAndInputRedundancyEnabled(bool enabled) { and_input_redundancy = enabled; }
     bool isGraphRewriteForced() const { return force_graph_rewrite; }
     bool isImplicitRewriteForced() const { return force_implicit_rewrite; }
     void setRewriteDefaults(bool rewrite, bool explicitRewrite, bool implicitRewrite) {
@@ -960,6 +963,7 @@ public:
                 {"prune-extra", false, nullptr, 1050},
                 {"lifted-wmc", false, nullptr, 1051},
                 {"lifted-threshold", true, nullptr, 1052},
+                {"and-input-redundancy", false, nullptr, 1053},
                 // the terminal option -- needs to be null
                 {nullptr, false, nullptr, 0}};
 
@@ -1128,6 +1132,7 @@ public:
                 case 'e': merge_bi_imp = true; break;
                 case 1050: prune_extra = true; break;
                 case 1051: lifted_wmc = true; break;
+                case 1053: and_input_redundancy = true; break;
                 case 1052:
                     if (!parseLiftedThreshold(optarg, lifted_threshold)) {
                         std::cerr << "Invalid value for --lifted-threshold: " << optarg << '\n';
@@ -1171,6 +1176,10 @@ public:
             std::cerr << "--dump=and-redundancy requires standalone full execution\n";
             ok = false;
         }
+        if (online_execution && and_input_redundancy) {
+            std::cerr << "--and-input-redundancy requires standalone full execution\n";
+            ok = false;
+        }
         if (online_execution && (derivation_only || merge_bi_imp || prune_extra)) {
             std::cerr << "--derv-only, --merge-bi-imp, and --prune-extra require standalone full execution\n";
             ok = false;
@@ -1202,6 +1211,7 @@ private:
         std::cerr << "    --full-only                  -- Run standalone full inference and exit (default)\n";
         std::cerr << "    --inc-only, --online         -- Run an online session with a plain full baseline\n";
         std::cerr << "    --rewrite                    -- Rewrite standalone full inference\n";
+        std::cerr << "    --and-input-redundancy       -- Eliminate proven AND inputs after pruning, before rewrite\n";
         std::cerr << "    --explicit-rewrite           -- Force graph rewrite\n";
         std::cerr << "    --implicit-rewrite           -- Force implicit split rewrite\n";
         std::cerr << "    --lifted-wmc                 -- Enable the exact pointwise fastpath\n";
