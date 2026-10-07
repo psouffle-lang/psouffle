@@ -70,6 +70,10 @@ struct AndInputRedundancySnapshot {
         std::size_t begin = 0;
         std::size_t end = 0;
     };
+    struct MustInputs {
+        Range range;
+        const std::vector<std::size_t>* values;
+    };
     struct EdgeInfo {
         EdgePtr edge;
         std::size_t head;
@@ -414,15 +418,23 @@ struct AndInputRedundancySnapshot {
         finish(collectCycleStats);
     }
 
-    Range mustFor(std::size_t node) {
-        if (!safe[node] || fact[node] || incomingOffsets[node] == incomingOffsets[node + 1]) return {};
-        if (mustSlots[node] != none) return mustEntries[mustSlots[node]];
+    MustInputs mustFor(std::size_t node) {
+        if (!safe[node] || fact[node] || incomingOffsets[node] == incomingOffsets[node + 1]) {
+            return {{}, &mustBodies};
+        }
+        if (incomingOffsets[node + 1] - incomingOffsets[node] == 1) {
+            const auto& source = edges[incomingEdges[incomingOffsets[node]]];
+            // A single positive source already is the necessary-input set.
+            // Borrow its current flat segment; erase() keeps it synchronized.
+            return {source.safe ? source.body : Range{}, &bodies};
+        }
+        if (mustSlots[node] != none) return {mustEntries[mustSlots[node]], &mustBodies};
         const auto cacheBegin = mustBodies.size();
         auto remember = [&]() {
             const Range range{cacheBegin, mustBodies.size()};
             mustSlots[node] = mustEntries.size();
             mustEntries.push_back(range);
-            return range;
+            return MustInputs{range, &mustBodies};
         };
         auto shortest = none;
         // Check all sources before deriving anything, and start with the
@@ -503,8 +515,8 @@ struct AndInputRedundancySnapshot {
             const auto other = bodies[i];
             if (cover(other, other)) return true;
             const auto must = mustFor(other);
-            for (auto j = must.begin; j < must.end; ++j) {
-                if (cover(mustBodies[j], other)) return true;
+            for (auto j = must.range.begin; j < must.range.end; ++j) {
+                if (cover((*must.values)[j], other)) return true;
             }
         }
         return false;

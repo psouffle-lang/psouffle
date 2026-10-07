@@ -563,13 +563,23 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     debugger.startStage(StageKind::AND_INPUT_REDUNDANCY);
     const auto start = std::chrono::steady_clock::now();
     const bool localCleanup = !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled();
-    const bool usedFreshDag = localCleanup && workspace && canUseAndInputRedundancyFreshDag(view, *workspace, certificate);
+    // The existing summary counts exact rule-event classifications. If every
+    // edge is probabilistic, no deterministic candidate definition can exist.
+    const bool summaryNoDefinitions = before.edges == before.probabilisticEdges;
+    const bool usedFreshDag = !summaryNoDefinitions && localCleanup && workspace &&
+            canUseAndInputRedundancyFreshDag(view, *workspace, certificate);
     const bool usedPrepared = usedFreshDag && workspace->prepared;
     const double workspaceSummaryMs = workspace ? workspace->summaryMs : 0.0;
     AndInputRedundancyCleanupPlan cleanupPlan;
-    const auto stats = usedFreshDag
-            ? eliminateAndInputRedundancyFreshDag(view, *workspace, certificate, &cleanupPlan)
-            : eliminateAndInputRedundancy(view, true, localCleanup ? &cleanupPlan : nullptr);
+    AndInputRedundancyPassStats stats;
+    if (summaryNoDefinitions) {
+        stats.initialInputAssociations = before.inputAssociations;
+        stats.finalInputAssociations = before.inputAssociations;
+    } else {
+        stats = usedFreshDag
+                ? eliminateAndInputRedundancyFreshDag(view, *workspace, certificate, &cleanupPlan)
+                : eliminateAndInputRedundancy(view, true, localCleanup ? &cleanupPlan : nullptr);
+    }
     const auto pruningStart = std::chrono::steady_clock::now();
     std::string cleanupStrategy = "none";
     if (stats.deletedInputAssociations != 0) {
@@ -584,8 +594,9 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
             view = graph.prune(outputs);
         }
     }
-    const double pruningMs = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - pruningStart).count() + stats.cleanupPlanningMs;
+    const double pruningMs = summaryNoDefinitions ? 0.0 :
+            std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - pruningStart).count() + stats.cleanupPlanningMs;
     GraphSummary after = before;
     if (stats.deletedInputAssociations != 0) {
         after = localCleanup && !cleanupPlan.requiresFullPrune && cleanupPlan.hasSummary
@@ -622,6 +633,7 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addTime("total_ms", totalMs);
     debugger.addInfo("and_input_redundancy_cleanup_strategy", cleanupStrategy);
     debugger.addInfo("and_input_redundancy_analysis_strategy",
+            summaryNoDefinitions ? "summary_no_definitions" :
             usedPrepared ? "indexed_fresh_dag" : usedFreshDag ? "lazy_fresh_dag" : "indexed");
     std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
               << " cleaned_nodes=" << before.nodes - after.nodes

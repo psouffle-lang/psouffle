@@ -102,7 +102,8 @@ def check_mutation(payload, *, positive=False, rewrite=False):
             assert names.index(name) > names.index('AND_INPUT_REDUNDANCY'), names
     info = mutation_info(payload)
     prefix = 'and_input_redundancy_'
-    assert info[prefix + 'analysis_strategy'] in ('indexed', 'lazy_fresh_dag', 'indexed_fresh_dag'), info
+    assert info[prefix + 'analysis_strategy'] in (
+        'indexed', 'lazy_fresh_dag', 'indexed_fresh_dag', 'summary_no_definitions'), info
     for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
                 'remaining_input_associations', 'initialization_ms', 'workspace_summary_ms', 'detection_ms',
                 'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
@@ -433,6 +434,45 @@ def main():
                         assert info[key] == value, (variant, key, info[key], value)
         else:
             assert 'and_input_redundancy_deleted_input_associations' not in mutation_info(payload), payload
+
+    # Every rule now has an independent random event. Although the same bodies
+    # imply Candidate-like inputs, the random Conflict event cannot be removed.
+    # Existing summary counts suffice to rule out every deterministic definition.
+    random_program = root / 'and_random_rules.dl'
+    random_program.write_text(and_program.read_text()
+                              .replace('conflict(k) :-', '0.4::conflict(k) :-')
+                              .replace('jb(k) :-', '0.6::jb(k) :-')
+                              .replace('jz(k) :-', '0.7::jz(k) :-'))
+    random_binary = root / 'and_random_rules'
+    run([args.souffle_bin, '--full-only', '-F', and_facts, random_program, '-o', random_binary])
+    random_expected = dict(expected, **{'y(1)': 0.17844, 'jb(1)': 0.096264, 'jz(1)': 0.109368})
+    random_baseline = None
+    for variant, flags in [('plain', []), ('pass', ['--and-input-redundancy']),
+                           ('pass_rewrite', ['--and-input-redundancy', '--rewrite'])]:
+        out = root / ('and_random_rules_' + variant)
+        out.mkdir()
+        run([random_binary, '-F', and_facts, '-D', out, *flags])
+        probabilities = parse_prob_file(out / 'facts.prob')
+        assert probabilities.keys() == random_expected.keys(), (variant, probabilities)
+        for key, value in random_expected.items():
+            assert abs(probabilities[key] - value) <= 1e-8, (variant, key, probabilities[key], value)
+        if random_baseline is None:
+            random_baseline = out
+        else:
+            assert_prob_close(random_baseline / 'facts.prob', out / 'facts.prob', label=variant)
+        payload = execution_log(out)
+        check_diagnostics(payload, rewrite='--rewrite' in flags)
+        if '--and-input-redundancy' in flags:
+            info = check_mutation(payload, rewrite='--rewrite' in flags)
+            prefix = 'and_input_redundancy_'
+            assert info[prefix + 'analysis_strategy'] == 'summary_no_definitions', info
+            assert int(info[prefix + 'before_edges']) > 0, info
+            assert info[prefix + 'before_edges'] == info[prefix + 'before_prob_rule_edges'], info
+            assert int(info[prefix + 'rounds']) == 0, info
+            for key in ('deleted_input_associations', 'affected_edges', 'cleaned_nodes', 'cleaned_hyperedges',
+                        'remaining_proven_input_associations', 'initialization_ms', 'detection_ms',
+                        'mutation_ms', 'cleanup_planning_ms', 'pruning_ms'):
+                assert float(info[prefix + key]) == 0, (variant, key, info)
 
     out = root / 'and_pass_graph_only'
     out.mkdir()

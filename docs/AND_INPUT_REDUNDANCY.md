@@ -63,7 +63,9 @@ is used to prove a deletion.
 In this path, source and SCC construction use flat arrays and CSR adjacency, with work linear
 in nodes, edges and body associations. `Must_1` is computed only for providers
 needed by candidate proofs, intersecting every source from the shortest current
-body. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
+body. A single complete positive source borrows its current indexed body directly,
+without building a copied intersection cache; body deletions update that same
+indexed segment. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
 lookup only after uniqueness checks, and each lookup still checks pointer
 identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
@@ -115,6 +117,10 @@ Definition preparation skips searching bodies for targets when no eligible
 definition exists. On a certified fresh DAG, it also skips filtering the same
 targets again: no intervening SCC check has changed their definitions or safety.
 Generic and read-only cycle checks retain their complete recursive statistics.
+If the existing graph summary shows that every rule edge is nondeterministic,
+the pass skips building analysis indexes entirely: no candidate can have the
+required deterministic definition. This exact structural check also covers
+recursive programs and performs no probability estimate.
 
 With splitting disabled, SISO reuses its initial or preceding iteration's exact
 random-variable count instead of traversing the unchanged graph again before
@@ -223,7 +229,9 @@ times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
 or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
 `analysis_strategy` records `indexed_fresh_dag` for the prepared summary indexes,
 `lazy_fresh_dag` for a degree-only workspace supplied directly to the helper, or
-`indexed` for generic analysis. `workspace_summary_ms` measures the whole initial
+`indexed` for generic analysis. `summary_no_definitions` records the summary-only
+rejection when there are no deterministic rule edges; no detection round runs.
+`workspace_summary_ms` measures the whole initial
 summary traversal when it prepares a workspace, including the common summary
 work. It is a subset of the existing pruning stage, separate from the pass's
 `total_ms`; benchmark wall time includes both stages.
