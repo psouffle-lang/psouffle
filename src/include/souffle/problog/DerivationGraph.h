@@ -1160,12 +1160,15 @@ protected:
 
 class WorkingSubgraphView : public SubgraphView, public virtual WorkingDerivationGraphViewInterface {
 public:
+    enum class EvidenceRoots { Discover, Complete };
+
     WorkingSubgraphView(std::unordered_set<NodePtr> nodes,
                     std::unordered_set<EdgePtr> edges,
-            std::vector<NodePtr> evidenceNodes = {})
+            std::vector<NodePtr> evidenceNodes = {},
+            EvidenceRoots evidenceRoots = EvidenceRoots::Discover)
             : SubgraphView(std::move(nodes), std::move(edges)),
             evidenceNodes_(std::move(evidenceNodes)) {
-            if (evidenceNodes_.empty()) {
+            if (evidenceNodes_.empty() && evidenceRoots == EvidenceRoots::Discover) {
                 for (const auto& node : nodes_) {
                     if (node && node->hasEvidence()) {
                         evidenceNodes_.push_back(node);
@@ -2410,7 +2413,10 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
 
     const size_t liveNodeCount = liveNodes.size();
     const size_t liveEdgeCount = liveEdges.size();
-    WorkingSubgraphView view(std::move(liveNodes), std::move(liveEdges), std::move(evidenceNodes));
+    // The full pruning scan already collected every surviving evidence root,
+    // including the confirmed-empty case. Other view callers still discover.
+    WorkingSubgraphView view(std::move(liveNodes), std::move(liveEdges), std::move(evidenceNodes),
+            WorkingSubgraphView::EvidenceRoots::Complete);
     view.dumpWorkingStatistics(std::cout);
 
     if (profileEnabled) {

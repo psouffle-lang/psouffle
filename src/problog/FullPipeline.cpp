@@ -459,6 +459,37 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
     return s;
 }
 
+static GraphSummary summarizeAfterAndInputCleanup(const GraphSummary& before,
+        const WorkingSubgraphView& view, const AndInputRedundancyCleanupPlan& plan) {
+    GraphSummary after = before;
+    after.nodes = view.getNodes().size();
+    after.edges = view.getEdges().size();
+    after.inputAssociations = plan.finalInputAssociations;
+    after.disjunctionNodes -= plan.removedDisjunctionNodes;
+    after.maxInDegree = plan.maxInDegree;
+    after.maxOutDegree = plan.maxOutDegree;
+    after.maxHyperedgeInputs = plan.maxHyperedgeInputs;
+    // The pass preserves node flags and edge events. Cleanup removes whole
+    // definitions, so retained nodes keep every incoming derivation source.
+    for (const auto& node : plan.nodes) {
+        if (node->isFact) {
+            --after.factNodes;
+            if (node->getProbability() < 1.0) --after.probabilisticFactNodes;
+        } else {
+            --after.derivedNodes;
+        }
+        if (node->isQuery) --after.queryNodes;
+        if (node->needOutput) --after.outputNodes;
+        if (node->hasEvidence()) --after.evidenceNodes;
+        if (node->isShadow) --after.shadowNodes;
+    }
+    for (const auto& edge : plan.edges) {
+        if (!edge->isDeterministic()) --after.probabilisticEdges;
+    }
+    after.randomVariables = after.probabilisticFactNodes + after.probabilisticEdges;
+    return after;
+}
+
 static void addGraphSummaryInfo(
         Debugger& debugger, const std::string& prefix, const GraphSummary& s) {
     auto add = [&](const std::string& key, const std::size_t value) {
@@ -508,7 +539,12 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     }
     const double pruningMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - pruningStart).count() + stats.cleanupPlanningMs;
-    const auto after = stats.deletedInputAssociations == 0 ? before : summarizeGraphLight(view);
+    GraphSummary after = before;
+    if (stats.deletedInputAssociations != 0) {
+        after = localCleanup && !cleanupPlan.requiresFullPrune && cleanupPlan.hasSummary
+                ? summarizeAfterAndInputCleanup(before, view, cleanupPlan)
+                : summarizeGraphLight(view);
+    }
     const double totalMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count();
     addGraphSummaryInfo(debugger, "and_input_redundancy_before_", before);
@@ -2229,6 +2265,7 @@ void runPipeline(
         auto rewriteStart = std::chrono::steady_clock::now();
         addGraphSummaryInfo(debugger, "rewrite_initial_", rewriteInitialSummary);
         GraphRewriteStats rewriteStats;
+        GraphSummary rewriteFinalSummary;
         ImplicitSplitOverlayStats overlayRewriteStats;
         rewriteDecision = chooseRewriteDispatch(opt, ruleManager);
         haveRewriteDecision = true;
@@ -2343,7 +2380,8 @@ void runPipeline(
                               << " tuple_output_facts=" << recoveredOutputFacts << std::endl;
                 }
             }
-            const GraphSummary implicitHandoffSummary = summarizeGraphLight(view);
+            rewriteFinalSummary = summarizeGraphLight(view);
+            const GraphSummary& implicitHandoffSummary = rewriteFinalSummary;
             const double implicitGraphDetectMs = rewriteStats.totalDetectMs;
             const double implicitTotalMs = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - implicitRewriteStart).count();
@@ -2482,8 +2520,8 @@ void runPipeline(
             }
         } else {
             runGraphRewrite();
+            rewriteFinalSummary = summarizeGraphLight(view);
         }
-        const GraphSummary rewriteFinalSummary = summarizeGraphLight(view);
         auto rewriteMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() - rewriteStart)
                                  .count();

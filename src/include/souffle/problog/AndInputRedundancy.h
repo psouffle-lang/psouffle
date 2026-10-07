@@ -53,6 +53,13 @@ struct AndInputRedundancyCleanupPlan {
     std::vector<NodePtr> nodes;
     std::vector<EdgePtr> edges;
     bool requiresFullPrune = false;
+    // Exact shape of the retained view, computed from the existing indexes.
+    bool hasSummary = false;
+    std::size_t finalInputAssociations = 0;
+    std::size_t removedDisjunctionNodes = 0;
+    std::size_t maxInDegree = 0;
+    std::size_t maxOutDegree = 0;
+    std::size_t maxHyperedgeInputs = 0;
 };
 
 namespace detail {
@@ -123,10 +130,15 @@ struct AndInputRedundancySnapshot {
         }
         if (!completeDerivations) return;
         nodes.assign(view.getNodes().begin(), view.getNodes().end());
+        safe.resize(nodes.size());
+        fact.resize(nodes.size());
         std::size_t maxId = 0;
-        for (const auto& node : nodes) {
+        for (std::size_t i = 0; i < nodes.size(); ++i) {
+            const auto& node = nodes[i];
             if (!node) return;
             maxId = std::max(maxId, node->getId());
+            safe[i] = !node->isShadow;
+            fact[i] = node->isFact || node->isOriginalFactNode();
         }
         if (!nodes.empty() && maxId != none && maxId < nodes.size() * 4 + 4096) {
             idIndex.assign(maxId + 1, none);
@@ -144,15 +156,9 @@ struct AndInputRedundancySnapshot {
             for (std::size_t i = 0; i < nodes.size(); ++i) pointerIndex.emplace(nodes[i].get(), i);
         }
 
-        safe.resize(nodes.size());
-        fact.resize(nodes.size());
         incomingOffsets.assign(nodes.size() + 1, 0);
         edges.reserve(baseStats.edges);
         bodies.reserve(baseStats.inputAssociations);
-        for (std::size_t i = 0; i < nodes.size(); ++i) {
-            safe[i] = !nodes[i]->isShadow;
-            fact[i] = nodes[i]->isFact || nodes[i]->isOriginalFactNode();
-        }
         // Validate EVERY endpoint before any early return or eligibility shortcut.
         for (const auto& edge : view.getEdges()) {
             if (!edge) return;
@@ -203,12 +209,14 @@ struct AndInputRedundancySnapshot {
         // still compute the complete recursive-node statistic.
         if (targets.empty() && !collectCycleStats) return;
 
-        // CSR adjacency over ALL signed body-to-head arcs. Reuse DFS storage
-        // across roots instead of allocating separate vectors for each node.
-        std::vector<std::size_t> nextOffsets(nodes.size() + 1, 0), prevOffsets(nodes.size() + 1, 0);
+        // Forward CSR over ALL signed body-to-head arcs. The existing incoming
+        // source/body index already represents the reverse adjacency exactly.
+        // Reuse DFS storage across roots instead of allocating per-node vectors.
+        std::vector<std::size_t> nextOffsets(nodes.size() + 1, 0);
+        std::vector<std::size_t> incomingOccurrences(nodes.size(), 0);
         std::vector<unsigned char> selfLoop(nodes.size(), 0);
         for (const auto& edge : edges) {
-            prevOffsets[edge.head + 1] += edge.body.end - edge.body.begin;
+            incomingOccurrences[edge.head] += edge.body.end - edge.body.begin;
             for (auto i = edge.body.begin; i < edge.body.end; ++i) {
                 ++nextOffsets[bodies[i] + 1];
                 if (bodies[i] == edge.head) selfLoop[edge.head] = 1;
@@ -218,22 +226,39 @@ struct AndInputRedundancySnapshot {
         if (trackCleanup) outgoingOccurrences.assign(nextOffsets.begin() + 1, nextOffsets.end());
         for (std::size_t i = 1; i < nextOffsets.size(); ++i) {
             nextOffsets[i] += nextOffsets[i - 1];
-            prevOffsets[i] += prevOffsets[i - 1];
         }
-        std::vector<std::size_t> next(bodies.size()), prev(bodies.size());
+        std::vector<std::size_t> next(bodies.size());
         cursor = nextOffsets;
         for (const auto& edge : edges) {
             for (auto i = edge.body.begin; i < edge.body.end; ++i) next[cursor[bodies[i]]++] = edge.head;
-        }
-        cursor = prevOffsets;
-        for (const auto& edge : edges) {
-            for (auto i = edge.body.begin; i < edge.body.end; ++i) prev[cursor[edge.head]++] = bodies[i];
         }
         std::vector<unsigned char> visited(nodes.size(), 0);
         std::vector<std::size_t> order, stack, component;
         std::vector<std::pair<std::size_t, std::size_t>> dfs;
         order.reserve(nodes.size());
-        for (std::size_t root = 0; root < nodes.size(); ++root) {
+        // Peel acyclic sources using the forward CSR, counting every signed
+        // occurrence (including duplicates). A cycle cannot lose its internal
+        // predecessors. Acyclic descendants of cycles may remain, so only the
+        // residual graph needs the exact SCC analysis below.
+        for (std::size_t node = 0; node < nodes.size(); ++node) {
+            if (incomingOccurrences[node] == 0) {
+                visited[node] = 1;
+                order.push_back(node);
+            }
+        }
+        for (std::size_t current = 0; current < order.size(); ++current) {
+            const auto node = order[current];
+            for (auto i = nextOffsets[node]; i < nextOffsets[node + 1]; ++i) {
+                const auto child = next[i];
+                if (--incomingOccurrences[child] == 0) {
+                    visited[child] = 1;
+                    order.push_back(child);
+                }
+            }
+        }
+        const bool hasResidual = order.size() != nodes.size();
+        order.clear();
+        for (std::size_t root = 0; hasResidual && root < nodes.size(); ++root) {
             if (visited[root]) continue;
             visited[root] = 1;
             dfs.emplace_back(root, nextOffsets[root]);
@@ -251,7 +276,11 @@ struct AndInputRedundancySnapshot {
                 }
             }
         }
-        std::fill(visited.begin(), visited.end(), 0);
+        if (hasResidual) {
+            for (std::size_t node = 0; node < nodes.size(); ++node) {
+                visited[node] = incomingOccurrences[node] == 0;
+            }
+        }
         for (auto it = order.rbegin(); it != order.rend(); ++it) {
             if (visited[*it]) continue;
             component.clear();
@@ -261,11 +290,14 @@ struct AndInputRedundancySnapshot {
                 const auto node = stack.back();
                 stack.pop_back();
                 component.push_back(node);
-                for (auto i = prevOffsets[node]; i < prevOffsets[node + 1]; ++i) {
-                    const auto parent = prev[i];
-                    if (!visited[parent]) {
-                        visited[parent] = 1;
-                        stack.push_back(parent);
+                for (auto i = incomingOffsets[node]; i < incomingOffsets[node + 1]; ++i) {
+                    const auto body = edges[incomingEdges[i]].body;
+                    for (auto j = body.begin; j < body.end; ++j) {
+                        const auto parent = bodies[j];
+                        if (!visited[parent]) {
+                            visited[parent] = 1;
+                            stack.push_back(parent);
+                        }
                     }
                 }
             }
@@ -445,6 +477,8 @@ struct AndInputRedundancySnapshot {
 
     void prepareCleanup(AndInputRedundancyCleanupPlan& plan) {
         plan = {};
+        std::vector<unsigned char> removed(nodes.size(), 0);
+        plan.finalInputAssociations = baseStats.inputAssociations;
         // All roots and active sources come from the initial pruning. Only
         // deletion can change reachability, so start where an erased input
         // loses its final active outgoing occurrence; reuse our source index.
@@ -456,6 +490,11 @@ struct AndInputRedundancySnapshot {
                 return;
             }
             plan.nodes.push_back(nodes[node]);
+            removed[node] = 1;
+            const auto incoming = incomingOffsets[node + 1] - incomingOffsets[node];
+            if ((!nodes[node]->isFact && incoming > 1) || (nodes[node]->isFact && incoming > 0)) {
+                ++plan.removedDisjunctionNodes;
+            }
             for (auto i = incomingOffsets[node]; i < incomingOffsets[node + 1]; ++i) {
                 const auto& edge = edges[incomingEdges[i]];
                 if (!edge.safe) {
@@ -463,6 +502,7 @@ struct AndInputRedundancySnapshot {
                     return;
                 }
                 plan.edges.push_back(edge.edge);
+                plan.finalInputAssociations -= edge.body.end - edge.body.begin;
                 for (auto j = edge.body.begin; j < edge.body.end; ++j) {
                     const auto input = bodies[j];
                     // A detached recursive component can retain its internal
@@ -476,6 +516,21 @@ struct AndInputRedundancySnapshot {
                 }
             }
         }
+        // Removing a node removes all its sources, so retained heads keep their
+        // original incoming degree. Outgoing counts already reflect both body
+        // erasures and the cleanup closure. Scan flat indexes, not graph bodies
+        // and a newly allocated pointer-to-degree map.
+        for (std::size_t node = 0; node < nodes.size(); ++node) {
+            if (removed[node]) continue;
+            plan.maxInDegree = std::max(plan.maxInDegree, incomingOffsets[node + 1] - incomingOffsets[node]);
+            plan.maxOutDegree = std::max(plan.maxOutDegree, outgoingOccurrences[node]);
+        }
+        for (const auto& edge : edges) {
+            if (!removed[edge.head]) {
+                plan.maxHyperedgeInputs = std::max(plan.maxHyperedgeInputs, edge.body.end - edge.body.begin);
+            }
+        }
+        plan.hasSummary = true;
     }
 };
 

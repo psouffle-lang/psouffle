@@ -63,7 +63,10 @@ identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
 
 Proof coverage uses one body traversal and a single stamp epoch, retaining the
-existing lazy `Must_1` cache. Cleanup reuses the same source and body indexes and
+existing lazy `Must_1` cache. Cycle analysis first peels acyclic sources using
+the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
+still receives exact SCC analysis, with reverse traversal reusing the source
+and body indexes. Cleanup reuses the same source and body indexes and
 the outgoing occurrence counts already computed for SCCs. Starting at inputs
 that lose their last active reference, it prepares a complete cleanup plan while
 preserving query/evidence roots. The pipeline applies the plan to the existing
@@ -77,8 +80,11 @@ the default core API continues to erase bodies only.
 The pipeline directly uses the working view returned by initial or fallback
 pruning; equivalence merging refreshes that view's evidence roots after moving
 observations to representative nodes. Graph statistics read bodies by reference,
-and a zero-deletion pass reuses the initial summary. No additional
-dependency/component/depth graph is built for cleanup.
+and a zero-deletion pass reuses the initial summary. Successful local cleanup
+computes exact degree/body maxima from the flat indexes and updates the original
+summary by the removed nodes and edges, avoiding another full body traversal and
+degree hash table. No additional dependency/component/depth graph is built for
+cleanup.
 
 ## Run
 

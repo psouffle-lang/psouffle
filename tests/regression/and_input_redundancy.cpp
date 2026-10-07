@@ -640,9 +640,13 @@ void unrelatedRecursionDoesNotBlockSafeDeletion() {
     const auto seed = f.edge({r}, u, 0.3);
     const auto forward = f.edge({r, v}, u, 0.6);
     const auto backward = f.edge({u}, v);
+    const auto descendant = f.node("AcyclicCycleDescendant");
+    f.edge({u, u}, descendant);
     WorkingSubgraphView recursive({r, u, v}, {seed, forward, backward});
     const auto cycleSnapshot = snapshot(recursive);
     WorkingSubgraphView full(f.graph.getNodes(), f.graph.getEdges());
+    require(detectReadOnly(full).stats.recursiveNodes == 2,
+            "acyclic descendant or duplicate arc changed the exact cycle statistic");
     const auto identity = eventIdentity(full);
     const auto stats = eliminateAndInputRedundancy(full, true);
     require(stats.deletedInputAssociations == 1 && eventIdentity(full) == identity,

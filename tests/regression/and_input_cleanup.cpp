@@ -160,6 +160,30 @@ void verifyCaches(WorkingSubgraphView& view) {
     }
 }
 
+struct GraphShape {
+    std::size_t associations = 0, disjunctions = 0;
+    std::size_t maxIncoming = 0, maxOutgoing = 0, maxBody = 0;
+};
+
+GraphShape graphShape(const DerivationGraphViewInterface& view) {
+    GraphShape shape;
+    std::unordered_map<NodePtr, std::size_t> incoming, outgoing;
+    for (const auto& edge : view.getEdges()) {
+        ++incoming[edge->getOutput()];
+        const auto& body = edge->getInputs();
+        shape.associations += body.size();
+        shape.maxBody = std::max(shape.maxBody, body.size());
+        for (const auto& input : body) ++outgoing[input];
+    }
+    for (const auto& node : view.getNodes()) {
+        const auto in = incoming[node];
+        if ((!node->isFact && in > 1) || (node->isFact && in > 0)) ++shape.disjunctions;
+        shape.maxIncoming = std::max(shape.maxIncoming, in);
+        shape.maxOutgoing = std::max(shape.maxOutgoing, outgoing[node]);
+    }
+    return shape;
+}
+
 void compareCleanup(Fixture& fixture, WorkingSubgraphView& view, const std::vector<std::string>& outputs,
         std::size_t expectedDeletions, const std::unordered_set<NodePtr>& expectedNodes,
         const std::unordered_set<EdgePtr>& expectedEdges, bool checkCaches = false) {
@@ -167,6 +191,7 @@ void compareCleanup(Fixture& fixture, WorkingSubgraphView& view, const std::vect
     const auto originalNodes = view.getNodes();
     const auto originalEdges = view.getEdges();
     const auto evidence = view.getEvidenceNodes();
+    const auto beforeShape = graphShape(view);
     const PrunedFlags flags(fixture.graph);
     AndInputRedundancyCleanupPlan plan;
     const auto stats = eliminateAndInputRedundancy(view, true, &plan);
@@ -202,6 +227,14 @@ void compareCleanup(Fixture& fixture, WorkingSubgraphView& view, const std::vect
     const auto ordinary = fixture.graph.prune(outputs);
     require(view.getNodes() == ordinary.getNodes() && view.getEdges() == ordinary.getEdges(),
             "local cleanup differs from query/evidence-aware full pruning");
+    if (expectedDeletions != 0) {
+        const auto afterShape = graphShape(ordinary);
+        require(plan.hasSummary && plan.finalInputAssociations == afterShape.associations &&
+                        plan.removedDisjunctionNodes == beforeShape.disjunctions - afterShape.disjunctions &&
+                        plan.maxInDegree == afterShape.maxIncoming && plan.maxOutDegree == afterShape.maxOutgoing &&
+                        plan.maxHyperedgeInputs == afterShape.maxBody,
+                "indexed cleanup summary differs from ordinary pruned graph");
+    }
     worlds.verify(ordinary);
 }
 
