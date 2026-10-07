@@ -445,7 +445,12 @@ void commitHistoricalOwnerAndTransactionalRetirement() {
     fixture.edge({z, b}, t, 0.5);
     t->setQuery();
     const UntypedTuple alias{"SavedAlias", {}};
+    const UntypedTuple deadAlias{"RetiredAlias", {}};
     fixture.graph.bindEventAliasTuple(alias, a);
+    fixture.graph.bindEventAliasTuple(deadAlias, dead);
+    fixture.graph.bindEventAliasTuple(dead->getTuple(), dead);
+    fixture.graph.attachEvidence({{alias, true}});
+    dead->setQuery();  // A carried output may keep this pointer after retirement.
     auto view = fixture.view();
     view.mutableNodes().erase(dead);
     view.mutableEdges().erase(historical);
@@ -455,6 +460,11 @@ void commitHistoricalOwnerAndTransactionalRetirement() {
     const auto retired = fixture.graph.retainRewriteView(view);
     require(retired.removedOwnerNodes == 1 && retired.removedOwnerEdges == 1 &&
                     fixture.graph.findNode(alias) == a && !fixture.graph.findNode(dead->getTuple()) &&
+                    fixture.graph.tupleExistsInUniverse(alias) && !fixture.graph.findNode(deadAlias) &&
+                    !fixture.graph.tupleExistsInUniverse(deadAlias) && !fixture.graph.tupleExistsInUniverse(dead->getTuple()) &&
+                    fixture.graph.resolveEvidenceNodes() == std::vector<std::pair<NodePtr, bool>>{{a, true}} &&
+                    dead->isFact && dead->isOriginalFactNode() && dead->needOutput && dead->isQuery &&
+                    dead->getProbability() == 0.2 && dead->pruned &&
                     dead->getIncomingEdges().empty() && dead->getOutgoingEdges().empty(),
             "residual owner commit lost an active alias or kept historical definitions");
     const auto before = structure(view);
@@ -471,6 +481,29 @@ void commitHistoricalOwnerAndTransactionalRetirement() {
                     !pruned.getEdges().count(historical), "owner prune revived historical rewrite inputs");
     worlds.verify(pruned);
 }
+
+void ownerCommitRejectsBeforeMutation() {
+    for (int kind = 0; kind < 3; ++kind) {
+        Fixture fixture;
+        const auto a = fixture.fact("A"), dead = fixture.fact("Dead");
+        const auto t = fixture.node("T");
+        const auto edge = fixture.edge({a}, t, 0.7);
+        t->setQuery();
+        auto view = WorkingSubgraphView(fixture.graph.getNodes(), fixture.graph.getEdges(), {},
+                WorkingSubgraphView::EvidenceRoots::Complete);
+        view.mutableNodes().erase(dead);
+        if (kind == 0) dead->setEvidence(true);
+        if (kind == 1) view.mutableNodes().erase(a);
+        if (kind == 2) view.mutableNodes().erase(t);
+        const auto ownerBefore = structure(fixture.graph), viewBefore = structure(view);
+        bool rejected = false;
+        try { fixture.graph.retainRewriteView(view); }
+        catch (const std::logic_error&) { rejected = true; }
+        require(rejected && ownerBefore == structure(fixture.graph) && viewBefore == structure(view) &&
+                        !dead->pruned && !edge->pruned && fixture.graph.findNode(dead->getTuple()) == dead,
+                "invalid residual owner commit changed state before rejecting");
+    }
+}
 }  // namespace
 
 int main() {
@@ -486,6 +519,7 @@ int main() {
         protectedAndMalformedCases();
         supportAndCycleRefusals();
         commitHistoricalOwnerAndTransactionalRetirement();
+        ownerCommitRejectsBeforeMutation();
         std::cout << "local series contraction preserves original worlds and joint distributions\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

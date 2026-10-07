@@ -2619,24 +2619,101 @@ inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::re
 
 inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::retainRewriteView(
         WorkingSubgraphView& view) {
-    for (const auto& node : view.getNodes()) {
+    const auto& activeNodes = view.getNodes();
+    const auto& activeEdges = view.getEdges();
+    if (nodes.count(NodePtr{}) || edges.count(EdgePtr{})) {
+        throw std::logic_error("Residual rewrite owner has a null object");
+    }
+    for (const auto& node : activeNodes) {
         if (!node || !nodes.count(node)) throw std::logic_error("Residual rewrite view has an unowned node");
     }
-    for (const auto& edge : view.getEdges()) {
-        if (!edge || !edges.count(edge) || !view.getNodes().count(edge->getOutput())) {
+    for (const auto& edge : activeEdges) {
+        if (!edge || !edges.count(edge) || !activeNodes.count(edge->getOutput())) {
             throw std::logic_error("Residual rewrite view has an unowned edge or head");
         }
         for (const auto& input : edge->getInputs()) {
-            if (!view.getNodes().count(input)) throw std::logic_error("Residual rewrite view has an absent input");
+            if (!activeNodes.count(input)) throw std::logic_error("Residual rewrite view has an absent input");
         }
     }
-    std::vector<NodePtr> retiredNodes;
-    std::vector<EdgePtr> retiredEdges;
-    retiredNodes.reserve(nodes.size() - view.getNodes().size());
-    retiredEdges.reserve(edges.size() - view.getEdges().size());
-    for (const auto& node : nodes) if (!view.getNodes().count(node)) retiredNodes.push_back(node);
-    for (const auto& edge : edges) if (!view.getEdges().count(edge)) retiredEdges.push_back(edge);
-    return retireRewriteObjects(view, retiredNodes, retiredEdges);
+    for (const auto& node : view.getEvidenceNodes()) {
+        if (!node || !activeNodes.count(node) || !node->hasEvidence()) {
+            throw std::logic_error("Residual rewrite view has an invalid evidence root");
+        }
+    }
+    for (const auto& [tuple, value] : evidences) {
+        const auto node = findNode(tuple);
+        if (!node || !activeNodes.count(node) || !node->hasEvidence() || node->getEvidenceValue() != value) {
+            throw std::logic_error("Residual rewrite view loses attached evidence");
+        }
+    }
+    // Validate all retiring evidence before changing any adjacency. Raw handles
+    // avoid copying ownership or building large retirement membership tables;
+    // the old owner keeps these nodes alive through the complete commit.
+    std::vector<Node*> retiredNodes;
+    retiredNodes.reserve(nodes.size() - activeNodes.size());
+    for (const auto& node : nodes) {
+        if (!activeNodes.count(node)) {
+            if (node->hasEvidence()) throw std::logic_error("Residual rewrite view retires an observed node");
+            retiredNodes.push_back(node.get());
+        }
+    }
+
+    // Prepare surviving owner indexes before mutation. Alias keys name their
+    // active targets, so an alias can survive even when its original node does
+    // not. Rebuilding small maps avoids erasing/rebalancing every retired entry.
+    std::unordered_set<NodePtr> retainedNodes;
+    retainedNodes.reserve(activeNodes.size());
+    retainedNodes.insert(activeNodes.begin(), activeNodes.end());
+    std::unordered_set<EdgePtr> retainedEdges;
+    retainedEdges.reserve(activeEdges.size());
+    retainedEdges.insert(activeEdges.begin(), activeEdges.end());
+    std::map<UntypedTuple, NodePtr> retainedTuples;
+    for (const auto& [tuple, node] : tupleToNodeMap) {
+        if (activeNodes.count(node)) retainedTuples.emplace_hint(retainedTuples.end(), tuple, node);
+    }
+    std::unordered_set<UntypedTuple> retainedExistingTuples;
+    retainedExistingTuples.reserve(std::min(existingTuples.size(), retainedTuples.size()));
+    for (const auto& [tuple, node] : retainedTuples) {
+        if (existingTuples.count(tuple)) retainedExistingTuples.insert(tuple);
+    }
+    std::unordered_map<size_t, NodePtr> retainedRepresentatives;
+    retainedRepresentatives.reserve(std::min(nodeRepMap.size(), retainedTuples.size()));
+    for (const auto& [id, node] : nodeRepMap) {
+        if (activeNodes.count(node)) retainedRepresentatives.emplace(id, node);
+    }
+    std::map<std::string, EdgePtr> retainedEdgeKeys;
+    for (const auto& [key, edge] : edgeKeyToEdgeMap) {
+        if (activeEdges.count(edge)) retainedEdgeKeys.emplace_hint(retainedEdgeKeys.end(), key, edge);
+    }
+
+    RewriteRetirementStats stats;
+    stats.removedOwnerNodes = retiredNodes.size();
+    stats.removedOwnerEdges = edges.size() - activeEdges.size();
+    for (const auto& node : activeNodes) {
+        auto& incoming = node->getIncomingEdges();
+        incoming.erase(std::remove_if(incoming.begin(), incoming.end(),
+                [&](const EdgePtr& edge) { return !activeEdges.count(edge); }), incoming.end());
+        auto& outgoing = node->getOutgoingEdges();
+        outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
+                [&](const EdgePtr& edge) { return !activeEdges.count(edge); }), outgoing.end());
+    }
+    for (const auto node : retiredNodes) {
+        node->getIncomingEdges().clear();
+        node->getOutgoingEdges().clear();
+        node->pruned = true;
+    }
+    for (const auto& edge : edges) if (!activeEdges.count(edge)) edge->pruned = true;
+    nodes.swap(retainedNodes);
+    edges.swap(retainedEdges);
+    tupleToNodeMap.swap(retainedTuples);
+    existingTuples.swap(retainedExistingTuples);
+    nodeRepMap.swap(retainedRepresentatives);
+    edgeKeyToEdgeMap.swap(retainedEdgeKeys);
+    // Attached evidence was validated against surviving bindings above. Keep
+    // its original names/values, including names bound through event aliases.
+    view.invalidateCaches();
+    invalidateCaches();
+    return stats;
 }
 
 WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Relation*>& outputRelations,
