@@ -352,12 +352,237 @@ void preConfigPreservesDefaultAndDeltaPolicies() {
     indices(delta, fixture, false);
 }
 
+struct Compilation {
+    WeightedBDDManager manager{smallConfig()};
+    NodeFormulas nodes;
+    EdgeFormulas edges;
+    std::size_t batchedCycles = 0;
+    std::size_t batchedEdges = 0;
+};
+
+void compile(Compilation& compilation, SubgraphView& view, bool standalone,
+        const std::unordered_set<NodePtr>& seeds) {
+    debugger.startTurn("FULL");
+    auto* stage = debugger.startStage(StageKind::FORWARD_COMPILATION);
+    if (standalone) {
+        buildFormulasCyclewiseStandaloneFull(view, compilation.manager, compilation.nodes, compilation.edges, seeds);
+    } else {
+        buildFormulasCyclewise(view, compilation.manager, compilation.nodes, compilation.edges, seeds);
+    }
+    require(stage != nullptr, "missing compilation diagnostics");
+    compilation.batchedCycles = std::stoull(stage->getInfo("fc_singleton_batched_cycles"));
+    compilation.batchedEdges = std::stoull(stage->getInfo("fc_singleton_batched_edges"));
+    debugger.endStage();
+    debugger.endTurn();
+}
+
+// Include zero-weight event assignments too. Equality is checked by event
+// identity and actual variable indices, never by BDD pointer equality across
+// managers or only by marginal probabilities.
+struct EventWorlds {
+    std::unordered_map<std::size_t, std::size_t> facts;
+    std::unordered_map<EdgePtr, std::size_t> rules;
+    std::size_t count = 0;
+
+    explicit EventWorlds(const Fixture& fixture) {
+        for (const auto& node : fixture.nodes) {
+            if (node->isFact && node->getProbability() < 1.0 && !facts.count(node->getSemanticFactId())) {
+                facts.emplace(node->getSemanticFactId(), count++);
+            }
+        }
+        for (const auto& edge : fixture.edges) {
+            if (!edge->isDeterministic()) rules.emplace(edge, count++);
+        }
+        require(count < 12, "batch event-world fixture too large");
+    }
+
+    std::vector<int> assignment(WeightedBDDManager& manager, const Fixture& fixture, std::uint64_t world) const {
+        std::vector<int> result(static_cast<std::size_t>(Cudd_ReadSize(manager.getManager())), 0);
+        for (const auto& node : fixture.nodes) {
+            if (!node->isFact) continue;
+            int index = -1;
+            require(manager.peekVarIndex(*node, index), "compiled fact has no variable identity");
+            result.at(static_cast<std::size_t>(index)) = node->getProbability() == 1.0 ? 1 :
+                    static_cast<int>((world >> facts.at(node->getSemanticFactId())) & 1);
+        }
+        for (const auto& [edge, bit] : rules) {
+            int index = -1;
+            require(manager.peekVarIndex(*edge, index), "compiled rule has no variable identity");
+            result.at(static_cast<std::size_t>(index)) = static_cast<int>((world >> bit) & 1);
+        }
+        return result;
+    }
+};
+
+bool truthAt(WeightedBDDManager& manager, const BddNodeRef& formula, std::vector<int>& assignment) {
+    require(formula.get() != nullptr, "attempt to evaluate unset BDD");
+    const auto value = Cudd_Eval(manager.getManager(), formula.get(), assignment.data());
+    const auto one = Cudd_ReadOne(manager.getManager());
+    require(value == one || value == Cudd_Not(one), "event assignment did not produce a Boolean value");
+    return value == one;
+}
+
+void compareCompilations(const std::string& label, const Fixture& fixture,
+        Compilation& reference, Compilation& candidate, const NodePtr& evidence) {
+    require(reference.batchedCycles == 0 && reference.batchedEdges == 0,
+            label + ": default entry unexpectedly batched sources");
+    require(reference.nodes.size() == candidate.nodes.size() && reference.edges.size() == candidate.edges.size(),
+            label + ": formula membership changed");
+    const EventWorlds worlds(fixture);
+    for (std::uint64_t world = 0; world < (std::uint64_t{1} << worlds.count); ++world) {
+        auto original = worlds.assignment(reference.manager, fixture, world);
+        auto optimized = worlds.assignment(candidate.manager, fixture, world);
+        for (const auto& node : fixture.nodes) {
+            require(reference.nodes.count(node) == candidate.nodes.count(node), label + ": node formula missing");
+            if (!reference.nodes.count(node)) continue;
+            require(truthAt(reference.manager, reference.nodes.at(node), original) ==
+                            truthAt(candidate.manager, candidate.nodes.at(node), optimized),
+                    label + ": changed node event in world " + std::to_string(world));
+        }
+        for (const auto& edge : fixture.edges) {
+            require(reference.edges.count(edge) == candidate.edges.count(edge), label + ": edge formula missing");
+            if (!reference.edges.count(edge)) continue;
+            require(truthAt(reference.manager, reference.edges.at(edge), original) ==
+                            truthAt(candidate.manager, candidate.edges.at(edge), optimized),
+                    label + ": changed rule contribution in world " + std::to_string(world));
+        }
+    }
+    for (const auto& edge : fixture.edges) {
+        if (reference.edges.count(edge)) close(candidate.manager.computeWeightedModelCount(candidate.edges.at(edge)),
+                reference.manager.computeWeightedModelCount(reference.edges.at(edge)), label + ": edge WMC");
+    }
+    for (const auto& node : fixture.nodes) {
+        if (!reference.nodes.count(node)) continue;
+        close(candidate.manager.computeWeightedModelCount(candidate.nodes.at(node)),
+                reference.manager.computeWeightedModelCount(reference.nodes.at(node)), label + ": node WMC");
+        for (const auto& other : fixture.nodes) {
+            if (!reference.nodes.count(other)) continue;
+            close(candidate.manager.computeWeightedModelCount(candidate.manager.makeAnd(candidate.nodes.at(node), candidate.nodes.at(other))),
+                    reference.manager.computeWeightedModelCount(reference.manager.makeAnd(reference.nodes.at(node), reference.nodes.at(other))),
+                    label + ": joint WMC");
+        }
+        for (bool positive : {false, true}) {
+            const auto originalEvidence = positive ? reference.nodes.at(evidence) : reference.manager.makeNot(reference.nodes.at(evidence));
+            const auto optimizedEvidence = positive ? candidate.nodes.at(evidence) : candidate.manager.makeNot(candidate.nodes.at(evidence));
+            const double originalMass = reference.manager.computeWeightedModelCount(originalEvidence);
+            const double optimizedMass = candidate.manager.computeWeightedModelCount(optimizedEvidence);
+            close(optimizedMass, originalMass, label + ": evidence mass");
+            require(originalMass > 0.0, label + ": degenerate evidence fixture");
+            close(candidate.manager.computeWeightedModelCount(candidate.manager.makeAnd(candidate.nodes.at(node), optimizedEvidence)) / optimizedMass,
+                    reference.manager.computeWeightedModelCount(reference.manager.makeAnd(reference.nodes.at(node), originalEvidence)) / originalMass,
+                    label + ": evidence posterior");
+        }
+    }
+}
+
+void batchedWideDisjunctionPreservesEvents() {
+    Fixture fixture;
+    const auto a = fixture.fact("WideA", 0.6);
+    const auto alias = fixture.fact("WideAliasA", 0.6);
+    alias->setSemanticFactId(a->getSemanticFactId());
+    const auto b = fixture.fact("WideB", 0.4);
+    const auto head = fixture.node("WideHead");
+    const auto downstream = fixture.node("WideDownstream");
+    fixture.edge({a, b}, head, 0.0);
+    fixture.edge({a, b}, head, 0.7);
+    fixture.edge({alias, b}, head, 0.2);
+    fixture.edge({a, b}, head, 0.45, {false, true});
+    fixture.edge({a, alias}, head, 0.3);
+    fixture.edge({a, alias}, head, 1.0, {false, true});
+    fixture.edge({head, b}, downstream, 0.8);
+    auto defaultView = fixture.view(false);
+    auto fullView = fixture.view(true);
+    Compilation reference, candidate;
+    compile(reference, defaultView, false, {});
+    compile(candidate, fullView, true, {});
+    require(candidate.batchedCycles == 2 && candidate.batchedEdges == fixture.edges.size(),
+            "wide OR did not batch all eligible singleton sources");
+    compareCompilations("wide OR", fixture, reference, candidate, head);
+    const Worlds oracle(fixture, {});
+    checkProbabilities(candidate.manager, fixture, candidate.nodes, oracle, head);
+}
+
+void baseFactsAndSeedsKeepDefaultBehavior() {
+    Fixture fixture;
+    const auto a = fixture.fact("BaseA", 0.4);
+    const auto head = fixture.fact("FactAndDerived", 0.65);
+    const auto seeded = fixture.node("SeedAndDerived");
+    fixture.edge({a}, head, 0.0);
+    fixture.edge({a}, head, 0.5);
+    fixture.edge({a}, seeded, 0.0);
+    fixture.edge({a}, seeded, 0.7);
+    const std::unordered_set<NodePtr> seeds{seeded};
+    auto defaultView = fixture.view(false);
+    auto fullView = fixture.view(true);
+    Compilation reference, candidate;
+    compile(reference, defaultView, false, seeds);
+    compile(candidate, fullView, true, seeds);
+    require(candidate.batchedCycles == 0 && candidate.batchedEdges == 0, "fact or seed head was batched");
+    compareCompilations("fact/seed sources", fixture, reference, candidate, a);
+    // Preserve the current incoming-edge-only recomputation. This fixture
+    // deliberately compares the existing contract, not a new fact-OR meaning.
+    close(candidate.manager.computeWeightedModelCount(candidate.nodes.at(head)), 0.2, "existing fact-head behavior");
+    close(candidate.manager.computeWeightedModelCount(candidate.nodes.at(seeded)), 0.28, "existing seed-head behavior");
+}
+
+void recursiveSourcesKeepDefaultBehavior() {
+    Fixture fixture;
+    const auto a = fixture.fact("CycleA", 0.4);
+    const auto self = fixture.node("SelfLoop");
+    const auto left = fixture.node("CycleLeft");
+    const auto right = fixture.node("CycleRight");
+    fixture.edge({a}, self, 0.5);
+    fixture.edge({self}, self, 0.6);
+    fixture.edge({a}, left, 0.7);
+    fixture.edge({left}, right, 0.3);
+    fixture.edge({right}, left, 0.8);
+    auto defaultView = fixture.view(false);
+    auto fullView = fixture.view(true);
+    Compilation reference, candidate;
+    compile(reference, defaultView, false, {});
+    compile(candidate, fullView, true, {});
+    require(candidate.batchedCycles == 0 && candidate.batchedEdges == 0, "recursive SCC was batched");
+    compareCompilations("recursive sources", fixture, reference, candidate, left);
+    close(candidate.manager.computeWeightedModelCount(candidate.nodes.at(self)), 0.2, "self-loop least fixed point");
+    close(candidate.manager.computeWeightedModelCount(candidate.nodes.at(right)), 0.084, "two-node least fixed point");
+}
+
+void prepopulatedFormulaMapsKeepDefaultBehavior() {
+    for (int mode : {1, 2}) {
+        Fixture fixture;
+        const auto a = fixture.fact("ExistingA", 0.6);
+        const auto head = fixture.node("ExistingHead");
+        const auto first = fixture.edge({a}, head, 0.4);
+        fixture.edge({a}, head, 0.7);
+        auto defaultView = fixture.view(false);
+        auto fullView = fixture.view(true);
+        Compilation reference, candidate;
+        if (mode == 1) {
+            reference.nodes[head] = reference.manager.getTrue();
+            candidate.nodes[head] = candidate.manager.getTrue();
+        } else {
+            reference.edges[first] = reference.manager.getFalse();
+            candidate.edges[first] = candidate.manager.getFalse();
+        }
+        compile(reference, defaultView, false, {});
+        compile(candidate, fullView, true, {});
+        require(candidate.batchedCycles == 0 && candidate.batchedEdges == 0, "prepopulated formula map was batched");
+        compareCompilations("prepopulated mode " + std::to_string(mode), fixture, reference, candidate, a);
+        const Worlds oracle(fixture, {});
+        checkProbabilities(candidate.manager, fixture, candidate.nodes, oracle, a);
+    }
+}
+
 }  // namespace
 
 int main() {
     try {
         standaloneOrderPreservesEventsAndProbabilities();
         preConfigPreservesDefaultAndDeltaPolicies();
+        batchedWideDisjunctionPreservesEvents();
+        baseFactsAndSeedsKeepDefaultBehavior();
+        recursiveSourcesKeepDefaultBehavior();
+        prepopulatedFormulaMapsKeepDefaultBehavior();
         std::cout << "full event order tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

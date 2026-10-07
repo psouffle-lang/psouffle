@@ -102,6 +102,13 @@ execution; online initialization and updates retain their existing entrypoint.
 The ordering changes internal BDD indexes, with each event and weight still
 mapped to its own variable.
 
+The same full compiler also reuses its existing SCC groups to compile a
+nonrecursive singleton head's incoming contributions together and form its OR
+once. It reads each body's inputs and signs once, instead of copying them for
+every input or repeatedly sorting and combining all incoming edges. Fact and
+seed heads, recursive groups, unavailable inputs and prepopulated formula maps
+retain the ordinary compilation path.
+
 The indexed proof uses one body traversal and a single stamp epoch, retaining the
 existing lazy `Must_1` cache. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
