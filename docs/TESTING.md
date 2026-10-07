@@ -67,8 +67,14 @@ merging independent events.
 The `and_input_cleanup` case compares local cleanup with ordinary full pruning,
 enumerates every retained event's random worlds, and checks roots, cascading
 removals, duplicate references, inactive raw adjacency and cache invalidation.
+The `and_input_fast` case independently enumerates worlds for the compiler DAG
+path, checks the same event identities, current-body proofs and cleanup roots,
+and exercises conservative fallback when its certificate is incomplete.
+The `compiler_acyclicity` and `compiler_acyclicity_emission` cases check trusted
+metadata, mutation invalidation, recursive base clauses, aggregate encoding,
+eqrel and reserved aggregate-state namespace exclusions.
 
-The maintained suite contains 34 tests. The initial unified integration passed
+The maintained suite contains 37 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

@@ -102,6 +102,7 @@ def check_mutation(payload, *, positive=False, rewrite=False):
             assert names.index(name) > names.index('AND_INPUT_REDUNDANCY'), names
     info = mutation_info(payload)
     prefix = 'and_input_redundancy_'
+    assert info[prefix + 'analysis_strategy'] in ('indexed', 'lazy_fresh_dag'), info
     for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
                 'remaining_input_associations', 'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
         assert float(info[prefix + key]) >= 0, info
@@ -418,6 +419,8 @@ def main():
             assert int(info['and_input_redundancy_cleaned_hyperedges']) == 1, info
             expected_cleanup = 'full' if variant in ('pass_merge', 'pass_prune_extra') else 'local'
             assert info['and_input_redundancy_cleanup_strategy'] == expected_cleanup, info
+            expected_analysis = 'indexed' if variant in ('pass_merge', 'pass_prune_extra') else 'lazy_fresh_dag'
+            assert info['and_input_redundancy_analysis_strategy'] == expected_analysis, info
             if variant == 'pass':
                 pass_info = info
             elif variant in ('pass_merge', 'pass_prune_extra'):

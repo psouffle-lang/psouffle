@@ -45,7 +45,7 @@ PASS_KEYS = (
     "remaining_input_associations", "remaining_proven_input_associations",
     "initial_input_associations", "final_input_associations", "before_nodes",
     "before_edges", "after_nodes", "after_edges", "detection_ms", "mutation_ms",
-    "cleanup_planning_ms", "cleanup_strategy", "pruning_ms", "total_ms",
+    "cleanup_planning_ms", "cleanup_strategy", "analysis_strategy", "pruning_ms", "total_ms",
 )
 REWRITE_KEYS = ("rewrite_simple_regions", "rewrite_general_regions", "graph_rewrite_rewritten_regions",
                 "rewrite_ms", "graph_rewrite_total_ms", "implicit_total_ms")
@@ -128,7 +128,9 @@ def read_debugger(output_dir):
             for key in PASS_KEYS:
                 field = f"and_input_redundancy_{key}"
                 if field in info:
-                    result["pass"][key] = info[field] if key == "cleanup_strategy" else number(info[field])
+                    result["pass"][key] = (info[field]
+                        if key in {"cleanup_strategy", "analysis_strategy"}
+                        else number(info[field]))
             for key in REWRITE_KEYS:
                 if key in info:
                     result["rewrite"][key] = number(info[key])

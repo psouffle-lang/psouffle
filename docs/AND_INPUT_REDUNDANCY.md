@@ -40,7 +40,7 @@ Post-rewrite certificates describe the residual graph's event model, including
 existing SISO summaries; they do not reconstruct original event formulas hidden
 by those summaries or establish identities across snapshots.
 
-The elimination pass builds these structural indexes once per invocation and
+The general elimination path builds these structural indexes once per invocation and
 re-proves each deletion against the current edge bodies and necessary-input
 sets. Source identities and eligibility stay fixed; deleting dependencies
 cannot create a cycle, and edges involving recursive nodes are never changed.
@@ -54,7 +54,7 @@ view caches are invalidated, and outgoing adjacency retains a dependency while
 any duplicate input occurrence survives. No SAT, BDD or probability estimate
 is used to prove a deletion.
 
-Source and SCC construction use flat arrays and CSR adjacency, with work linear
+In this path, source and SCC construction use flat arrays and CSR adjacency, with work linear
 in nodes, edges and body associations. `Must_1` is computed only for providers
 needed by candidate proofs, intersecting every source from the shortest current
 body. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
@@ -62,7 +62,28 @@ lookup only after uniqueness checks, and each lookup still checks pointer
 identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
 
-Proof coverage uses one body traversal and a single stamp epoch, retaining the
+Newly compiled programs can also attest that the original rule dependency graph
+is acyclic. For that certificate, standalone full execution retains the degree
+counts and potential targets from its existing initial graph-summary traversal.
+Immediately after ordinary pruning, a separate path uses the original incoming
+adjacency and computes definitions and necessary inputs only when a proof needs
+them. It avoids rebuilding whole-graph source, body and SCC indexes. The workspace
+is consumed in this invocation, and every deletion is still re-proved against
+the current bodies. It counts repeated occurrences separately and preserves the
+same rule events and query/evidence roots.
+
+This path requires trusted compiler metadata, complete endpoints and the freshly
+constructed original graph before other rewrites. Recursive strata, eqrel,
+special pruning policies, and a user relation named `__agg_sum_state` disable it.
+The original graph and aggregate identities must fit their runtime encoding.
+Internally generated aggregate states remain acyclic: witness dependencies
+follow the relation order, transitions advance the state step, and the final
+state precedes the ordinary head. Older generated executables and manual rule
+managers have no compiler certificate and use the indexed analysis above.
+Public rule-manager mutations invalidate the certificate. Read-only reports
+continue to build their own grounded analysis.
+
+The indexed proof uses one body traversal and a single stamp epoch, retaining the
 existing lazy `Must_1` cache. Cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
 still receives exact SCC analysis, with reverse traversal reusing the source
@@ -153,6 +174,9 @@ counters include deleted input associations, affected edges, detection rounds,
 cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
 times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
 or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
+`analysis_strategy` records `lazy_fresh_dag` or `indexed`; the initial-summary
+workspace preparation is part of the existing pruning stage, and benchmark wall
+time includes it.
 `remaining_proven_input_associations` counts opportunities at the pass's
 fixpoint **before SISO**; SISO may subsequently expose new opportunities.
 `initial_input_associations` and `final_input_associations` count all body links
@@ -201,6 +225,12 @@ colliding or maximum sparse IDs, and foreign endpoints with matching IDs.
 The cleanup regression compares planned cleanup with ordinary full pruning,
 including shared consumers, query/evidence roots, duplicate occurrences,
 inactive raw adjacency, and cascading removals.
+`regression.and_input_fast` exercises the lazy DAG path with independent world
+enumeration, rule-event identity checks, shortened definitions, stale proofs,
+duplicate occurrences, query/evidence cleanup and certificate fallback. The
+compiler-certificate regressions check emitted recursion metadata, invalidation
+after public mutations, recursive base clauses, eqrel, aggregate identities and
+the reserved state namespace.
 The execution-contract regression checks runtime reports, stage ordering, actual
 deletion/cleanup, correlated evidence-conditioned outputs, opt-in behavior,
 both rewrite dispatchers and online rejection.

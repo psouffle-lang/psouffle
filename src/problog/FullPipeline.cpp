@@ -2,6 +2,7 @@
 
 #include "souffle/Derivation.h"
 #include "souffle/problog/AndInputRedundancy.h"
+#include "souffle/problog/AndInputRedundancyFast.h"
 #include "souffle/problog/DerivationGraph.h"
 #include "souffle/problog/ForwardCompilation.h"
 #include "souffle/problog/GraphAnalyzer.h"
@@ -386,25 +387,38 @@ struct GraphSummary {
     std::size_t inputAssociations = 0;
 };
 
-static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view) {
+static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view,
+        AndInputRedundancyWorkspace* workspace = nullptr) {
     GraphSummary s;
     const auto& nodes = view.getNodes();
     const auto& edges = view.getEdges();
     s.nodes = nodes.size();
     s.edges = edges.size();
 
-    struct Degree {
-        std::size_t incoming = 0;
-        std::size_t outgoing = 0;
-    };
-    std::unordered_map<NodePtr, Degree> degrees;
+    AndInputRedundancyWorkspace::DegreeMap localDegrees;
+    if (workspace) {
+        *workspace = {};
+        workspace->completeEndpoints = true;
+    }
+    auto& degrees = workspace ? workspace->degrees : localDegrees;
     degrees.reserve(nodes.size());
     for (const auto& n : nodes) {
-        degrees.emplace(n, Degree{});
+        degrees.emplace(n, AndInputRedundancyDegree{});
+        if (workspace && (!n || n->pruned)) workspace->completeEndpoints = false;
     }
 
     for (const auto& e : edges) {
+        if (!e) {
+            if (workspace) workspace->completeEndpoints = false;
+            continue;
+        }
         const auto& inputs = e->getInputs();
+        if (workspace) {
+            if (e->pruned || inputs.size() != e->getBodyNegations().size()) workspace->completeEndpoints = false;
+            if (inputs.size() >= 2) workspace->potentialTargets.push_back(e);
+            if (workspace->arityCounts.size() <= inputs.size()) workspace->arityCounts.resize(inputs.size() + 1);
+            ++workspace->arityCounts[inputs.size()];
+        }
         s.inputAssociations += inputs.size();
         s.maxHyperedgeInputs = std::max(s.maxHyperedgeInputs, inputs.size());
         NodePtr out = e->getOutput();
@@ -412,13 +426,20 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
             auto it = degrees.find(out);
             if (it != degrees.end()) {
                 ++it->second.incoming;
+            } else if (workspace) {
+                workspace->completeEndpoints = false;
             }
+        } else if (workspace) {
+            workspace->completeEndpoints = false;
         }
         for (const auto& in : inputs) {
             auto it = degrees.find(in);
             if (it != degrees.end()) {
                 ++it->second.outgoing;
+            } else if (workspace) {
+                workspace->completeEndpoints = false;
             }
+            if (workspace && !in) workspace->completeEndpoints = false;
         }
         if (!e->isDeterministic()) {
             ++s.probabilisticEdges;
@@ -426,6 +447,7 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
     }
 
     for (const auto& n : nodes) {
+        if (!n) continue;
         if (n->isFact) {
             ++s.factNodes;
             if (n->getProbability() < 1.0) {
@@ -456,6 +478,7 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
         }
     }
     s.randomVariables = s.probabilisticFactNodes + s.probabilisticEdges;
+    if (workspace) workspace->initialInputAssociations = s.inputAssociations;
     return s;
 }
 
@@ -515,14 +538,18 @@ static void addGraphSummaryInfo(
 
 static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivationGraph& graph,
         WorkingSubgraphView& view, const std::vector<souffle::Relation*>& outputs,
-        const GraphSummary& before) {
+        const GraphSummary& before, AndInputRedundancyWorkspace* workspace = nullptr,
+        const AndInputRedundancyFreshDagCertificate& certificate = {}) {
     if (!opt.isAndInputRedundancyEnabled()) return before;
     auto& debugger = Debugger::getInstance();
     debugger.startStage(StageKind::AND_INPUT_REDUNDANCY);
     const auto start = std::chrono::steady_clock::now();
     const bool localCleanup = !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled();
+    const bool usedFreshDag = localCleanup && workspace && canUseAndInputRedundancyFreshDag(view, *workspace, certificate);
     AndInputRedundancyCleanupPlan cleanupPlan;
-    const auto stats = eliminateAndInputRedundancy(view, true, localCleanup ? &cleanupPlan : nullptr);
+    const auto stats = usedFreshDag
+            ? eliminateAndInputRedundancyFreshDag(view, *workspace, certificate, &cleanupPlan)
+            : eliminateAndInputRedundancy(view, true, localCleanup ? &cleanupPlan : nullptr);
     const auto pruningStart = std::chrono::steady_clock::now();
     std::string cleanupStrategy = "none";
     if (stats.deletedInputAssociations != 0) {
@@ -545,6 +572,8 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
                 ? summarizeAfterAndInputCleanup(before, view, cleanupPlan)
                 : summarizeGraphLight(view);
     }
+    // Release retained summary storage inside the measured pass, before SISO.
+    if (workspace) *workspace = {};
     const double totalMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count();
     addGraphSummaryInfo(debugger, "and_input_redundancy_before_", before);
@@ -570,6 +599,7 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addTime("pruning_ms", pruningMs);
     addTime("total_ms", totalMs);
     debugger.addInfo("and_input_redundancy_cleanup_strategy", cleanupStrategy);
+    debugger.addInfo("and_input_redundancy_analysis_strategy", usedFreshDag ? "lazy_fresh_dag" : "indexed");
     std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
               << " cleaned_nodes=" << before.nodes - after.nodes
               << " cleaned_hyperedges=" << before.edges - after.edges
@@ -2235,8 +2265,20 @@ void runPipeline(
     debugger.addInfo("before_prune_nodes", std::to_string(graph->getNodes().size()));
     debugger.addInfo("before_prune_edges", std::to_string(graph->getEdges().size()));
     auto t2 = std::chrono::steady_clock::now();
+    AndInputRedundancyFreshDagCertificate freshDagCertificate;
+    freshDagCertificate.completeDerivations = true;
+    std::unique_ptr<AndInputRedundancyWorkspace> andInputWorkspace;
+    if (opt.isAndInputRedundancyEnabled() && !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled() &&
+            ruleManager.hasCompilerAcyclicityCertificate() && program.getRelation("__agg_sum_state") == nullptr &&
+            graph->getNodes().size() <= static_cast<std::size_t>(std::numeric_limits<RamSigned>::max())) {
+        freshDagCertificate.compilerAttestedDag = true;
+        // This is the original createFrom graph, before any SISO or aliases.
+        freshDagCertificate.originalGraph = true;
+        andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+    }
     auto view = graph->prune(concreteOutputs);
-    const GraphSummary afterPruneSummary = summarizeGraphLight(view);
+    const GraphSummary afterPruneSummary = summarizeGraphLight(view, andInputWorkspace.get());
+    if (afterPruneSummary.shadowNodes != 0) freshDagCertificate.originalGraph = false;
     addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
     auto t3 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] pruning took "
@@ -2247,7 +2289,8 @@ void runPipeline(
     reportAndInputRedundancy(opt, view, "before-rewrite");
 
     const GraphSummary rewriteInitialSummary = runAndInputRedundancy(
-            opt, *graph, view, concreteOutputs, afterPruneSummary);
+            opt, *graph, view, concreteOutputs, afterPruneSummary, andInputWorkspace.get(), freshDagCertificate);
+    andInputWorkspace.reset();
 
     if (opt.isDumpDotEnabled()) {
         view.dumpDot(makeOutputPath(opt, "after_prune.dot"));

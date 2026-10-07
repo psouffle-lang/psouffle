@@ -784,8 +784,13 @@ void Synthesiser::emitRules (std::ostream& out) {
         }
     }
 
+    // Aggregate replay uses this runtime-only relation. A user declaration can
+    // collide with those states, invalidating the compiler DAG certificate.
+    const bool compilerRecursionMetadata = eqrelNames.empty() &&
+            newAstProgram->getRelation(ast::QualifiedName::fromString("__agg_sum_state")) == nullptr;
     out << "ruleManager = RuleManager({" << join(ruleNames, ", ") << "}"
-        << ", {" << join(eqrelNames, ", ") << "});" << std::endl;
+        << ", {" << join(eqrelNames, ", ") << "}, "
+        << (compilerRecursionMetadata ? "true" : "false") << ");" << std::endl;
         // out << "std::cout << ruleManager.toString();\n";
     const auto& queries = this->newAstProgram->getProbQueries();
     std::vector<std::string> queryNames;
