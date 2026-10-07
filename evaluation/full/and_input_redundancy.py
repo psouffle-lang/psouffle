@@ -60,6 +60,32 @@ ALIAS_KEYS = ("candidates", "merged_aliases", "query_aliases", "promoted_output_
               "analysis_ms", "mutation_ms", "summary_ms", "total_ms",
               "before_nodes", "before_edges", "before_input_associations",
               "after_nodes", "after_edges", "after_input_associations", "before_output_nodes", "after_output_nodes")
+GRAPH_SHAPE_KEYS = ("nodes", "edges", "input_associations", "fact_nodes", "derived_nodes",
+                    "query_nodes", "output_nodes", "evidence_nodes", "shadow_nodes",
+                    "prob_fact_nodes", "prob_rule_edges", "random_variables", "disjunction_nodes",
+                    "max_in_degree", "max_out_degree", "max_hyperedge_inputs")
+PRIVATE_FACTOR_METRICS = {
+    "private_factor_preparation": ("private_factor_", (
+        "retired_owner_nodes", "retired_owner_edges", "owner_commit_ms", "stage_time_seconds")),
+    "local_series": ("local_series_", (
+        "candidates", "contractions", "removed_nodes", "removed_edges", "added_edges",
+        "duplicate_inputs_removed", "rule_variables_removed", "initial_input_associations",
+        "final_input_associations", "support_owners", "support_tokens", "unknown_random_events",
+        "recursive_nodes", "rejected_private_support", "rejected_owner_uses", "rejected_work_budget",
+        "body_occurrences_analyzed", "analysis_ms", "mutation_ms", "total_ms", "stage_time_seconds",
+        *(f"after_{key}" for key in GRAPH_SHAPE_KEYS))),
+    "terminal_queries": ("terminal_query_", (
+        "candidates", "factored_queries", "factored_output_queries", "hidden_chain_steps",
+        "removed_nodes", "removed_edges", "promoted_roots", "skipped_support_overlap",
+        "skipped_missing_support", "skipped_recursive", "skipped_owner_history",
+        "analysis_ms", "mutation_ms", "total_ms", "stage_time_seconds",
+        *(f"after_{key}" for key in GRAPH_SHAPE_KEYS))),
+}
+PRIVATE_FACTOR_STAGES = {
+    "PRIVATE_FACTOR_PREPARATION": "private_factor_preparation",
+    "LOCAL_SERIES_CONTRACTION": "local_series",
+    "TERMINAL_QUERY_FACTORS": "terminal_queries",
+}
 VARIANTS = {
     "baseline": [], "siso": ["--rewrite"],
     "siso_and_pass": ["--rewrite", "--and-input-redundancy"],
@@ -73,6 +99,11 @@ VARIANTS = {
     "alias_siso_pass": ["--deterministic-event-aliases", "--rewrite", "--and-input-redundancy",
                         "--and-input-redundancy-placement=after-siso"],
 }
+for control in ("siso", "alias_pass_siso"):
+    VARIANTS[f"{control}_series"] = [*VARIANTS[control], "--local-series-contraction"]
+    VARIANTS[f"{control}_terminal"] = [*VARIANTS[control], "--terminal-query-factors"]
+    VARIANTS[f"{control}_private_factors"] = [*VARIANTS[control], "--local-series-contraction",
+                                             "--terminal-query-factors"]
 
 
 def read_report(path):
@@ -128,7 +159,8 @@ def read_debugger(output_dir):
         except (OSError, ValueError, TypeError, AttributeError):
             continue
         result = {"path": str(path), "status": data.get("status"), "pipeline": {},
-                  "detector_timings": {}, "pass": {}, "aliases": {}, "rewrite": {}}
+                  "detector_timings": {}, "pass": {}, "aliases": {}, "rewrite": {},
+                  **{section: {} for section in PRIVATE_FACTOR_METRICS}}
         peaks = [number(stage.get("peak_mem_kb")) for stage in stages if isinstance(stage, dict)]
         result["peak_mem_kb"] = max((peak for peak in peaks if peak is not None), default=None)
         # Between stages, Debugger::addInfo stores counters on the turn.
@@ -157,6 +189,12 @@ def read_debugger(output_dir):
                 field = f"deterministic_event_aliases_{key}"
                 if field in info:
                     result["aliases"][key] = number(info[field])
+            for section, (prefix, keys) in PRIVATE_FACTOR_METRICS.items():
+                for key in keys:
+                    if prefix + key in info:
+                        result[section][key] = number(info[prefix + key])
+            if name in PRIVATE_FACTOR_STAGES:
+                result[PRIVATE_FACTOR_STAGES[name]]["stage_time_seconds"] = number(scope.get("time_seconds"))
             for phase in PHASES:
                 for metric in ("analysis_ms", "write_ms"):
                     key = f"and_input_redundancy_{phase}_{metric}"
@@ -240,6 +278,7 @@ def write_summary(output_root, binary, cases_root, timeout, records):
                             "conflict_input_associations")]
     columns += [*PIPELINE_KEYS, "bdd_live_nodes", "bdd_stage_status", "bdd_live_nodes_source",
                 "run_dir", "notes"]
+    columns += [prefix + key for prefix, keys in PRIVATE_FACTOR_METRICS.values() for key in keys]
     with (output_root / "summary.csv").open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
@@ -257,6 +296,8 @@ def write_summary(output_root, binary, cases_root, timeout, records):
                         "proven_by_redundant_relation"].get("data_object_conflict", 0)
             debugger = record["debugger"]
             row.update(debugger.get("pipeline", {}))
+            for section, (prefix, _) in PRIVATE_FACTOR_METRICS.items():
+                row.update({prefix + key: value for key, value in debugger.get(section, {}).items()})
             for key in ("bdd_live_nodes", "bdd_stage_status", "bdd_live_nodes_source"):
                 row[key] = debugger.get(key)
             row["notes"] = "; ".join(record["notes"])
@@ -380,6 +421,11 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
         if record[f"final_{metric}"] is None:
             record[f"final_{metric}"] = pass_stats.get(f"after_{metric}",
                     debugger.get("aliases", {}).get(f"after_{metric}", pipeline.get(f"after_prune_{metric}")))
+        for section in ("terminal_queries", "local_series"):
+            final = debugger.get(section, {}).get(f"after_{metric}")
+            if final is not None:
+                record[f"final_{metric}"] = final
+                break
     rewrite = debugger.get("rewrite", {})
     simple, general = rewrite.get("rewrite_simple_regions"), rewrite.get("rewrite_general_regions")
     record["completed_siso_rewrites"] = (
@@ -394,6 +440,12 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
         if "merged_aliases" not in debugger.get("aliases", {}):
             record["status"] = "incomplete_metrics"
             record["notes"].append("Enabled event alias pass did not emit its merge counters.")
+    for flag, section, key in (("--local-series-contraction", "local_series", "contractions"),
+                               ("--terminal-query-factors", "terminal_queries", "factored_queries")):
+        if record["status"] == "ok" and flag in VARIANTS[variant]:
+            if key not in debugger.get(section, {}):
+                record["status"] = "incomplete_metrics"
+                record["notes"].append(f"Enabled {section} pass did not emit its counters.")
     return record
 
 
@@ -416,13 +468,21 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
         for key in ("completed_siso_rewrites", "final_nodes", "final_edges"):
             values = [r[key] for r in successful if r.get(key) is not None]
             group[key + "_median"] = statistics.median(values) if values else None
+        for section, (prefix, keys) in PRIVATE_FACTOR_METRICS.items():
+            for key in keys:
+                values = [r.get("debugger", {}).get(section, {}).get(key) for r in successful]
+                values = [value for value in values if value is not None]
+                group[prefix + key + "_median"] = statistics.median(values) if values else None
         groups.append(group)
     comparisons = []
     for case in sorted({r["case"] for r in active}):
         cells = {g["variant"]: g for g in groups if g["case"] == case}
         comparison = {"case": case}
         for variant in VARIANTS:
-            for reference in ("baseline", "siso", "siso_and_pass", "alias"):
+            references = ("baseline", "siso", "siso_and_pass", "alias")
+            if variant.startswith("alias_pass_siso_"):
+                references += ("alias_pass_siso",)
+            for reference in references:
                 if variant == reference:
                     continue
                 left, right = cells.get(reference), cells.get(variant)
@@ -448,6 +508,9 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                                            "siso_then_pass": "after-siso"},
                "remaining_opportunities_scope": "Core deletion fixpoint at the selected placement; a later SISO rewrite may expose more opportunities.",
                "additional_siso_rewrites_delta_semantics": "Signed difference in completed SISO region counts, not identities of newly triggered regions.",
+               "local_series_edge_count_semantics": "removed_edges counts gross retired edges; added_edges counts new compound edges. Net edge reduction is removed_edges minus added_edges.",
+               "terminal_query_count_semantics": "factored_queries counts output calculation records, including hidden_chain_steps; factored_output_queries counts physical pre-pass output representatives, including alias-promoted roots, not printed query names.",
+               "final_graph_shape_semantics": "Prefer terminal_query_after counters, then local_series_after counters, then the existing AND/SISO/alias/pruning counters.",
                "bdd_live_nodes_semantics": {"FC_WMC_HYBRID": "Sum after each slow component's formula compilation.",
                                             "FORWARD_COMPILATION": "Whole-graph manager count after formula compilation."},
                "timing_scope": "Child wall time includes detection, mutation, pruning, SISO, inference and ordinary outputs; excludes compilation and Python collection.",
@@ -460,6 +523,7 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                "final_nodes", "final_edges", "completed_siso_rewrites", "siso_ms", *PIPELINE_KEYS]
     columns += [f"and_input_redundancy_{key}" for key in PASS_KEYS]
     columns += [f"deterministic_event_aliases_{key}" for key in ALIAS_KEYS]
+    columns += [prefix + key for prefix, keys in PRIVATE_FACTOR_METRICS.values() for key in keys]
     columns += ["bdd_live_nodes", "bdd_stage_status", "peak_mem_kb", "probability_check", "probability_reference_variant",
                 "query_count", "max_absolute_difference", "run_dir", "notes"]
     csv_tmp = output_root / "summary.csv.tmp"
@@ -473,6 +537,8 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
             row.update({f"and_input_redundancy_{key}": value for key, value in debugger.get("pass", {}).items()})
             row.update({f"deterministic_event_aliases_{key}": value
                         for key, value in debugger.get("aliases", {}).items()})
+            for section, (prefix, _) in PRIVATE_FACTOR_METRICS.items():
+                row.update({prefix + key: value for key, value in debugger.get(section, {}).items()})
             for key in ("bdd_live_nodes", "bdd_stage_status", "peak_mem_kb"):
                 row[key] = debugger.get(key)
             check = record.get("probability_check", {})

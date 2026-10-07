@@ -91,6 +91,10 @@ counters describe SISO's residual view; use `local_series_after_*` or
   -F input -D output
 ./compute --deterministic-event-aliases --and-input-redundancy --rewrite \
   --local-series-contraction --terminal-query-factors -F input -D output
+python3 evaluation/full/and_input_redundancy.py --mode benchmark \
+  --binary ./compute --cases readelf --output-root build/private-factor-benchmark \
+  --variants baseline siso alias_pass_siso alias_pass_siso_series \
+  alias_pass_siso_terminal alias_pass_siso_private_factors --runs 3
 ```
 
 Regression coverage enumerates primitive worlds and conditions on positive and
