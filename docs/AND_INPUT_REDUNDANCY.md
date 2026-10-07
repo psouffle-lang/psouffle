@@ -135,15 +135,16 @@ ordinary recount because a split can change the graph between iterations.
 
 The same full compiler also reuses its existing SCC groups to compile a
 nonrecursive singleton head's incoming contributions together and form its OR
-once. It reads each body's inputs and signs once, instead of copying them for
-every input or repeatedly sorting and combining all incoming edges. Fact and
+once. It borrows each active edge's aligned input and sign arrays, avoiding
+repeated view membership checks and vector copies, and reserves each formula
+operand vector before inserting its rule event. Fact and
 seed heads, recursive groups, unavailable inputs and prepopulated formula maps
 retain the ordinary compilation path.
 
 For definitions with at most two body occurrences, the indexed proof tracks
 coverage in local bits, counting repeated occurrences of the same premise once.
-Wider definitions mark distinct needed and covered premises in the existing
-stamp array. Both paths retain the lazy `Must_1` cache and the first provider for
+The coverage stamp array is allocated only when a wider definition actually
+needs it. Both paths retain the lazy `Must_1` cache and the first provider for
 each certificate. Once all premises are
 covered, it stops without expanding later providers. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph

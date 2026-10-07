@@ -663,8 +663,11 @@ void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
         const auto before = snapshot(f.graph);
         souffle::problog::detail::AndInputRedundancySnapshot analysis;
         analysis.initialize(f.graph, true, true, true);
+        require(analysis.coverageMarks.empty(), "initialization eagerly allocated wide-proof stamps");
         if (wrapEpoch) analysis.coverageEpoch = std::numeric_limits<std::size_t>::max() - 1;
         const auto report = analysis.detect(true);
+        require(wideDefinition ? analysis.coverageMarks.size() == analysis.nodes.size() : analysis.coverageMarks.empty(),
+                "proof did not allocate coverage stamps only when the wide branch needed them");
         require(report.proofs.size() == 1 && hasProof(report, target, c),
                 "duplicate required premises prevented an otherwise complete proof");
         const auto& proof = report.proofs.front();

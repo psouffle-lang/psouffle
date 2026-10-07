@@ -567,10 +567,13 @@ void buildFormulasCyclewiseInternal(
                     }
                     formulaManager.dumpProfilingStatistics();
                     if (fcProfile) ++stats.edge_processed;
-                    const auto body = view.getInputs(edge);
-                    const auto negations = view.getBodyNegations(edge);
-                    std::vector<FormulaNodeRef> inputs{baseEdgeFormulas.at(edge)};
+                    // CDG edges belong to this view and remain unchanged
+                    // throughout compilation. Borrow the aligned body ranges.
+                    const auto& body = edge->getInputs();
+                    const auto& negations = edge->getBodyNegations();
+                    std::vector<FormulaNodeRef> inputs;
                     inputs.reserve(body.size() + 1);
+                    inputs.push_back(baseEdgeFormulas.at(edge));
                     for (std::size_t i = 0; i < body.size(); ++i) {
                         if (body[i] == head) {
                             complete = false;

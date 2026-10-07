@@ -298,7 +298,6 @@ struct AndInputRedundancySnapshot {
         });
         if (targets.empty()) return;
         mustSlots.assign(nodes.size(), none);
-        coverageMarks.assign(nodes.size(), 0);
     }
 
     void excludeRecursiveNodes() {
@@ -526,6 +525,7 @@ struct AndInputRedundancySnapshot {
         }
         // Obtain both stamps before marking needed premises: the second epoch
         // can wrap and clear the shared array.
+        if (coverageMarks.empty()) coverageMarks.assign(nodes.size(), 0);
         const auto neededTag = nextEpoch(coverageEpoch, coverageMarks);
         const auto coveredTag = nextEpoch(coverageEpoch, coverageMarks);
         std::size_t remaining = 0;
