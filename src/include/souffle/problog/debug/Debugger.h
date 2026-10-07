@@ -33,6 +33,7 @@ enum class StageKind {
     LOCAL_SERIES_CONTRACTION,
     PRIVATE_FACTOR_PREPARATION,
     TERMINAL_QUERY_FACTORS,
+    PRIVATE_FACTOR_REWRITE,
     FORWARD_COMPILATION,
     WEIGHTED_MODEL_COUNTING,
     FC_WMC_HYBRID,
@@ -69,6 +70,7 @@ inline std::string stageKindToString(const StageKind kind) {
         case StageKind::LOCAL_SERIES_CONTRACTION: return "LOCAL_SERIES_CONTRACTION";
         case StageKind::PRIVATE_FACTOR_PREPARATION: return "PRIVATE_FACTOR_PREPARATION";
         case StageKind::TERMINAL_QUERY_FACTORS: return "TERMINAL_QUERY_FACTORS";
+        case StageKind::PRIVATE_FACTOR_REWRITE: return "PRIVATE_FACTOR_REWRITE";
         case StageKind::FORWARD_COMPILATION: return "FORWARD_COMPILATION";
         case StageKind::WEIGHTED_MODEL_COUNTING: return "WEIGHTED_MODEL_COUNTING";
         case StageKind::FC_WMC_HYBRID: return "FC_WMC_HYBRID";

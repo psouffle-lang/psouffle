@@ -10,7 +10,7 @@
 #include "souffle/problog/GraphRewriter.h"
 #include "souffle/problog/ImplicitSplitRewrite.h"
 #include "souffle/problog/LiftedWmc.h"
-#include "souffle/problog/LocalSeriesContraction.h"
+#include "souffle/problog/PrivateFactorRewrite.h"
 #include "souffle/problog/PipelineComponents.h"
 #include "souffle/problog/QueryManager.h"
 #include "souffle/problog/RuleManager.h"
@@ -3029,71 +3029,88 @@ void runPipeline(
 
     TerminalQueryFactorResult terminalQueries;
     if (opt.isLocalSeriesContractionEnabled() || opt.isTerminalQueryFactorsEnabled()) {
-        // Commit existing SISO's active view once. Historical owner definitions
-        // cannot participate in a later private-factor proof or be resurrected.
         if (rewriteHybridStage) {
             debugger.endStage();
             rewriteHybridStage = nullptr;
         }
-        debugger.startStage(StageKind::PRIVATE_FACTOR_PREPARATION);
-        const auto ownerCommitStart = std::chrono::steady_clock::now();
-        const auto retired = graph->retainRewriteView(view);
-        debugger.addInfo("private_factor_retired_owner_nodes", std::to_string(retired.removedOwnerNodes));
-        debugger.addInfo("private_factor_retired_owner_edges", std::to_string(retired.removedOwnerEdges));
-        debugger.addInfo("private_factor_owner_commit_ms", std::to_string(std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - ownerCommitStart).count()));
-        debugger.endStage();
-    }
-    if (opt.isLocalSeriesContractionEnabled()) {
-        debugger.startStage(StageKind::LOCAL_SERIES_CONTRACTION);
-        const auto result = contractLocalSeries(*graph, view, true);
-        const auto& stats = result.stats;
-        debugger.addInfo("local_series_candidates", std::to_string(stats.candidates));
-        debugger.addInfo("local_series_contractions", std::to_string(stats.contractions));
-        debugger.addInfo("local_series_removed_nodes", std::to_string(stats.removedNodes));
-        debugger.addInfo("local_series_removed_edges", std::to_string(stats.removedEdges));
-        debugger.addInfo("local_series_added_edges", std::to_string(stats.addedEdges));
-        debugger.addInfo("local_series_duplicate_inputs_removed", std::to_string(stats.duplicateInputsRemoved));
-        debugger.addInfo("local_series_rule_variables_removed", std::to_string(stats.ruleVariablesRemoved));
-        debugger.addInfo("local_series_initial_input_associations", std::to_string(stats.inputAssociationsBefore));
-        debugger.addInfo("local_series_final_input_associations", std::to_string(stats.inputAssociationsAfter));
-        debugger.addInfo("local_series_support_owners", std::to_string(stats.supportOwners));
-        debugger.addInfo("local_series_support_tokens", std::to_string(stats.supportTokens));
-        debugger.addInfo("local_series_unknown_random_events", std::to_string(stats.unknownRandomEvents));
-        debugger.addInfo("local_series_recursive_nodes", std::to_string(stats.recursiveNodes));
-        debugger.addInfo("local_series_rejected_private_support", std::to_string(stats.rejectedPrivateSupport));
-        debugger.addInfo("local_series_rejected_owner_uses", std::to_string(stats.rejectedOwnerUses));
-        debugger.addInfo("local_series_rejected_work_budget", std::to_string(stats.rejectedWorkBudget));
-        debugger.addInfo("local_series_body_occurrences_analyzed", std::to_string(stats.bodyOccurrencesAnalyzed));
-        debugger.addInfo("local_series_analysis_ms", std::to_string(stats.analysisMs));
-        debugger.addInfo("local_series_mutation_ms", std::to_string(stats.mutationMs));
-        debugger.addInfo("local_series_total_ms", std::to_string(stats.totalMs));
-        addGraphSummaryInfo(debugger, "local_series_after_", summarizeGraphLight(view));
-        std::cout << "[local-series-contraction] contractions=" << stats.contractions << '\n';
-        debugger.endStage();
-    }
-    if (opt.isTerminalQueryFactorsEnabled()) {
-        debugger.startStage(StageKind::TERMINAL_QUERY_FACTORS);
-        terminalQueries = factorTerminalQueries(*graph, view, true);
-        eventAliases.promotedOutputRoots.insert(eventAliases.promotedOutputRoots.end(),
-                terminalQueries.promotedOutputRoots.begin(), terminalQueries.promotedOutputRoots.end());
-        const auto& stats = terminalQueries.stats;
-        debugger.addInfo("terminal_query_candidates", std::to_string(stats.candidateQueries));
-        debugger.addInfo("terminal_query_factored_queries", std::to_string(stats.factoredQueries));
-        debugger.addInfo("terminal_query_factored_output_queries", std::to_string(stats.factoredOutputQueries));
-        debugger.addInfo("terminal_query_hidden_chain_steps", std::to_string(stats.hiddenChainSteps));
-        debugger.addInfo("terminal_query_removed_nodes", std::to_string(stats.removedNodes));
-        debugger.addInfo("terminal_query_removed_edges", std::to_string(stats.removedEdges));
-        debugger.addInfo("terminal_query_promoted_roots", std::to_string(stats.promotedRoots));
-        debugger.addInfo("terminal_query_skipped_support_overlap", std::to_string(stats.skippedSupportOverlap));
-        debugger.addInfo("terminal_query_skipped_missing_support", std::to_string(stats.skippedMissingSupport));
-        debugger.addInfo("terminal_query_skipped_recursive", std::to_string(stats.skippedRecursive));
-        debugger.addInfo("terminal_query_skipped_owner_history", std::to_string(stats.skippedOwnerHistory));
-        debugger.addInfo("terminal_query_analysis_ms", std::to_string(stats.analysisMs));
-        debugger.addInfo("terminal_query_mutation_ms", std::to_string(stats.mutationMs));
-        debugger.addInfo("terminal_query_total_ms", std::to_string(stats.totalMs));
-        addGraphSummaryInfo(debugger, "terminal_query_after_", summarizeGraphLight(view));
-        std::cout << "[terminal-query-factors] factored_queries=" << stats.factoredQueries << '\n';
+        debugger.startStage(StageKind::PRIVATE_FACTOR_REWRITE);
+        // The complete residual view certifies active definitions and factor
+        // ownership. Plan both passes in one index; commit only after a hit.
+        auto privateFactors = rewritePrivateFactors(*graph, view,
+                opt.isLocalSeriesContractionEnabled(), opt.isTerminalQueryFactorsEnabled(), true, true);
+        const auto& shared = privateFactors.stats;
+        const auto addShared = [&](const std::string& key, auto value) {
+            debugger.addInfo("private_factor_" + key, std::to_string(value));
+        };
+        addShared("collection_passes", shared.collectionPasses);
+        addShared("scc_passes", shared.sccPasses);
+        addShared("support_passes", shared.supportPasses);
+        addShared("retirement_batches", shared.retirementBatches);
+        addShared("virtual_compound_edges", shared.virtualCompoundEdges);
+        addShared("materialized_compound_edges", shared.materializedCompoundEdges);
+        addShared("terminal_virtual_sources", shared.terminalVirtualSources);
+        addShared("retired_active_nodes", shared.retiredActiveNodes);
+        addShared("retired_active_edges", shared.retiredActiveEdges);
+        addShared("retired_owner_nodes", shared.removedOwnerNodes);
+        addShared("retired_owner_edges", shared.removedOwnerEdges);
+        addShared("zero_hit_owner_commits", shared.zeroHitOwnerCommits);
+        addShared("preparation_ms", shared.preparationMs);
+        addShared("series_plan_ms", shared.seriesPlanMs);
+        addShared("terminal_plan_ms", shared.terminalPlanMs);
+        addShared("mutation_ms", shared.mutationMs);
+        addShared("owner_commit_ms", shared.ownerCommitMs);
+        addShared("total_ms", shared.totalMs);
+        if (opt.isLocalSeriesContractionEnabled()) {
+            const auto& stats = privateFactors.series.stats;
+            debugger.addInfo("local_series_candidates", std::to_string(stats.candidates));
+            debugger.addInfo("local_series_contractions", std::to_string(stats.contractions));
+            debugger.addInfo("local_series_removed_nodes", std::to_string(stats.removedNodes));
+            debugger.addInfo("local_series_removed_edges", std::to_string(stats.removedEdges));
+            debugger.addInfo("local_series_added_edges", std::to_string(stats.addedEdges));
+            debugger.addInfo("local_series_duplicate_inputs_removed", std::to_string(stats.duplicateInputsRemoved));
+            debugger.addInfo("local_series_rule_variables_removed", std::to_string(stats.ruleVariablesRemoved));
+            debugger.addInfo("local_series_initial_input_associations", std::to_string(stats.inputAssociationsBefore));
+            debugger.addInfo("local_series_final_input_associations", std::to_string(stats.inputAssociationsAfter));
+            debugger.addInfo("local_series_support_owners", std::to_string(stats.supportOwners));
+            debugger.addInfo("local_series_support_tokens", std::to_string(stats.supportTokens));
+            debugger.addInfo("local_series_unknown_random_events", std::to_string(stats.unknownRandomEvents));
+            debugger.addInfo("local_series_recursive_nodes", std::to_string(stats.recursiveNodes));
+            debugger.addInfo("local_series_rejected_private_support", std::to_string(stats.rejectedPrivateSupport));
+            debugger.addInfo("local_series_rejected_owner_uses", std::to_string(stats.rejectedOwnerUses));
+            debugger.addInfo("local_series_rejected_work_budget", std::to_string(stats.rejectedWorkBudget));
+            debugger.addInfo("local_series_body_occurrences_analyzed", std::to_string(stats.bodyOccurrencesAnalyzed));
+            debugger.addInfo("local_series_analysis_ms", std::to_string(stats.analysisMs));
+            debugger.addInfo("local_series_mutation_ms", std::to_string(stats.mutationMs));
+            debugger.addInfo("local_series_total_ms", std::to_string(stats.totalMs));
+            debugger.addInfo("local_series_after_nodes", std::to_string(shared.nodesAfterSeries));
+            debugger.addInfo("local_series_after_edges", std::to_string(shared.edgesAfterSeries));
+            debugger.addInfo("local_series_after_input_associations", std::to_string(shared.inputAssociationsAfterSeries));
+            std::cout << "[local-series-contraction] contractions=" << stats.contractions << '\n';
+        }
+        if (opt.isTerminalQueryFactorsEnabled()) {
+            terminalQueries = std::move(privateFactors.terminal);
+            eventAliases.promotedOutputRoots.insert(eventAliases.promotedOutputRoots.end(),
+                    terminalQueries.promotedOutputRoots.begin(), terminalQueries.promotedOutputRoots.end());
+            const auto& stats = terminalQueries.stats;
+            debugger.addInfo("terminal_query_candidates", std::to_string(stats.candidateQueries));
+            debugger.addInfo("terminal_query_factored_queries", std::to_string(stats.factoredQueries));
+            debugger.addInfo("terminal_query_factored_output_queries", std::to_string(stats.factoredOutputQueries));
+            debugger.addInfo("terminal_query_hidden_chain_steps", std::to_string(stats.hiddenChainSteps));
+            debugger.addInfo("terminal_query_removed_nodes", std::to_string(stats.removedNodes));
+            debugger.addInfo("terminal_query_removed_edges", std::to_string(stats.removedEdges));
+            debugger.addInfo("terminal_query_promoted_roots", std::to_string(stats.promotedRoots));
+            debugger.addInfo("terminal_query_skipped_support_overlap", std::to_string(stats.skippedSupportOverlap));
+            debugger.addInfo("terminal_query_skipped_missing_support", std::to_string(stats.skippedMissingSupport));
+            debugger.addInfo("terminal_query_skipped_recursive", std::to_string(stats.skippedRecursive));
+            debugger.addInfo("terminal_query_skipped_owner_history", std::to_string(stats.skippedOwnerHistory));
+            debugger.addInfo("terminal_query_analysis_ms", std::to_string(stats.analysisMs));
+            debugger.addInfo("terminal_query_mutation_ms", std::to_string(stats.mutationMs));
+            debugger.addInfo("terminal_query_total_ms", std::to_string(stats.totalMs));
+            debugger.addInfo("terminal_query_after_nodes", std::to_string(shared.nodesAfter));
+            debugger.addInfo("terminal_query_after_edges", std::to_string(shared.edgesAfter));
+            debugger.addInfo("terminal_query_after_input_associations", std::to_string(shared.inputAssociationsAfter));
+            std::cout << "[terminal-query-factors] factored_queries=" << stats.factoredQueries << '\n';
+        }
         debugger.endStage();
     }
     if (opt.isRewriteEnabled() && !opt.isDerivationOnly()) {

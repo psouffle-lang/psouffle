@@ -65,8 +65,13 @@ GRAPH_SHAPE_KEYS = ("nodes", "edges", "input_associations", "fact_nodes", "deriv
                     "prob_fact_nodes", "prob_rule_edges", "random_variables", "disjunction_nodes",
                     "max_in_degree", "max_out_degree", "max_hyperedge_inputs")
 PRIVATE_FACTOR_METRICS = {
-    "private_factor_preparation": ("private_factor_", (
-        "retired_owner_nodes", "retired_owner_edges", "owner_commit_ms", "stage_time_seconds")),
+    "private_factor_rewrite": ("private_factor_", (
+        "collection_passes", "scc_passes", "support_passes", "retirement_batches",
+        "virtual_compound_edges", "materialized_compound_edges", "terminal_virtual_sources",
+        "retired_active_nodes", "retired_active_edges", "zero_hit_owner_commits",
+        "preparation_ms", "series_plan_ms", "terminal_plan_ms",
+        "mutation_ms", "total_ms", "owner_commit_ms", "retired_owner_nodes",
+        "retired_owner_edges", "stage_time_seconds")),
     "local_series": ("local_series_", (
         "candidates", "contractions", "removed_nodes", "removed_edges", "added_edges",
         "duplicate_inputs_removed", "rule_variables_removed", "initial_input_associations",
@@ -82,9 +87,10 @@ PRIVATE_FACTOR_METRICS = {
         *(f"after_{key}" for key in GRAPH_SHAPE_KEYS))),
 }
 PRIVATE_FACTOR_STAGES = {
-    "PRIVATE_FACTOR_PREPARATION": "private_factor_preparation",
+    "PRIVATE_FACTOR_PREPARATION": "private_factor_rewrite",
     "LOCAL_SERIES_CONTRACTION": "local_series",
     "TERMINAL_QUERY_FACTORS": "terminal_queries",
+    "PRIVATE_FACTOR_REWRITE": "private_factor_rewrite",
 }
 VARIANTS = {
     "baseline": [], "siso": ["--rewrite"],
@@ -508,7 +514,7 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                                            "siso_then_pass": "after-siso"},
                "remaining_opportunities_scope": "Core deletion fixpoint at the selected placement; a later SISO rewrite may expose more opportunities.",
                "additional_siso_rewrites_delta_semantics": "Signed difference in completed SISO region counts, not identities of newly triggered regions.",
-               "local_series_edge_count_semantics": "removed_edges counts gross retired edges; added_edges counts new compound edges. Net edge reduction is removed_edges minus added_edges.",
+               "local_series_edge_count_semantics": "removed_edges counts retired original edges; added_edges counts virtual compound survivors of the series stage. Net series-stage reduction is removed_edges minus added_edges. With fused terminal factoring, private_factor_rewrite.materialized_compound_edges counts only compounds surviving both stages.",
                "terminal_query_count_semantics": "factored_queries counts output calculation records, including hidden_chain_steps; factored_output_queries counts physical pre-pass output representatives, including alias-promoted roots, not printed query names.",
                "final_graph_shape_semantics": "Prefer terminal_query_after counters, then local_series_after counters, then the existing AND/SISO/alias/pruning counters.",
                "bdd_live_nodes_semantics": {"FC_WMC_HYBRID": "Sum after each slow component's formula compilation.",

@@ -4,7 +4,8 @@
 opt-in standalone full inference passes. Compiler arguments bake the same
 runtime defaults. Both reject online execution and `--derv-only`; neither
 enables SISO or aliases. They run after enabled alias, AND-input and SISO passes,
-before component solving. When both are enabled, series contraction runs first.
+before component solving. When both are enabled, series contraction plans first
+and terminal factoring consumes its updated virtual graph in the same workspace.
 An explicitly requested lifted fastpath keeps the concrete graph for these passes.
 
 ## Private series contraction
@@ -69,19 +70,32 @@ replace events inside a sum or a joint formula.
 
 ## Integration, diagnostics and validation
 
-Before either pass, `PRIVATE_FACTOR_PREPARATION` commits the current active view
-to the graph owner once. This retires historical SISO definitions, prevents later
-owner pruning from reviving them, and makes the complete active support proof
-usable. Its cost is included in native wall time and recorded separately.
+`PRIVATE_FACTOR_REWRITE` collects the complete active graph once, counting primitive
+support ownership during that collection. Both optimizations share the source/body
+index, signed consumer index, SCC result and private-factor certificates. SCC
+analysis borrows the same consumer CSR rather than rebuilding its forward arcs.
+Series substitution updates local sources and degrees; terminal factoring then
+uses that virtual graph without another collection or privacy/SCC analysis.
+Only surviving compound edges are materialized. After any successful rewrite,
+one owner/view commit retires the planned objects and historical SISO definitions,
+filters maps and adjacency once, and invalidates caches once. A zero-hit run leaves
+the owner unchanged. The standalone helper APIs retain conservative owner checks;
+only the full pipeline certifies its complete post-SISO active view.
 
-`LOCAL_SERIES_CONTRACTION` records candidates, contractions, removed nodes and
+The single stage records candidates, contractions, removed nodes and
 edges, added edges, removed rule variables, input associations, recursive nodes,
-privacy/owner rejections and analysis/mutation/total time. Removed edges are gross
-retired originals; net reduction subtracts added compound edges.
-`TERMINAL_QUERY_FACTORS` records factored physical output representatives, hidden
+privacy/owner rejections and plan time. Series removed edges count retired
+originals; added edges count virtual compounds surviving the series stage.
+Their difference is the series-stage net edge reduction. Terminal factoring may
+consume those virtual compounds before materialization; the shared counters
+separately report final materialized compounds and terminal virtual sources.
+The terminal counters record factored physical output representatives, hidden
 chain steps, removed nodes/edges, promoted roots, rejection reasons and timings.
 Physical output representatives can supply several original alias names.
-After-stage summaries describe the final residual graph. With rewrite enabled,
+Phase node, edge and input counts come from the workspace, without full graph
+summary scans. Shared preparation, plan and final commit timings are recorded
+once; collection/SCC/support counters and retirement batches expose repeated work.
+With rewrite enabled,
 `rewrite_final.dot/json` includes these passes. The existing `rewrite_final_*`
 counters describe SISO's residual view; use `local_series_after_*` or
 `terminal_query_after_*` counters for the graph after the new passes.

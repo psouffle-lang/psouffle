@@ -28,6 +28,7 @@
 #include "souffle/utility/json11.h"
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 
 // Forward declarations
@@ -260,6 +261,7 @@ using EdgeKey = std::tuple<
 class Hyperedge {
 public:
     friend class DerivationGraph;
+    friend class WorkingDerivationGraph;
 
     const std::vector<NodePtr>& getInputs() const { return inputs; }
 
@@ -2322,10 +2324,28 @@ public:
         size_t removedOwnerNodes = 0;
         size_t removedOwnerEdges = 0;
     };
+    struct RewriteEdgeSpec {
+        std::vector<NodePtr> inputs;
+        NodePtr output;
+        double probability = 1.0;
+        std::vector<bool> bodyNegations;
+        std::vector<SupportToken> supportTokens;
+    };
+    struct RewriteViewCommitResult {
+        RewriteRetirementStats stats;
+        std::vector<EdgePtr> insertedEdges;
+    };
     // Full-only rewrites may retire definitions and intermediate/output nodes.
     // Every owned edge incident to a retired node must be retired in this batch.
     RewriteRetirementStats retireRewriteObjects(WorkingSubgraphView& view,
             const std::vector<NodePtr>& retiredNodes, const std::vector<EdgePtr>& retiredEdges);
+    // Consume a plan over the original active view in one physical commit.
+    // Insertions are staged without changing ownership, adjacency or IDs.
+    // The complete-view certificate permits retiring owner-only SISO history;
+    // ordinary callers preserve that history and require full owned closure.
+    RewriteViewCommitResult commitRewriteView(WorkingSubgraphView& view,
+            const std::vector<NodePtr>& retiredActiveNodes, const std::vector<EdgePtr>& retiredActiveEdges,
+            const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs, bool completeActiveDerivations = false);
     // Commit a complete residual view after SISO. Historical owner definitions
     // must not revive during later owner pruning or appear as factor consumers.
     RewriteRetirementStats retainRewriteView(WorkingSubgraphView& view);
@@ -2619,30 +2639,131 @@ inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::re
 
 inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::retainRewriteView(
         WorkingSubgraphView& view) {
-    const auto& activeNodes = view.getNodes();
-    const auto& activeEdges = view.getEdges();
+    return commitRewriteView(view, {}, {}, {}, true).stats;
+}
+
+inline WorkingDerivationGraph::RewriteViewCommitResult WorkingDerivationGraph::commitRewriteView(
+        WorkingSubgraphView& view, const std::vector<NodePtr>& retiredActiveNodes,
+        const std::vector<EdgePtr>& retiredActiveEdges, const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs,
+        bool completeActiveDerivations) {
+    const auto& originalNodes = view.getNodes();
+    const auto& originalEdges = view.getEdges();
     if (nodes.count(NodePtr{}) || edges.count(EdgePtr{})) {
         throw std::logic_error("Residual rewrite owner has a null object");
     }
-    for (const auto& node : activeNodes) {
+    for (const auto& node : originalNodes) {
         if (!node || !nodes.count(node)) throw std::logic_error("Residual rewrite view has an unowned node");
     }
-    for (const auto& edge : activeEdges) {
-        if (!edge || !edges.count(edge) || !activeNodes.count(edge->getOutput())) {
-            throw std::logic_error("Residual rewrite view has an unowned edge or head");
+    // All allocation and plan validation precede the first adjacency change.
+    // Erasing from these local sets also detects duplicate retirement objects.
+    std::unordered_set<NodePtr> finalNodes;
+    finalNodes.reserve(originalNodes.size());
+    finalNodes.insert(originalNodes.begin(), originalNodes.end());
+    for (const auto& node : retiredActiveNodes) {
+        if (!node || node->hasEvidence() || finalNodes.erase(node) != 1) {
+            throw std::logic_error("Invalid or duplicate active rewrite node retirement");
+        }
+    }
+    std::unordered_set<EdgePtr> finalEdges;
+    finalEdges.reserve(originalEdges.size() + insertedEdgeSpecs.size());
+    finalEdges.insert(originalEdges.begin(), originalEdges.end());
+    for (const auto& edge : retiredActiveEdges) {
+        if (!edge || finalEdges.erase(edge) != 1) {
+            throw std::logic_error("Invalid or duplicate active rewrite edge retirement");
+        }
+    }
+    // Validate original rows once. A surviving row must reference final nodes;
+    // a retired row only needs the original complete view. New rows are checked
+    // below as specs, before allocation, and need no second endpoint scan.
+    for (const auto& edge : originalEdges) {
+        if (!edge || !edges.count(edge) || edge->getInputs().size() != edge->getBodyNegations().size()) {
+            throw std::logic_error("Residual rewrite view has an unowned edge or invalid body");
+        }
+        const auto& allowedNodes = finalEdges.count(edge) ? finalNodes : originalNodes;
+        if (!allowedNodes.count(edge->getOutput())) {
+            throw std::logic_error("Residual rewrite edge has an absent head");
         }
         for (const auto& input : edge->getInputs()) {
-            if (!activeNodes.count(input)) throw std::logic_error("Residual rewrite view has an absent input");
+            if (!allowedNodes.count(input)) throw std::logic_error("Residual rewrite edge has an absent input");
+        }
+    }
+    if (insertedEdgeSpecs.size() > std::numeric_limits<size_t>::max() - nextEdgeId) {
+        throw std::logic_error("Full rewrite exhausted edge IDs");
+    }
+    for (const auto& spec : insertedEdgeSpecs) {
+        if (!finalNodes.count(spec.output) || spec.inputs.size() != spec.bodyNegations.size() ||
+                !std::isfinite(spec.probability) || spec.probability < 0.0 || spec.probability > 1.0) {
+            throw std::logic_error("Invalid planned rewrite edge");
+        }
+        for (const auto& input : spec.inputs) {
+            if (!finalNodes.count(input)) throw std::logic_error("Planned rewrite edge has an absent input");
+        }
+    }
+    RewriteViewCommitResult result;
+    result.insertedEdges.reserve(insertedEdgeSpecs.size());
+    auto stagedNextEdgeId = nextEdgeId;
+    for (const auto& spec : insertedEdgeSpecs) {
+        auto edge = std::shared_ptr<Hyperedge>(new Hyperedge(spec.inputs, spec.output, stagedNextEdgeId++,
+                nullptr, spec.bodyNegations, naiveRuleApplication));
+        edge->setProbability(spec.probability);
+        edge->setProbabilisticSupportTokens(spec.supportTokens);
+        finalEdges.insert(edge);
+        result.insertedEdges.push_back(std::move(edge));
+    }
+    for (const auto& node : retiredActiveNodes) {
+        const auto closed = [&](const std::vector<EdgePtr>& incident) {
+            for (const auto& edge : incident) {
+                if (!edges.count(edge)) continue;
+                if (originalEdges.count(edge)) {
+                    if (finalEdges.count(edge)) return false;
+                } else if (!completeActiveDerivations) return false;
+            }
+            return true;
+        };
+        if (!closed(node->getIncomingEdges()) || !closed(node->getOutgoingEdges())) {
+            throw std::logic_error("Retired rewrite node still has an uncertified owned incident");
         }
     }
     for (const auto& node : view.getEvidenceNodes()) {
-        if (!node || !activeNodes.count(node) || !node->hasEvidence()) {
+        if (!node || !finalNodes.count(node) || !node->hasEvidence()) {
             throw std::logic_error("Residual rewrite view has an invalid evidence root");
+        }
+    }
+
+    // Compact owner membership once. In the uncertified case, unrelated owner
+    // history remains owned and cannot silently disappear with a partial view.
+    std::unordered_set<NodePtr> retainedNodes;
+    retainedNodes.reserve(completeActiveDerivations ? finalNodes.size() : nodes.size() - retiredActiveNodes.size());
+    std::unordered_set<EdgePtr> retainedEdges;
+    retainedEdges.reserve(completeActiveDerivations ? finalEdges.size() :
+            edges.size() - retiredActiveEdges.size() + result.insertedEdges.size());
+    if (completeActiveDerivations) {
+        retainedNodes.insert(finalNodes.begin(), finalNodes.end());
+        retainedEdges.insert(finalEdges.begin(), finalEdges.end());
+    } else {
+        for (const auto& node : nodes) {
+            if (!originalNodes.count(node) || finalNodes.count(node)) retainedNodes.insert(node);
+        }
+        for (const auto& edge : edges) {
+            if (!originalEdges.count(edge) || finalEdges.count(edge)) retainedEdges.insert(edge);
+        }
+        retainedEdges.insert(result.insertedEdges.begin(), result.insertedEdges.end());
+        // Historical adjacency may be stale. Check actual edge endpoints as
+        // well as the retiring nodes' raw incident lists before preserving it.
+        for (const auto& edge : retainedEdges) {
+            if (!retainedNodes.count(edge->getOutput())) {
+                throw std::logic_error("Retained owner edge has a retired head");
+            }
+            for (const auto& input : edge->getInputs()) {
+                if (!retainedNodes.count(input)) {
+                    throw std::logic_error("Retained owner edge has a retired input");
+                }
+            }
         }
     }
     for (const auto& [tuple, value] : evidences) {
         const auto node = findNode(tuple);
-        if (!node || !activeNodes.count(node) || !node->hasEvidence() || node->getEvidenceValue() != value) {
+        if (!node || !retainedNodes.count(node) || !node->hasEvidence() || node->getEvidenceValue() != value) {
             throw std::logic_error("Residual rewrite view loses attached evidence");
         }
     }
@@ -2650,70 +2771,96 @@ inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::re
     // avoid copying ownership or building large retirement membership tables;
     // the old owner keeps these nodes alive through the complete commit.
     std::vector<Node*> retiredNodes;
-    retiredNodes.reserve(nodes.size() - activeNodes.size());
+    retiredNodes.reserve(nodes.size() - retainedNodes.size());
     for (const auto& node : nodes) {
-        if (!activeNodes.count(node)) {
+        if (!retainedNodes.count(node)) {
             if (node->hasEvidence()) throw std::logic_error("Residual rewrite view retires an observed node");
             retiredNodes.push_back(node.get());
         }
     }
 
-    // Prepare surviving owner indexes before mutation. Alias keys name their
-    // active targets, so an alias can survive even when its original node does
-    // not. Rebuilding small maps avoids erasing/rebalancing every retired entry.
-    std::unordered_set<NodePtr> retainedNodes;
-    retainedNodes.reserve(activeNodes.size());
-    retainedNodes.insert(activeNodes.begin(), activeNodes.end());
-    std::unordered_set<EdgePtr> retainedEdges;
-    retainedEdges.reserve(activeEdges.size());
-    retainedEdges.insert(activeEdges.begin(), activeEdges.end());
-    std::map<UntypedTuple, NodePtr> retainedTuples;
-    for (const auto& [tuple, node] : tupleToNodeMap) {
-        if (activeNodes.count(node)) retainedTuples.emplace_hint(retainedTuples.end(), tuple, node);
-    }
-    std::unordered_set<UntypedTuple> retainedExistingTuples;
-    retainedExistingTuples.reserve(std::min(existingTuples.size(), retainedTuples.size()));
-    for (const auto& [tuple, node] : retainedTuples) {
-        if (existingTuples.count(tuple)) retainedExistingTuples.insert(tuple);
-    }
-    std::unordered_map<size_t, NodePtr> retainedRepresentatives;
-    retainedRepresentatives.reserve(std::min(nodeRepMap.size(), retainedTuples.size()));
-    for (const auto& [id, node] : nodeRepMap) {
-        if (activeNodes.count(node)) retainedRepresentatives.emplace(id, node);
-    }
-    std::map<std::string, EdgePtr> retainedEdgeKeys;
-    for (const auto& [key, edge] : edgeKeyToEdgeMap) {
-        if (activeEdges.count(edge)) retainedEdgeKeys.emplace_hint(retainedEdgeKeys.end(), key, edge);
+    // Stage adjacency only for endpoints receiving new edges. Each raw vector
+    // is filtered once, and all vector/hash allocation finishes before commit.
+    // Unaffected endpoints can be filtered in place without allocating.
+    struct StagedAdjacency {
+        std::vector<EdgePtr> incoming, outgoing;
+    };
+    std::unordered_map<NodePtr, StagedAdjacency> stagedAdjacency;
+    stagedAdjacency.reserve(std::min(retainedNodes.size(), result.insertedEdges.size()));
+    auto stageNode = [&](const NodePtr& node) -> StagedAdjacency& {
+        auto [it, inserted] = stagedAdjacency.try_emplace(node);
+        if (inserted) {
+            for (const auto& edge : node->getIncomingEdges()) {
+                if (retainedEdges.count(edge)) it->second.incoming.push_back(edge);
+            }
+            for (const auto& edge : node->getOutgoingEdges()) {
+                if (retainedEdges.count(edge)) it->second.outgoing.push_back(edge);
+            }
+        }
+        return it->second;
+    };
+    for (const auto& edge : result.insertedEdges) {
+        stageNode(edge->getOutput()).incoming.push_back(edge);
+        for (const auto& input : edge->getInputs()) stageNode(input).outgoing.push_back(edge);
     }
 
-    RewriteRetirementStats stats;
+    auto& stats = result.stats;
+    stats.removedNodes = retiredActiveNodes.size();
+    stats.removedEdges = retiredActiveEdges.size();
     stats.removedOwnerNodes = retiredNodes.size();
-    stats.removedOwnerEdges = edges.size() - activeEdges.size();
-    for (const auto& node : activeNodes) {
+    stats.removedOwnerEdges = edges.size() + result.insertedEdges.size() - retainedEdges.size();
+    for (const auto& node : retainedNodes) {
+        const auto staged = stagedAdjacency.find(node);
+        if (staged != stagedAdjacency.end()) {
+            node->getIncomingEdges().swap(staged->second.incoming);
+            node->getOutgoingEdges().swap(staged->second.outgoing);
+            continue;
+        }
         auto& incoming = node->getIncomingEdges();
         incoming.erase(std::remove_if(incoming.begin(), incoming.end(),
-                [&](const EdgePtr& edge) { return !activeEdges.count(edge); }), incoming.end());
+                [&](const EdgePtr& edge) { return !retainedEdges.count(edge); }), incoming.end());
         auto& outgoing = node->getOutgoingEdges();
         outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
-                [&](const EdgePtr& edge) { return !activeEdges.count(edge); }), outgoing.end());
+                [&](const EdgePtr& edge) { return !retainedEdges.count(edge); }), outgoing.end());
     }
     for (const auto node : retiredNodes) {
         node->getIncomingEdges().clear();
         node->getOutgoingEdges().clear();
         node->pruned = true;
     }
-    for (const auto& edge : edges) if (!activeEdges.count(edge)) edge->pruned = true;
+    for (const auto& edge : edges) if (!retainedEdges.count(edge)) edge->pruned = true;
+    // Keep surviving alias keys in their original containers. Only bindings
+    // whose target retired are erased; no retained tuple/key is copied.
+    for (auto it = tupleToNodeMap.begin(); it != tupleToNodeMap.end();) {
+        if (!retainedNodes.count(it->second)) {
+            existingTuples.erase(it->first);
+            it = tupleToNodeMap.erase(it);
+        } else ++it;
+    }
+    if (completeActiveDerivations) {
+        for (auto it = existingTuples.begin(); it != existingTuples.end();) {
+            if (!tupleToNodeMap.count(*it)) it = existingTuples.erase(it);
+            else ++it;
+        }
+    }
+    for (auto it = nodeRepMap.begin(); it != nodeRepMap.end();) {
+        if (!retainedNodes.count(it->second)) it = nodeRepMap.erase(it);
+        else ++it;
+    }
+    for (auto it = edgeKeyToEdgeMap.begin(); it != edgeKeyToEdgeMap.end();) {
+        if (!retainedEdges.count(it->second)) it = edgeKeyToEdgeMap.erase(it);
+        else ++it;
+    }
     nodes.swap(retainedNodes);
     edges.swap(retainedEdges);
-    tupleToNodeMap.swap(retainedTuples);
-    existingTuples.swap(retainedExistingTuples);
-    nodeRepMap.swap(retainedRepresentatives);
-    edgeKeyToEdgeMap.swap(retainedEdgeKeys);
+    view.mutableNodes().swap(finalNodes);
+    view.mutableEdges().swap(finalEdges);
+    nextEdgeId = stagedNextEdgeId;
     // Attached evidence was validated against surviving bindings above. Keep
     // its original names/values, including names bound through event aliases.
     view.invalidateCaches();
     invalidateCaches();
-    return stats;
+    return result;
 }
 
 WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Relation*>& outputRelations,

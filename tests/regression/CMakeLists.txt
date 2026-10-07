@@ -124,7 +124,7 @@ add_test(NAME regression.deterministic_event_aliases
 set_tests_properties(regression.deterministic_event_aliases PROPERTIES
     LABELS "regression;full;exact" TIMEOUT 60)
 
-foreach(private_factor_pass local_series_contraction terminal_query_factors)
+foreach(private_factor_pass local_series_contraction terminal_query_factors private_factor_rewrite)
     add_executable(regression_${private_factor_pass} ${private_factor_pass}.cpp)
     target_link_libraries(regression_${private_factor_pass} PRIVATE compiled)
     add_test(NAME regression.${private_factor_pass}
@@ -150,5 +150,5 @@ if (NOT TARGET check-regression)
     add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup
         regression_compiler_acyclicity regression_and_input_fast regression_full_event_order
         regression_deterministic_event_aliases regression_local_series_contraction
-        regression_terminal_query_factors)
+        regression_terminal_query_factors regression_private_factor_rewrite)
 endif()

@@ -476,29 +476,44 @@ struct AndInputRedundancySnapshot {
         return true;
     }
 
-    void excludeRecursiveNodes() {
+    void excludeRecursiveNodes(const std::vector<std::size_t>* preparedNextOffsets = nullptr,
+            const std::vector<std::size_t>* preparedNextEdges = nullptr) {
         // Forward CSR over ALL signed body-to-head arcs. The existing incoming
         // source/body index already represents the reverse adjacency exactly.
         // Reuse DFS storage across roots instead of allocating per-node vectors.
-        std::vector<std::size_t> nextOffsets(nodes.size() + 1, 0);
-        if (trackCleanup) std::copy(outgoingOccurrences.begin(), outgoingOccurrences.end(), nextOffsets.begin() + 1);
+        assert((preparedNextOffsets == nullptr) == (preparedNextEdges == nullptr));
+        std::vector<std::size_t> ownedNextOffsets;
+        if (!preparedNextOffsets) {
+            ownedNextOffsets.resize(nodes.size() + 1, 0);
+            if (trackCleanup) std::copy(outgoingOccurrences.begin(), outgoingOccurrences.end(),
+                    ownedNextOffsets.begin() + 1);
+        }
         std::vector<std::size_t> incomingOccurrences(nodes.size(), 0);
         std::vector<unsigned char> selfLoop(nodes.size(), 0);
         for (const auto& edge : edges) {
             incomingOccurrences[edge.head] += edge.body.end - edge.body.begin;
             for (auto i = edge.body.begin; i < edge.body.end; ++i) {
-                if (!trackCleanup) ++nextOffsets[bodies[i] + 1];
+                if (!preparedNextOffsets && !trackCleanup) ++ownedNextOffsets[bodies[i] + 1];
                 if (bodies[i] == edge.head) selfLoop[edge.head] = 1;
             }
         }
-        for (std::size_t i = 1; i < nextOffsets.size(); ++i) {
-            nextOffsets[i] += nextOffsets[i - 1];
+        std::vector<std::size_t> ownedNext;
+        if (!preparedNextOffsets) {
+            for (std::size_t i = 1; i < ownedNextOffsets.size(); ++i) {
+                ownedNextOffsets[i] += ownedNextOffsets[i - 1];
+            }
+            ownedNext.resize(bodies.size());
+            auto cursor = ownedNextOffsets;
+            for (const auto& edge : edges) {
+                for (auto i = edge.body.begin; i < edge.body.end; ++i) {
+                    ownedNext[cursor[bodies[i]]++] = edge.head;
+                }
+            }
         }
-        std::vector<std::size_t> next(bodies.size());
-        auto cursor = nextOffsets;
-        for (const auto& edge : edges) {
-            for (auto i = edge.body.begin; i < edge.body.end; ++i) next[cursor[bodies[i]]++] = edge.head;
-        }
+        const auto& nextOffsets = preparedNextOffsets ? *preparedNextOffsets : ownedNextOffsets;
+        const auto nextHead = [&](std::size_t occurrence) {
+            return preparedNextEdges ? edges[(*preparedNextEdges)[occurrence]].head : ownedNext[occurrence];
+        };
         std::vector<unsigned char> visited(nodes.size(), 0);
         std::vector<std::size_t> order, stack, component;
         std::vector<std::pair<std::size_t, std::size_t>> dfs;
@@ -516,7 +531,7 @@ struct AndInputRedundancySnapshot {
         for (std::size_t current = 0; current < order.size(); ++current) {
             const auto node = order[current];
             for (auto i = nextOffsets[node]; i < nextOffsets[node + 1]; ++i) {
-                const auto child = next[i];
+                const auto child = nextHead(i);
                 if (--incomingOccurrences[child] == 0) {
                     visited[child] = 1;
                     order.push_back(child);
@@ -535,7 +550,7 @@ struct AndInputRedundancySnapshot {
                     order.push_back(frame.first);
                     dfs.pop_back();
                 } else {
-                    const auto child = next[frame.second++];
+                    const auto child = nextHead(frame.second++);
                     if (!visited[child]) {
                         visited[child] = 1;
                         dfs.emplace_back(child, nextOffsets[child]);

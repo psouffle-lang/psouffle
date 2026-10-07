@@ -30,8 +30,11 @@ inference. Online and derivation-only execution reject this option. See
 after enabled SISO and AND passes. The first substitutes a private intermediate
 definition into its sole consumer, retaining all correlated external inputs.
 The second defers terminal unary marginal queries until conditional parent
-probabilities are available. A shared preparation step retires inactive owner
-history; global primitive support ownership proves absorbed factors private.
+probabilities are available. Both share one active graph collection, signed source
+and consumer indexes, SCC analysis and global primitive support ownership.
+Terminal factoring consumes the virtual series result before edge materialization.
+A successful rewrite commits the owner and active view once, including inactive
+history retirement; zero hits leave the owner unchanged.
 Original output names survive through explicit records. Online and graph-only
 execution reject both flags. See [private-factor semantics](LOCAL_PRIVATE_FACTORS.md).
 

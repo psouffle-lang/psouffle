@@ -59,23 +59,27 @@ def check_expected(values, observed):
 def check_passes(output, flags, *, require_hits=False):
     info, order = stages(output)
     if SERIES not in flags and TERMINAL not in flags:
+        assert 'PRIVATE_FACTOR_REWRITE' not in order, order
         assert 'PRIVATE_FACTOR_PREPARATION' not in order, order
         assert 'LOCAL_SERIES_CONTRACTION' not in order, order
         assert 'TERMINAL_QUERY_FACTORS' not in order, order
         return
-    preparation = order.index('PRIVATE_FACTOR_PREPARATION')
+    assert order.count('PRIVATE_FACTOR_REWRITE') == 1, order
+    assert not {'PRIVATE_FACTOR_PREPARATION', 'LOCAL_SERIES_CONTRACTION',
+                'TERMINAL_QUERY_FACTORS'}.intersection(order), order
+    preparation = order.index('PRIVATE_FACTOR_REWRITE')
     assert preparation > order.index('PRUNING'), order
+    stage = info['PRIVATE_FACTOR_REWRITE']
+    for key in ('collection_passes', 'scc_passes', 'support_passes'):
+        assert int(stage['private_factor_' + key]) == 1, stage
+    assert int(stage['private_factor_retirement_batches']) <= 1, stage
     if SERIES in flags:
-        stage = info['LOCAL_SERIES_CONTRACTION']
-        assert order.index('LOCAL_SERIES_CONTRACTION') > preparation, order
         for key in ('local_series_contractions', 'local_series_removed_nodes',
                     'local_series_removed_edges', 'local_series_total_ms'):
             assert float(stage[key]) >= 0, stage
         if require_hits:
             assert int(stage['local_series_contractions']) >= 1, stage
     if TERMINAL in flags:
-        stage = info['TERMINAL_QUERY_FACTORS']
-        assert order.index('TERMINAL_QUERY_FACTORS') > preparation, order
         for key in ('terminal_query_factored_queries', 'terminal_query_factored_output_queries',
                     'terminal_query_hidden_chain_steps', 'terminal_query_removed_nodes',
                     'terminal_query_removed_edges', 'terminal_query_total_ms'):
@@ -84,8 +88,9 @@ def check_passes(output, flags, *, require_hits=False):
             stage['terminal_query_hidden_chain_steps']) == int(stage['terminal_query_factored_queries']), stage
         if require_hits:
             assert int(stage['terminal_query_factored_output_queries']) >= 1, stage
-    if SERIES in flags and TERMINAL in flags:
-        assert order.index('LOCAL_SERIES_CONTRACTION') < order.index('TERMINAL_QUERY_FACTORS'), order
+    hits = int(stage.get('local_series_contractions', 0)) + int(
+        stage.get('terminal_query_factored_queries', 0))
+    assert int(stage['private_factor_retirement_batches']) == int(hits > 0), stage
     for stage in ('FORWARD_COMPILATION', 'IO_DUMP'):
         if stage in order:
             assert order.index(stage) > preparation, order
