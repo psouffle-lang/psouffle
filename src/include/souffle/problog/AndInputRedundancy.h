@@ -245,7 +245,7 @@ struct AndInputRedundancySnapshot {
         // Bodies only shrink, so mutation cannot add a definition or target to
         // this pool: unsupported edges are never edited and sources stay fixed.
         definition.assign(nodes.size(), none);
-        bool anyDefinition = false;
+        std::size_t structuralDefinitions = 0;
         for (std::size_t node = 0; node < nodes.size(); ++node) {
             const auto incoming = incomingOffsets[node + 1] - incomingOffsets[node];
             maxInDegree = std::max(maxInDegree, incoming);
@@ -259,7 +259,7 @@ struct AndInputRedundancySnapshot {
             if (edge.safe && edge.body.begin != edge.body.end && edge.edge->isDeterministic() &&
                     edge.edge->getProbabilisticSupportTokens().empty()) {
                 definition[node] = edgeId;
-                anyDefinition = true;
+                ++structuralDefinitions;
             }
         }
         auto hasCandidate = [&](const EdgeInfo& edge) {
@@ -268,7 +268,7 @@ struct AndInputRedundancySnapshot {
             }
             return false;
         };
-        if (anyDefinition) {
+        if (structuralDefinitions != 0) {
             for (std::size_t i = 0; i < edges.size(); ++i) {
                 const auto& edge = edges[i];
                 if (edge.safe && edge.body.end - edge.body.begin >= 2 && hasCandidate(edge)) targets.push_back(i);
@@ -278,12 +278,16 @@ struct AndInputRedundancySnapshot {
         // still compute the complete recursive-node statistic.
         if (targets.empty() && !collectCycleStats) return;
 
-        if (!compilerCertifiedFreshDag) excludeRecursiveNodes();
-        for (std::size_t node = 0; node < nodes.size(); ++node) {
-            if (definition[node] != none && !edges[definition[node]].safe) definition[node] = none;
-            if (definition[node] != none) ++baseStats.eligibleDefinitions;
-        }
-        if (!compilerCertifiedFreshDag) {
+        if (compilerCertifiedFreshDag) {
+            // No cycle check changes eligibility in an attested fresh DAG.
+            // Reuse the count from the existing definition/degree traversal.
+            baseStats.eligibleDefinitions = structuralDefinitions;
+        } else {
+            excludeRecursiveNodes();
+            for (std::size_t node = 0; node < nodes.size(); ++node) {
+                if (definition[node] != none && !edges[definition[node]].safe) definition[node] = none;
+                if (definition[node] != none) ++baseStats.eligibleDefinitions;
+            }
             targets.erase(std::remove_if(targets.begin(), targets.end(),
                                   [&](auto edge) { return !edges[edge].safe || !hasCandidate(edges[edge]); }),
                     targets.end());
@@ -294,7 +298,6 @@ struct AndInputRedundancySnapshot {
         });
         if (targets.empty()) return;
         mustSlots.assign(nodes.size(), none);
-        bodyMarks.assign(nodes.size(), 0);
         coverageMarks.assign(nodes.size(), 0);
     }
 
@@ -403,13 +406,14 @@ struct AndInputRedundancySnapshot {
 
     void initialize(const DerivationGraphViewInterface& view, bool completeDerivations,
             bool collectCycleStats, bool collectCleanup = false) {
-        std::size_t inputCount = 0;
-        for (const auto& edge : view.getEdges()) {
-            if (edge) inputCount += edge->getInputs().size();
-        }
-        begin(view.getNodes().size(), view.getEdges().size(), completeDerivations, collectCleanup, 0, inputCount);
+        // addEdge() records exact body sizes; use the same cheap capacity
+        // estimate as prepared summaries instead of counting complete edges twice.
+        begin(view.getNodes().size(), view.getEdges().size(), completeDerivations,
+                collectCleanup, 0, view.getEdges().size());
         if (!completeDerivations) {
-            baseStats.inputAssociations = inputCount;
+            for (const auto& edge : view.getEdges()) {
+                if (edge) baseStats.inputAssociations += edge->getInputs().size();
+            }
             return;
         }
         for (const auto& node : view.getNodes()) addNode(node);
@@ -447,6 +451,9 @@ struct AndInputRedundancySnapshot {
                                            edges[shortest].body.end - edges[shortest].body.begin) shortest = source;
         }
         mustScratch.clear();
+        // Borrowed single-source bodies and rejected sources need no stamps.
+        // Allocate only when a complete multi-source intersection is needed.
+        if (bodyMarks.empty()) bodyMarks.assign(nodes.size(), 0);
         const auto firstEpoch = nextEpoch(bodyEpoch, bodyMarks);
         const auto first = edges[shortest].body;
         for (auto i = first.begin; i < first.end; ++i) {
@@ -491,6 +498,32 @@ struct AndInputRedundancySnapshot {
             }
             if (!duplicate) return false;
         }
+        if (collectProviders && providers.empty()) providers.resize(nodes.size());
+        auto coverInputs = [&](auto&& cover) {
+            for (auto i = edge.body.begin; i < edge.body.end; ++i) {
+                if (i == edge.body.begin + inputIndex) continue;
+                const auto other = bodies[i];
+                if (cover(other, other)) return true;
+                const auto must = mustFor(other);
+                for (auto j = must.range.begin; j < must.range.end; ++j) {
+                    if (cover((*must.values)[j], other)) return true;
+                }
+            }
+            return false;
+        };
+        if (premises.end - premises.begin <= 2) {
+            const auto first = bodies[premises.begin];
+            const auto second = bodies[premises.end - 1];
+            unsigned uncovered = first == second ? 1U : 3U;
+            auto cover = [&](std::size_t premise, std::size_t provider) {
+                const unsigned bit = premise == first ? 1U : (premise == second ? 2U : 0U);
+                if ((uncovered & bit) == 0) return false;
+                uncovered &= ~bit;
+                if (collectProviders) providers[premise] = provider;
+                return uncovered == 0;
+            };
+            return coverInputs(cover);
+        }
         // Obtain both stamps before marking needed premises: the second epoch
         // can wrap and clear the shared array.
         const auto neededTag = nextEpoch(coverageEpoch, coverageMarks);
@@ -503,23 +536,13 @@ struct AndInputRedundancySnapshot {
                 ++remaining;
             }
         }
-        if (collectProviders && providers.empty()) providers.resize(nodes.size());
         auto cover = [&](std::size_t premise, std::size_t provider) {
             if (coverageMarks[premise] != neededTag) return false;
             coverageMarks[premise] = coveredTag;
             if (collectProviders) providers[premise] = provider;
             return --remaining == 0;
         };
-        for (auto i = edge.body.begin; i < edge.body.end; ++i) {
-            if (i == edge.body.begin + inputIndex) continue;
-            const auto other = bodies[i];
-            if (cover(other, other)) return true;
-            const auto must = mustFor(other);
-            for (auto j = must.range.begin; j < must.range.end; ++j) {
-                if (cover((*must.values)[j], other)) return true;
-            }
-        }
-        return false;
+        return coverInputs(cover);
     }
 
     AndInputRedundancyReport detect(bool collectWitnesses, std::vector<Candidate>* compact = nullptr) {

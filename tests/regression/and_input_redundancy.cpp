@@ -641,7 +641,10 @@ void sharedProviderIntersectsEveryAlternative() {
 }
 
 void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
-    for (bool wrapEpoch : {false, true}) {
+    for (int mode = 0; mode < 4; ++mode) {
+        const bool singlePremise = mode == 1;
+        const bool wideDefinition = mode >= 2;
+        const bool wrapEpoch = mode == 3;
         Fixture f;
         const auto a = f.fact("A");
         const auto b = f.fact("B", 0.4);
@@ -650,7 +653,8 @@ void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
         const auto x = f.node("FirstProvider");
         const auto z = f.node("UnusedProvider");
         const auto y = f.node("Y");
-        const auto definition = f.edge({a, a, b, b}, c);
+        const auto definition = f.edge(wideDefinition ? std::vector<NodePtr>{a, a, b, b} :
+                (singlePremise ? std::vector<NodePtr>{a, a} : std::vector<NodePtr>{a, b}), c);
         const auto firstSource = f.edge({a, b}, x, 0.7);
         f.edge({a, b, q}, z, 0.8);
         f.edge({a, b}, z, 0.6);
@@ -664,7 +668,7 @@ void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
         require(report.proofs.size() == 1 && hasProof(report, target, c),
                 "duplicate required premises prevented an otherwise complete proof");
         const auto& proof = report.proofs.front();
-        require(proof.definition == definition && proof.witnesses.size() == 2,
+        require(proof.definition == definition && proof.witnesses.size() == (singlePremise ? 1U : 2U),
                 "duplicate premises changed definition identity or certificate cardinality");
         std::unordered_set<NodePtr> premises;
         for (const auto& witness : proof.witnesses) {
@@ -672,17 +676,69 @@ void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
             require(witness.provider == x && witness.sourceEdges == std::vector<EdgePtr>{firstSource},
                     "later alternative provider replaced the first covering certificate");
         }
-        require(premises == std::unordered_set<NodePtr>{a, b}, "certificate omitted a required event");
+        require(premises == (singlePremise ? std::unordered_set<NodePtr>{a} :
+                                           std::unordered_set<NodePtr>{a, b}),
+                "certificate omitted a required event");
         // Lazy analysis is part of this optimization: the later provider's
         // complete alternative-source intersection is unnecessary for proof.
         require(analysis.mustSlots.at(analysis.indexOf(z)) == analysis.none,
                 "complete early coverage still analyzed an unrelated provider");
+        require(analysis.bodyMarks.empty(), "single-source proof allocated an unnecessary intersection workspace");
         require(snapshot(f.graph) == before, "early-coverage detection changed graph state");
         verifyEveryProof(f.graph, report);
         verifyActualPass(f, 1);
         require(target->getInputs() == std::vector<NodePtr>{x, z},
                 "early coverage changed the retained inputs or independently random provider");
     }
+}
+
+void singleSourceThenAlternativeSourcesAllocateIntersectionWorkspace() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto b = f.fact("B", 0.4);
+    const auto q = f.fact("IndependentQ", 0.3);
+    const auto c = f.node("C");
+    const auto d = f.node("D");
+    const auto x = f.node("SingleSource");
+    const auto z = f.node("AlternativeSources");
+    const auto y = f.node("Y");
+    const auto w = f.node("W");
+    f.edge({a, b}, c);
+    f.edge({a, b}, d);
+    f.edge({a, b}, x, 0.7);
+    f.edge({a, b, q}, z, 0.8);
+    f.edge({a, b}, z, 0.6);
+    const auto first = f.edge({c, x}, y, 0.9);
+    const auto second = f.edge({d, z}, w, 0.5);
+    const auto before = snapshot(f.graph);
+    souffle::problog::detail::AndInputRedundancySnapshot analysis;
+    analysis.initialize(f.graph, true, true, true);
+    require(analysis.bodyMarks.empty(), "initialization eagerly allocated an intersection workspace");
+    const auto firstIndex = static_cast<std::size_t>(std::find_if(analysis.edges.begin(), analysis.edges.end(),
+            [&](const auto& edge) { return edge.edge == first; }) - analysis.edges.begin());
+    require(firstIndex < analysis.edges.size() && analysis.prove(firstIndex, 0, true),
+            "single-source fixture lacks its expected collective proof");
+    require(analysis.bodyMarks.empty(), "borrowed single-source proof allocated intersection stamps");
+    const auto report = analysis.detect(true);
+    require(report.proofs.size() == 2 && hasProof(report, first, c) && hasProof(report, second, d),
+            "complete alternative sources lost their common required inputs");
+    require(analysis.bodyMarks.size() == analysis.nodes.size(),
+            "a needed alternative-source intersection did not initialize its workspace");
+    // The certified DAG count must agree with an independently checked snapshot.
+    souffle::problog::detail::AndInputRedundancySnapshot certified;
+    certified.begin(f.graph.getNodes().size(), f.graph.getEdges().size(), true, true);
+    for (const auto& node : f.graph.getNodes()) certified.addNode(node);
+    certified.finishNodes();
+    for (const auto& edge : f.graph.getEdges()) certified.addEdge(edge);
+    certified.finish(false, true);
+    require(report.stats.eligibleDefinitions == 2 &&
+                    certified.detect(true).stats.eligibleDefinitions == report.stats.eligibleDefinitions,
+            "certified DAG eligibility count disagrees with complete source/cycle analysis");
+    require(snapshot(f.graph) == before, "lazy workspace preparation changed graph state");
+    verifyEveryProof(f.graph, report);
+    verifyActualPass(f, 2);
+    require(first->getInputs() == std::vector<NodePtr>{x} && second->getInputs() == std::vector<NodePtr>{z},
+            "single/multiple-source proofs changed their surviving random providers");
 }
 
 void repeatedPremiseDoesNotProvideItsOwnWitness() {
@@ -920,6 +976,7 @@ int main() {
         irrelevantDefinitionMutationCertifiesFixpoint();
         sharedProviderIntersectsEveryAlternative();
         duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider();
+        singleSourceThenAlternativeSourcesAllocateIntersectionWorkspace();
         repeatedPremiseDoesNotProvideItsOwnWitness();
         unrelatedRecursionDoesNotBlockSafeDeletion();
         collidingNodeIdsPreservePointerIdentity();

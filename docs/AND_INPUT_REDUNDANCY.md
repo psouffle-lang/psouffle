@@ -65,10 +65,14 @@ in nodes, edges and body associations. `Must_1` is computed only for providers
 needed by candidate proofs, intersecting every source from the shortest current
 body. A single complete positive source borrows its current indexed body directly,
 without building a copied intersection cache; body deletions update that same
-indexed segment. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
+indexed segment. Intersection stamps are allocated only when a requested provider
+has multiple complete positive sources. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
 lookup only after uniqueness checks, and each lookup still checks pointer
 identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
+Generic complete-view preparation also counts inputs while indexing edges,
+using an edge-count capacity estimate instead of first scanning the same edges
+just to reserve body storage.
 
 Newly compiled programs can also attest that the original rule dependency graph
 is acyclic. For that certificate, standalone full execution prepares the existing
@@ -116,6 +120,8 @@ mapped to its own variable.
 Definition preparation skips searching bodies for targets when no eligible
 definition exists. On a certified fresh DAG, it also skips filtering the same
 targets again: no intervening SCC check has changed their definitions or safety.
+Its definition count comes from the initial node traversal, avoiding a second
+node scan when SCC analysis is unnecessary.
 Generic and read-only cycle checks retain their complete recursive statistics.
 If the existing graph summary shows that every rule edge is nondeterministic,
 the pass skips building analysis indexes entirely: no candidate can have the
@@ -134,8 +140,11 @@ every input or repeatedly sorting and combining all incoming edges. Fact and
 seed heads, recursive groups, unavailable inputs and prepopulated formula maps
 retain the ordinary compilation path.
 
-The indexed proof marks distinct needed premises and covered premises in the
-existing stamp array, retaining the lazy `Must_1` cache. Once all premises are
+For definitions with at most two body occurrences, the indexed proof tracks
+coverage in local bits, counting repeated occurrences of the same premise once.
+Wider definitions mark distinct needed and covered premises in the existing
+stamp array. Both paths retain the lazy `Must_1` cache and the first provider for
+each certificate. Once all premises are
 covered, it stops without expanding later providers. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
 still receives exact SCC analysis, with reverse traversal reusing the source
