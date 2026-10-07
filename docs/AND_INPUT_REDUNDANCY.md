@@ -62,13 +62,13 @@ lookup only after uniqueness checks, and each lookup still checks pointer
 identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
 
-Proof coverage tracks only distinct required premises. Direct inputs are checked
-first, and provider analysis stops as soon as all premises are covered; unused
-providers do not need a `Must_1` intersection. Cleanup reuses the same source and
-body indexes and outgoing occurrence counts. Starting at inputs that lose their
-last active reference, it prepares a complete cleanup plan while preserving
-query/evidence roots. The pipeline applies the plan to the existing working view;
-it retains graph entities and raw adjacency, just as ordinary pruning does.
+Proof coverage uses one body traversal and a single stamp epoch, retaining the
+existing lazy `Must_1` cache. Cleanup reuses the same source and body indexes and
+the outgoing occurrence counts already computed for SCCs. Starting at inputs
+that lose their last active reference, it prepares a complete cleanup plan while
+preserving query/evidence roots. The pipeline applies the plan to the existing
+working view; it retains graph entities and raw adjacency, just as ordinary
+pruning does.
 Touching unsupported or recursive structure falls back to full pruning before
 any cleanup plan is applied. `--merge-bi-imp` and `--prune-extra` always use the
 existing full pruner. This optional plan requires a freshly pruned complete view;
@@ -77,9 +77,8 @@ the default core API continues to erase bodies only.
 The pipeline directly uses the working view returned by initial or fallback
 pruning; equivalence merging refreshes that view's evidence roots after moving
 observations to representative nodes. Graph statistics read bodies by reference,
-and a zero-deletion pass
-reuses the initial summary. No additional dependency/component/depth graph is
-built for cleanup.
+and a zero-deletion pass reuses the initial summary. No additional
+dependency/component/depth graph is built for cleanup.
 
 ## Run
 

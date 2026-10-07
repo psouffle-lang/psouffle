@@ -347,41 +347,24 @@ struct AndInputRedundancySnapshot {
         if (definition[candidate] == none) return false;
         const auto premises = edges[definition[candidate]].body;
         if (premises.begin == premises.end) return false;
-        // Mark only the definition's distinct premises. Direct inputs may
-        // settle the proof without intersecting any provider's sources.
-        if (coverageEpoch > none - 2) {
-            std::fill(coverageMarks.begin(), coverageMarks.end(), 0);
-            coverageEpoch = 0;
-        }
-        const auto needed = ++coverageEpoch, covered = ++coverageEpoch;
-        std::size_t remaining = 0;
-        for (auto i = premises.begin; i < premises.end; ++i) {
-            const auto premise = bodies[i];
-            if (coverageMarks[premise] == needed) continue;
-            coverageMarks[premise] = needed;
-            ++remaining;
-        }
+        const auto epoch = nextEpoch(coverageEpoch, coverageMarks);
         if (collectProviders && providers.empty()) providers.resize(nodes.size());
         auto cover = [&](std::size_t premise, std::size_t provider) {
-            if (coverageMarks[premise] != needed) return;
-            coverageMarks[premise] = covered;
-            --remaining;
+            if (coverageMarks[premise] == epoch) return;
+            coverageMarks[premise] = epoch;
             if (collectProviders) providers[premise] = provider;
         };
         for (auto i = edge.body.begin; i < edge.body.end; ++i) {
             if (i == edge.body.begin + inputIndex) continue;
             const auto other = bodies[i];
             cover(other, other);
-        }
-        if (remaining == 0) return true;
-        for (auto i = edge.body.begin; i < edge.body.end; ++i) {
-            if (i == edge.body.begin + inputIndex) continue;
-            const auto other = bodies[i];
             const auto must = mustFor(other);
             for (auto j = must.begin; j < must.end; ++j) cover(mustBodies[j], other);
-            if (remaining == 0) return true;
         }
-        return false;
+        for (auto i = premises.begin; i < premises.end; ++i) {
+            if (coverageMarks[bodies[i]] != epoch) return false;
+        }
+        return true;
     }
 
     AndInputRedundancyReport detect(bool collectWitnesses, std::vector<Candidate>* compact = nullptr) {
