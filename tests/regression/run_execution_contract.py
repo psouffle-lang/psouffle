@@ -104,9 +104,11 @@ def check_mutation(payload, *, positive=False, rewrite=False):
     prefix = 'and_input_redundancy_'
     assert info[prefix + 'analysis_strategy'] in ('indexed', 'lazy_fresh_dag'), info
     for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
-                'remaining_input_associations', 'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
+                'remaining_input_associations', 'initialization_ms', 'detection_ms',
+                'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
         assert float(info[prefix + key]) >= 0, info
     assert float(info[prefix + 'cleanup_planning_ms']) <= float(info[prefix + 'pruning_ms']) + 1e-6, info
+    assert float(info[prefix + 'initialization_ms']) <= float(info[prefix + 'detection_ms']) + 1e-6, info
     if positive:
         assert int(info[prefix + 'deleted_input_associations']) > 0, info
     assert int(info[prefix + 'remaining_input_associations']) == 0, info

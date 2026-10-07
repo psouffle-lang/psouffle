@@ -421,7 +421,7 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
         }
         s.inputAssociations += inputs.size();
         s.maxHyperedgeInputs = std::max(s.maxHyperedgeInputs, inputs.size());
-        NodePtr out = e->getOutput();
+        const auto& out = e->getOutputRef();
         if (out) {
             auto it = degrees.find(out);
             if (it != degrees.end()) {
@@ -593,6 +593,7 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addCount("final_input_associations", after.inputAssociations);
     addCount("cleaned_nodes", before.nodes - after.nodes);
     addCount("cleaned_hyperedges", before.edges - after.edges);
+    addTime("initialization_ms", stats.initializationMs);
     addTime("detection_ms", stats.detectionMs);
     addTime("mutation_ms", stats.mutationMs);
     addTime("cleanup_planning_ms", stats.cleanupPlanningMs);

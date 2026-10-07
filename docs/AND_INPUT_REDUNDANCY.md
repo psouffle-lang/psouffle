@@ -90,6 +90,10 @@ their own source bodies; only another occurrence of the same candidate can
 prove this deletion. This rejects unsuccessful proofs without constructing
 provider caches. The check reads current bodies and counts on every attempt,
 so a later shortened definition can still enable a proof.
+Its definition and necessary-input caches borrow pointers during the analysis;
+the view and original graph retain every entity until the analysis ends, before
+cleanup is applied. This avoids repeated shared-ownership copies and releases.
+Targets, mutation candidates and cleanup plans retain their owning references.
 
 The indexed proof uses one body traversal and a single stamp epoch, retaining the
 existing lazy `Must_1` cache. Cycle analysis first peels acyclic sources using
@@ -185,6 +189,8 @@ or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
 `analysis_strategy` records `lazy_fresh_dag` or `indexed`; the initial-summary
 workspace preparation is part of the existing pruning stage, and benchmark wall
 time includes it.
+`initialization_ms` measures analysis setup and target preparation inside
+`detection_ms`; it is a submeasurement and must not be added to total time again.
 `remaining_proven_input_associations` counts opportunities at the pass's
 fixpoint **before SISO**; SISO may subsequently expose new opportunities.
 `initial_input_associations` and `final_input_associations` count all body links

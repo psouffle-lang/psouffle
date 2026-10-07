@@ -559,6 +559,8 @@ struct AndInputRedundancyPassStats {
     std::size_t finalInputAssociations = 0;
     // Remaining independently certified opportunities, not total body size.
     std::size_t remainingInputAssociations = 0;
+    // Initialization is a subset of detectionMs, not an additional cost.
+    double initializationMs = 0.0;
     double detectionMs = 0.0;
     double mutationMs = 0.0;
     double cleanupPlanningMs = 0.0;
@@ -582,7 +584,8 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
     detail::AndInputRedundancySnapshot snapshot;
     if (cleanup) *cleanup = {};
     snapshot.initialize(view, completeDerivations, false, cleanup != nullptr);
-    stats.detectionMs = elapsedMs(start);
+    stats.initializationMs = elapsedMs(start);
+    stats.detectionMs = stats.initializationMs;
     stats.initialInputAssociations = snapshot.baseStats.inputAssociations;
     std::vector<unsigned char> affected(snapshot.edges.size(), 0);
     std::vector<detail::AndInputRedundancySnapshot::Candidate> candidates;

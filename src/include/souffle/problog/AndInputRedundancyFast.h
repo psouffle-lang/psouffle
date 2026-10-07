@@ -50,15 +50,17 @@ struct AndInputRedundancyFreshDag {
 
     AndInputRedundancyWorkspace& workspace;
     std::vector<EdgePtr> targets;
-    std::unordered_map<NodePtr, EdgePtr> definitions;
-    std::unordered_map<NodePtr, std::vector<NodePtr>> must;
+    // Borrow only for this analysis: the view and original owner retain every
+    // entity until it ends, before the caller applies the cleanup plan.
+    std::unordered_map<const Node*, const Hyperedge*> definitions;
+    std::unordered_map<const Node*, std::vector<const Node*>> must;
     std::vector<NodePtr> cleanupSeeds;
     std::size_t inputAssociations;
 
     explicit AndInputRedundancyFreshDag(AndInputRedundancyWorkspace& workspace)
             : workspace(workspace), inputAssociations(workspace.initialInputAssociations) {
         for (const auto& edge : workspace.potentialTargets) {
-            if (!supported(edge) || edge->getInputs().size() < 2) continue;
+            if (!supported(edge.get()) || edge->getInputs().size() < 2) continue;
             for (const auto& node : edge->getInputs()) {
                 if (definition(node)) {
                     targets.push_back(edge);
@@ -72,10 +74,12 @@ struct AndInputRedundancyFreshDag {
         });
     }
 
-    bool supported(const EdgePtr& edge) const {
+    bool supported(const Hyperedge* edge) const {
         // Initial summary validated every endpoint. Fresh original ownership
         // makes the active raw sources the same edges, without repeating hashes.
-        if (!edge || edge->pruned || !edge->getOutput() || edge->getOutput()->isShadow) return false;
+        if (!edge || edge->pruned) return false;
+        const auto& head = edge->getOutputRef();
+        if (!head || head->isShadow) return false;
         const auto& inputs = edge->getInputs();
         const auto& negations = edge->getBodyNegations();
         if (inputs.size() != negations.size()) return false;
@@ -85,39 +89,39 @@ struct AndInputRedundancyFreshDag {
         return true;
     }
 
-    EdgePtr definition(const NodePtr& node) {
+    const Hyperedge* definition(const NodePtr& node) {
         if (!node || node->isFact || node->isOriginalFactNode() || node->isShadow) return {};
         const auto degree = workspace.degrees.find(node);
         if (degree == workspace.degrees.end() || degree->second.incoming != 1) return {};
-        const auto cached = definitions.find(node);
+        const auto cached = definitions.find(node.get());
         if (cached != definitions.end()) return cached->second;
-        EdgePtr source;
+        const Hyperedge* source = nullptr;
         for (const auto& edge : node->getIncomingEdges()) {
             if (!edge || edge->pruned) continue;
-            if (source || edge->getOutput() != node) {
-                source.reset();
+            if (source || edge->getOutputRef() != node) {
+                source = nullptr;
                 break;
             }
-            source = edge;
+            source = edge.get();
         }
         if (source && (!supported(source) || source->getInputs().empty() || !source->isDeterministic() ||
-                              !source->getProbabilisticSupportTokens().empty())) source.reset();
-        definitions.emplace(node, source);
+                              !source->getProbabilisticSupportTokens().empty())) source = nullptr;
+        definitions.emplace(node.get(), source);
         return source;
     }
 
-    const std::vector<NodePtr>& mustFor(const NodePtr& node) {
-        static const std::vector<NodePtr> empty;
+    const std::vector<const Node*>& mustFor(const NodePtr& node) {
+        static const std::vector<const Node*> empty;
         if (!node || node->isFact || node->isOriginalFactNode() || node->isShadow) return empty;
         const auto degree = workspace.degrees.find(node);
         if (degree == workspace.degrees.end() || degree->second.incoming == 0) return empty;
-        const auto cached = must.find(node);
+        const auto cached = must.find(node.get());
         if (cached != must.end()) return cached->second;
-        std::vector<NodePtr> premises;
+        std::vector<const Node*> premises;
         std::size_t sources = 0;
         for (const auto& edge : node->getIncomingEdges()) {
             if (!edge || edge->pruned) continue;
-            if (edge->getOutput() != node || !supported(edge) || edge->getInputs().empty()) {
+            if (edge->getOutputRef() != node || !supported(edge.get()) || edge->getInputs().empty()) {
                 premises.clear();
                 sources = degree->second.incoming;
                 break;
@@ -125,16 +129,20 @@ struct AndInputRedundancyFreshDag {
             const auto& inputs = edge->getInputs();
             if (sources++ == 0) {
                 for (const auto& input : inputs) {
-                    if (std::find(premises.begin(), premises.end(), input) == premises.end()) premises.push_back(input);
+                    if (std::find(premises.begin(), premises.end(), input.get()) == premises.end()) {
+                        premises.push_back(input.get());
+                    }
                 }
             } else {
                 premises.erase(std::remove_if(premises.begin(), premises.end(), [&](const auto& premise) {
-                    return std::find(inputs.begin(), inputs.end(), premise) == inputs.end();
+                    return std::none_of(inputs.begin(), inputs.end(), [&](const auto& input) {
+                        return input.get() == premise;
+                    });
                 }), premises.end());
             }
         }
         if (sources != degree->second.incoming) premises.clear();
-        return must.emplace(node, std::move(premises)).first->second;
+        return must.emplace(node.get(), std::move(premises)).first->second;
     }
 
     bool prove(const EdgePtr& edge, std::size_t inputIndex) {
@@ -160,7 +168,7 @@ struct AndInputRedundancyFreshDag {
                     break;
                 }
                 const auto& necessary = mustFor(inputs[other]);
-                if (std::find(necessary.begin(), necessary.end(), premise) != necessary.end()) {
+                if (std::find(necessary.begin(), necessary.end(), premise.get()) != necessary.end()) {
                     covered = true;
                     break;
                 }
@@ -192,10 +200,10 @@ struct AndInputRedundancyFreshDag {
         --workspace.arityCounts[oldArity];
         ++workspace.arityCounts[oldArity - 1];
         if (--degree->second.outgoing == 0) cleanupSeeds.push_back(candidate.node);
-        const auto cached = must.find(candidate.edge->getOutput());
+        const auto cached = must.find(candidate.edge->getOutputRef().get());
         if (cached != must.end() && std::find(inputs.begin(), inputs.end(), candidate.node) == inputs.end()) {
             auto& premises = cached->second;
-            premises.erase(std::remove(premises.begin(), premises.end(), candidate.node), premises.end());
+            premises.erase(std::remove(premises.begin(), premises.end(), candidate.node.get()), premises.end());
         }
         return true;
     }
@@ -217,7 +225,7 @@ struct AndInputRedundancyFreshDag {
             std::size_t sources = 0;
             for (const auto& edge : node->getIncomingEdges()) {
                 if (!edge || edge->pruned) continue;
-                if (edge->getOutput() != node || !supported(edge)) {
+                if (edge->getOutputRef() != node || !supported(edge.get())) {
                     plan = {{}, {}, true};
                     return;
                 }
@@ -275,7 +283,8 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancyFreshDag(WorkingSu
     if (cleanup) *cleanup = {};
     AndInputRedundancyPassStats stats;
     detail::AndInputRedundancyFreshDag analysis(workspace);
-    stats.detectionMs = elapsedMs(start);
+    stats.initializationMs = elapsedMs(start);
+    stats.detectionMs = stats.initializationMs;
     stats.initialInputAssociations = workspace.initialInputAssociations;
     std::vector<detail::AndInputRedundancyFreshDag::Candidate> candidates;
     std::unordered_set<EdgePtr> affected;

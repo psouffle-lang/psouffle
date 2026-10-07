@@ -266,6 +266,7 @@ public:
         return *cachedSortedInputs;
     }
     NodePtr getOutput() const { return output; }
+    const NodePtr& getOutputRef() const { return output; }
     size_t getId() const { return id; }
     const Rule* getRule() const { return rule; }
     const std::vector<bool>& getBodyNegations() const { return bodyNegations; }
