@@ -32,22 +32,35 @@ never equality of rendered tuple names. Unrelated recursive components are
 allowed. Deterministic provenance already omitted by the compiler may produce
 fact nodes; these intentionally do not supply necessary-input evidence.
 
-Each call builds fresh adjacency and SCC indexes from the active edges of the
-complete working view. The standalone pipeline confirms source completeness;
+Each read-only call builds fresh source and SCC indexes from the active edges
+of the complete working view. The standalone pipeline confirms source completeness;
 the detector API defaults to no proofs when completeness is not confirmed.
 Inactive raw adjacency left behind by rewrite is not a source in this snapshot.
 Post-rewrite certificates describe the residual graph's event model, including
 existing SISO summaries; they do not reconstruct original event formulas hidden
 by those summaries or establish identities across snapshots.
 
-The elimination pass re-proves each deletion against the current edge bodies
-and necessary-input sets. It updates `Must_1` immediately when a body changes
-and performs fresh detection rounds until no opportunities remain. It erases
+The elimination pass builds these structural indexes once per invocation and
+re-proves each deletion against the current edge bodies and necessary-input
+sets. Source identities and eligibility stay fixed; deleting dependencies
+cannot create a cycle, and edges involving recursive nodes are never changed.
+Indexed body segments mirror every in-place deletion, and cached `Must_1`
+entries are updated immediately. Later rounds scan only the preselected target
+edges until no opportunities remain, including opportunities exposed by a
+shortened definition. It erases
 aligned input/negation entries in the existing `Hyperedge` object, retaining
 edge ID, rule application, probability and probabilistic support. Edge and
 view caches are invalidated, and outgoing adjacency retains a dependency while
 any duplicate input occurrence survives. No SAT, BDD or probability estimate
 is used to prove a deletion.
+
+Source and SCC construction use flat arrays and CSR adjacency, with work linear
+in nodes, edges and body associations. `Must_1` is computed only for providers
+needed by candidate proofs, intersecting every source from the shortest current
+body. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
+lookup only after uniqueness checks, and each lookup still checks pointer
+identity; sparse or colliding IDs use a pointer index. None of these indexes is
+reused across separate calls or online updates.
 
 ## Run
 
@@ -155,6 +168,9 @@ sources, facts, exact determinism, empty bodies, negative literals, recursion,
 aliases, incomplete snapshots, independent events, report serialization and
 the unsafe batch-deletion example, stale necessary-input evidence, duplicate
 occurrences, and preserved random-event/cache/adjacency identities. The
-execution-contract regression checks runtime reports, stage ordering, actual
+optimized detector also covers shortened definitions enabling later deletions,
+shared providers with alternative derivations, unrelated recursive components,
+colliding or maximum sparse IDs, and foreign endpoints with matching IDs.
+The execution-contract regression checks runtime reports, stage ordering, actual
 deletion/cleanup, correlated evidence-conditioned outputs, opt-in behavior,
 both rewrite dispatchers and online rejection.

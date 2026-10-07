@@ -61,6 +61,9 @@ rejection cases, graph/event identity, cache invalidation, duplicate adjacency,
 stale proof updates and certificate serialization. The execution contract also
 checks pass placement after pruning and before SISO/fastpaths, correlated
 evidence-conditioned outputs, read-only reports and online rejection.
+The detector tests cover shortened definitions enabling later proofs, lazy
+intersection across alternative sources, and colliding/sparse node IDs without
+merging independent events.
 
 The maintained suite contains 33 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
