@@ -651,6 +651,10 @@ std::vector<MainOption> getMainOptions() {
           "Place AND-input elimination before SISO (default) or after rewrite; after requires both flags and excludes --derv-only."},
       {"deterministic-event-aliases", nextOptChar++, "", "", false,
           "Merge proven deterministic copy events before input elimination and rewrite, retaining output names."},
+      {"local-series-contraction", nextOptChar++, "", "", false,
+          "Contract private series factors with extra body inputs after existing rewrite."},
+      {"terminal-query-factors", nextOptChar++, "", "", false,
+          "Evaluate private terminal marginal query factors after core inference."},
       {"explicit-rewrite", nextOptChar++, "", "", false,
           "Force graph rewrite for standalone full inference."},
       {"implicit-rewrite", nextOptChar++, "", "", false,
@@ -752,6 +756,10 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     }
     if (config.has("deterministic-event-aliases") && (online || config.has("derv-only"))) {
         throw std::runtime_error("--deterministic-event-aliases requires standalone full inference");
+    }
+    if ((config.has("local-series-contraction") || config.has("terminal-query-factors")) &&
+            (online || config.has("derv-only"))) {
+        throw std::runtime_error("--local-series-contraction and --terminal-query-factors require standalone full inference");
     }
     const auto& andInputPlacement = config.get("and-input-redundancy-placement");
     if (andInputPlacement != "before-siso" && andInputPlacement != "after-siso") {

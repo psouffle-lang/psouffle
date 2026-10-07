@@ -4763,6 +4763,10 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
          << (glb.config().has("and-input-redundancy") ? "true" : "false") << ");\n";
     hook << "opt.setDeterministicEventAliasesEnabled("
          << (glb.config().has("deterministic-event-aliases") ? "true" : "false") << ");\n";
+    hook << "opt.setLocalSeriesContractionEnabled("
+         << (glb.config().has("local-series-contraction") ? "true" : "false") << ");\n";
+    hook << "opt.setTerminalQueryFactorsEnabled("
+         << (glb.config().has("terminal-query-factors") ? "true" : "false") << ");\n";
     hook << "opt.setAndInputRedundancyPlacement(\""
          << glb.config().get("and-input-redundancy-placement") << "\");\n";
     hook << "opt.setLiftedWmcEnabled(" << (glb.config().has("lifted-wmc") ? "true" : "false") << ");\n";

@@ -2316,6 +2316,20 @@ public:
     EventAliasMutationStats applyEventAliases(WorkingSubgraphView& view,
             const std::vector<std::pair<NodePtr, NodePtr>>& aliases);
 
+    struct RewriteRetirementStats {
+        size_t removedNodes = 0;
+        size_t removedEdges = 0;
+        size_t removedOwnerNodes = 0;
+        size_t removedOwnerEdges = 0;
+    };
+    // Full-only rewrites may retire definitions and intermediate/output nodes.
+    // Every owned edge incident to a retired node must be retired in this batch.
+    RewriteRetirementStats retireRewriteObjects(WorkingSubgraphView& view,
+            const std::vector<NodePtr>& retiredNodes, const std::vector<EdgePtr>& retiredEdges);
+    // Commit a complete residual view after SISO. Historical owner definitions
+    // must not revive during later owner pruning or appear as factor consumers.
+    RewriteRetirementStats retainRewriteView(WorkingSubgraphView& view);
+
     // Restore a certified original name after an implicit rewrite replaces the
     // graph owner. The caller resolves its representative in this new owner;
     // registering the name does not rewrite any event or graph endpoint.
@@ -2527,6 +2541,102 @@ inline WorkingDerivationGraph::EventAliasMutationStats WorkingDerivationGraph::a
             std::move(evidenceNodes), WorkingSubgraphView::EvidenceRoots::Complete);
     invalidateCaches();
     return stats;
+}
+
+inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::retireRewriteObjects(
+        WorkingSubgraphView& view, const std::vector<NodePtr>& retiredNodes,
+        const std::vector<EdgePtr>& retiredEdges) {
+    RewriteRetirementStats stats;
+    if (retiredNodes.empty() && retiredEdges.empty()) return stats;
+    const std::unordered_set<NodePtr> nodeSet(retiredNodes.begin(), retiredNodes.end());
+    const std::unordered_set<EdgePtr> edgeSet(retiredEdges.begin(), retiredEdges.end());
+    if (nodeSet.size() != retiredNodes.size() || edgeSet.size() != retiredEdges.size()) {
+        throw std::logic_error("Duplicate full-rewrite retirement object");
+    }
+    for (const auto& edge : retiredEdges) {
+        if (!edge || !edges.count(edge)) throw std::logic_error("Retiring an unowned rewrite edge");
+    }
+    for (const auto& node : retiredNodes) {
+        if (!node || !nodes.count(node) || node->hasEvidence()) {
+            throw std::logic_error("Retiring an unowned or observed rewrite node");
+        }
+        for (const auto& edge : node->getIncomingEdges()) {
+            if (edges.count(edge) && !edgeSet.count(edge)) {
+                throw std::logic_error("Retired rewrite node still has an owned source");
+            }
+        }
+        for (const auto& edge : node->getOutgoingEdges()) {
+            if (edges.count(edge) && !edgeSet.count(edge)) {
+                throw std::logic_error("Retired rewrite node still has an owned consumer");
+            }
+        }
+    }
+    std::unordered_set<NodePtr> touched(nodeSet);
+    touched.reserve(nodeSet.size() + retiredEdges.size());
+    for (const auto& edge : retiredEdges) {
+        touched.insert(edge->getOutput());
+        touched.insert(edge->getInputs().begin(), edge->getInputs().end());
+    }
+    for (const auto& node : touched) {
+        if (!node) continue;
+        auto& incoming = node->getIncomingEdges();
+        incoming.erase(std::remove_if(incoming.begin(), incoming.end(),
+                [&](const EdgePtr& edge) { return edgeSet.count(edge); }), incoming.end());
+        auto& outgoing = node->getOutgoingEdges();
+        outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
+                [&](const EdgePtr& edge) { return edgeSet.count(edge); }), outgoing.end());
+    }
+    for (const auto& edge : retiredEdges) {
+        stats.removedEdges += view.mutableEdges().erase(edge);
+        stats.removedOwnerEdges += edges.erase(edge);
+        edge->pruned = true;
+    }
+    for (auto it = tupleToNodeMap.begin(); it != tupleToNodeMap.end();) {
+        if (nodeSet.count(it->second)) {
+            existingTuples.erase(it->first);
+            it = tupleToNodeMap.erase(it);
+        } else ++it;
+    }
+    for (auto it = nodeRepMap.begin(); it != nodeRepMap.end();) {
+        if (nodeSet.count(it->second)) it = nodeRepMap.erase(it);
+        else ++it;
+    }
+    for (auto it = edgeKeyToEdgeMap.begin(); it != edgeKeyToEdgeMap.end();) {
+        if (edgeSet.count(it->second)) it = edgeKeyToEdgeMap.erase(it);
+        else ++it;
+    }
+    for (const auto& node : retiredNodes) {
+        node->getIncomingEdges().clear();
+        node->getOutgoingEdges().clear();
+        node->pruned = true;
+        stats.removedNodes += view.mutableNodes().erase(node);
+        stats.removedOwnerNodes += nodes.erase(node);
+    }
+    view.invalidateCaches();
+    invalidateCaches();
+    return stats;
+}
+
+inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::retainRewriteView(
+        WorkingSubgraphView& view) {
+    for (const auto& node : view.getNodes()) {
+        if (!node || !nodes.count(node)) throw std::logic_error("Residual rewrite view has an unowned node");
+    }
+    for (const auto& edge : view.getEdges()) {
+        if (!edge || !edges.count(edge) || !view.getNodes().count(edge->getOutput())) {
+            throw std::logic_error("Residual rewrite view has an unowned edge or head");
+        }
+        for (const auto& input : edge->getInputs()) {
+            if (!view.getNodes().count(input)) throw std::logic_error("Residual rewrite view has an absent input");
+        }
+    }
+    std::vector<NodePtr> retiredNodes;
+    std::vector<EdgePtr> retiredEdges;
+    retiredNodes.reserve(nodes.size() - view.getNodes().size());
+    retiredEdges.reserve(edges.size() - view.getEdges().size());
+    for (const auto& node : nodes) if (!view.getNodes().count(node)) retiredNodes.push_back(node);
+    for (const auto& edge : edges) if (!view.getEdges().count(edge)) retiredEdges.push_back(edge);
+    return retireRewriteObjects(view, retiredNodes, retiredEdges);
 }
 
 WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Relation*>& outputRelations,

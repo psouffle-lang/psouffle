@@ -124,6 +124,22 @@ add_test(NAME regression.deterministic_event_aliases
 set_tests_properties(regression.deterministic_event_aliases PROPERTIES
     LABELS "regression;full;exact" TIMEOUT 60)
 
+foreach(private_factor_pass local_series_contraction terminal_query_factors)
+    add_executable(regression_${private_factor_pass} ${private_factor_pass}.cpp)
+    target_link_libraries(regression_${private_factor_pass} PRIVATE compiled)
+    add_test(NAME regression.${private_factor_pass}
+        COMMAND regression_${private_factor_pass})
+    set_tests_properties(regression.${private_factor_pass} PROPERTIES
+        LABELS "regression;full;exact;private_factors" TIMEOUT 60)
+endforeach()
+
+add_test(NAME regression.private_factor_passes
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/run_private_factor_passes.py"
+        --souffle-bin "$<TARGET_FILE:souffle>"
+        --work-root "${CMAKE_CURRENT_BINARY_DIR}")
+set_tests_properties(regression.private_factor_passes PROPERTIES
+    LABELS "regression;full;exact;private_factors" TIMEOUT 300)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression
@@ -133,5 +149,6 @@ if (NOT TARGET check-regression)
     )
     add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup
         regression_compiler_acyclicity regression_and_input_fast regression_full_event_order
-        regression_deterministic_event_aliases)
+        regression_deterministic_event_aliases regression_local_series_contraction
+        regression_terminal_query_factors)
 endif()
