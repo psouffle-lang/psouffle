@@ -14,6 +14,8 @@
   counters in debugger JSON.
 - [AND_INPUT_REDUNDANCY.md](AND_INPUT_REDUNDANCY.md): exact input elimination
   after pruning and before SISO, proof certificates and Symbolization benchmarks.
+- [DETERMINISTIC_EVENT_ALIASES.md](DETERMINISTIC_EVENT_ALIASES.md): proven copy
+  event merging, retained query names, duplicate inputs and exact aggregate semantics.
 - [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
   and experiment automation.
 - [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental

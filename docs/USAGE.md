@@ -187,6 +187,15 @@ Public generated runtime options for this branch:
   initial pruning and before SISO/graph fastpaths. Re-pruning preserves query
   and evidence roots. The compiler accepts it to bake the same default. It can
   run alone or with `--rewrite`; online execution rejects it.
+- `--deterministic-event-aliases`: merge structurally proven deterministic copy
+  events before AND-input elimination and SISO, retaining query names and using
+  one representative for inference. Independent and off by default; online and
+  derivation-only execution reject it. See [proof and output semantics](DETERMINISTIC_EVENT_ALIASES.md).
+- `--and-input-redundancy-placement=<before-siso|after-siso>`: select where the
+  enabled pass runs; default `before-siso`. `after-siso` also requires rewrite
+  with inference and excludes `--derv-only`. It uses the residual active graph
+  after SISO and before component solving.
+  The compiler accepts the option to bake the same placement default.
 
 - `-F, --facts, --input-dir <DIR>`: fact directory.
 - `-D, --output, --output-dir <DIR>`: output directory.

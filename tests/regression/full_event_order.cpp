@@ -1,4 +1,6 @@
 #include "souffle/problog/ForwardCompilation.h"
+#include "souffle/problog/AndInputRedundancy.h"
+#include "souffle/problog/GraphRewriter.h"
 
 #include <cmath>
 #include <cstdint>
@@ -641,10 +643,105 @@ void tupleAndSupportOrderPreservesIndependentEvents() {
     checkProbabilities(candidate.manager, fixture, candidate.nodes, oracle, aHead);
 }
 
+void deterministicSisoExposesSafePostPassOpportunity() {
+    Fixture fixture;
+    const auto a = fixture.fact("A", 0.6);
+    const auto isolated = fixture.fact("IsolatedOutput", 0.25);
+    const auto mid = fixture.node("Mid");
+    const auto c = fixture.node("C");
+    const auto x = fixture.node("X");
+    const auto y = fixture.node("Y");
+    const auto intoMid = fixture.edge({a}, mid);
+    const auto intoC = fixture.edge({mid}, c);
+    const auto sourceX = fixture.edge({a}, x, 0.7);
+    const auto target = fixture.edge({c, x}, y, 0.8);
+    isolated->setQuery();
+    y->setQuery();
+    const Worlds worlds(fixture, {});
+    const EventWorlds events(fixture);
+    auto originalView = fixture.view(false);
+    Compilation original;
+    compile(original, originalView, false, {});
+    WorkingSubgraphView active(fixture.graph.getNodes(), fixture.graph.getEdges());
+    require(souffle::problog::detectAndInputRedundancy(active, true).proofs.empty(),
+            "post-SISO fixture already had a pre-SISO one-layer proof");
+    souffle::problog::RewriteFeatureFlags flags;
+    flags.splitMode = souffle::problog::SplitMode::None;
+    flags.enableSingleHyperedge = flags.enableAllFactsToSO = flags.enableParallelEdge = false;
+    flags.enableFanOutConverge = flags.enableGeneral = flags.enableCompaction = false;
+    flags.enableCleanupIsolated = false;
+    debugger.startTurn("FULL");
+    debugger.startStage(StageKind::FC_WMC_HYBRID);
+    const auto rewrite = souffle::problog::GraphRewriter{}.rewriteUntilFixpoint(fixture.graph, active, false, flags);
+    debugger.endStage();
+    debugger.endTurn();
+    require(rewrite.numLinearRegionsRewritten == 1 && !active.getNodes().count(mid) &&
+                    !active.getEdges().count(intoMid) && !active.getEdges().count(intoC),
+            "actual deterministic linear SISO contraction did not occur");
+    require(precomputedProbResult.count(isolated) && precomputedProbResult.at(isolated) == 0.25,
+            "actual SISO did not carry the isolated query probability");
+    const auto carried = precomputedProbResult;
+    const auto report = souffle::problog::detectAndInputRedundancy(active, true);
+    require(report.proofs.size() == 1 && report.proofs.front().edge == target &&
+                    report.proofs.front().redundant == c && report.proofs.front().definition->isDeterministic() &&
+                    report.proofs.front().definition->getProbabilisticSupportTokens().empty(),
+            "actual SISO did not expose the expected deterministic local proof");
+    const auto targetId = target->getId();
+    const auto application = target->getRuleApp();
+    const auto support = target->getProbabilisticSupportTokens();
+    souffle::problog::AndInputRedundancyCleanupPlan plan;
+    const auto stats = souffle::problog::eliminateAndInputRedundancy(active, true, &plan);
+    require(stats.deletedInputAssociations == 1 && !plan.requiresFullPrune &&
+                    target->getInputs() == std::vector<NodePtr>{x},
+            "post-SISO pass did not remove only the newly redundant input");
+    active.applyPruning(plan.nodes, plan.edges);
+    require(precomputedProbResult == carried && target->getId() == targetId && target->getProbability() == 0.8 &&
+                    target->getRuleApp().ruleId == application.ruleId &&
+                    target->getRuleApp().varValuesPure == application.varValuesPure &&
+                    target->getProbabilisticSupportTokens() == support && active.getEdges().count(sourceX),
+            "post-SISO mutation changed macro-event identity or a carried query probability");
+    require(!active.getEdges().count(intoMid) && !active.getEdges().count(intoC),
+            "post-SISO cleanup revived a retired owning edge");
+    Fixture retained;
+    retained.nodes.assign(active.getNodes().begin(), active.getNodes().end());
+    retained.edges.assign(active.getEdges().begin(), active.getEdges().end());
+    Compilation optimized;
+    compile(optimized, active, true, {});
+    for (std::uint64_t world = 0; world < (std::uint64_t{1} << events.count); ++world) {
+        auto before = events.assignment(original.manager, fixture, world);
+        auto after = events.assignment(optimized.manager, retained, world);
+        for (const auto& node : active.getNodes()) {
+            require(truthAt(original.manager, original.nodes.at(node), before) ==
+                            truthAt(optimized.manager, optimized.nodes.at(node), after),
+                    "deterministic SISO plus pass changed an original event-world truth value");
+        }
+    }
+    for (const auto& node : active.getNodes()) {
+        close(optimized.manager.computeWeightedModelCount(optimized.nodes.at(node)),
+                worlds.probability({{node, true}}), "post-SISO marginal");
+        for (const auto& other : active.getNodes()) {
+            close(optimized.manager.computeWeightedModelCount(optimized.manager.makeAnd(
+                          optimized.nodes.at(node), optimized.nodes.at(other))),
+                    worlds.probability({{node, true}, {other, true}}), "post-SISO joint");
+        }
+        for (bool positive : {true, false}) {
+            const auto evidence = positive ? optimized.nodes.at(x) : optimized.manager.makeNot(optimized.nodes.at(x));
+            const double denominator = optimized.manager.computeWeightedModelCount(evidence);
+            close(denominator, worlds.probability({{x, positive}}), "post-SISO evidence mass");
+            close(optimized.manager.computeWeightedModelCount(optimized.manager.makeAnd(
+                          optimized.nodes.at(node), evidence)) / denominator,
+                    worlds.probability({{node, true}, {x, positive}}) / worlds.probability({{x, positive}}),
+                    "post-SISO posterior");
+        }
+    }
+    precomputedProbResult.clear();
+}
+
 }  // namespace
 
 int main() {
     try {
+        deterministicSisoExposesSafePostPassOpportunity();
         standaloneOrderPreservesEventsAndProbabilities();
         preConfigPreservesDefaultAndDeltaPolicies();
         batchedWideDisjunctionPreservesEvents();

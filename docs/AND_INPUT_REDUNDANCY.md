@@ -6,6 +6,30 @@ pruning, AND-input elimination, query/evidence cleanup, then ordinary SISO
 rewrite and graph/formula fastpaths. `--rewrite` is independent: the input pass
 can run alone or before explicit, implicit, or automatic rewrite.
 
+For an order comparison, run the same executable with
+`--rewrite --and-input-redundancy --and-input-redundancy-placement=after-siso`.
+This runs SISO first, then the input pass, then graph/formula fastpaths. The
+placement option enables neither pass nor rewrite by itself. The default
+`before-siso` preserves the original order.
+
+The independent `--deterministic-event-aliases` option can run first to identify
+equal copy events and remove repeated occurrences of their representatives.
+The AND pass builds fresh indexes after those changes; it cannot reuse its
+original-graph preparation. See [event aliases](DETERMINISTIC_EVENT_ALIASES.md).
+
+After SISO, the final graph-summary traversal builds fresh indexes from the
+active working view. The pass reuses those indexes and performs the ordinary
+grounded cycle check; it cannot use the original compiler DAG certificate.
+Index preparation is recorded as `workspace_summary_ms` within the final
+rewrite summary cost and is included in process wall time. A successful local
+cleanup plan removes definitions only from the active view. Unsupported cleanup
+retains view membership and applies only proven input deletions; it never calls
+the raw owner's pruner, which could restore sources replaced by SISO. Query
+and evidence roots and previously computed output probabilities are retained.
+The proof preserves every event of the residual snapshot. Existing SISO
+summaries remain as supplied by SISO; this pass does not reconstruct their
+original random-world formulas.
+
 The separate `--dump=and-redundancy` selector measures opportunities and writes
 proof certificates without performing any deletion itself.
 
@@ -231,31 +255,39 @@ it is not a count of the derivation graph or the last manager alone. Missing
 metrics stay blank rather than being reported as zero.
 
 The `AND_INPUT_REDUNDANCY` debugger stage sits after `PRUNING` and before
-`FC_WMC_HYBRID` or plain formula compilation. Its `and_input_redundancy_*`
+`FC_WMC_HYBRID` or plain formula compilation by default. With `after-siso`,
+SISO and component solving have separate `FC_WMC_HYBRID` stages on either
+side of the input pass; consumers merge their information and sum their
+durations. Its `and_input_redundancy_*`
 counters include deleted input associations, affected edges, detection rounds
 (excluding a final scan when unchanged definitions already certify the fixpoint),
 cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
 times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
-or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
+or full pruning. `cleanup_strategy` records `none`, `local`, `full`, or
+`body_only` when post-SISO cleanup cannot safely remove active entities.
 `analysis_strategy` records `indexed_fresh_dag` for the prepared summary indexes,
 `lazy_fresh_dag` for a degree-only workspace supplied directly to the helper, or
-`indexed` for generic analysis. `summary_no_definitions` records the summary-only
+`indexed` for generic analysis. `indexed_active_view` consumes the generic
+indexes prepared by the final SISO summary. `summary_no_definitions` records the summary-only
 rejection when there are no deterministic rule edges; no detection round runs.
-`workspace_summary_ms` measures the whole initial
-summary traversal when it prepares a workspace, including the common summary
-work. It is a subset of the existing pruning stage, separate from the pass's
-`total_ms`; benchmark wall time includes both stages.
+`workspace_summary_ms` measures the whole summary traversal when it prepares
+a workspace, including common summary work. It is a subset of initial pruning
+for `before-siso`, or the final rewrite summary for `after-siso`, separate from
+the pass's `total_ms`; benchmark wall time includes both.
 `initialization_ms` measures analysis setup and target preparation inside
 `detection_ms`; it is a submeasurement and must not be added to total time again.
 `remaining_proven_input_associations` counts opportunities at the pass's
-fixpoint **before SISO**; SISO may subsequently expose new opportunities.
+fixpoint at the recorded `placement`; a later SISO rewrite may expose new opportunities.
 `initial_input_associations` and `final_input_associations` count all body links
 before the pass and after cleanup. Their difference includes links on pruned
 edges as well as explicitly deleted inputs. The core pass alone removes no
 nodes or edges; the pipeline applies the query/evidence-aware cleanup plan or
 uses ordinary pruning.
 
-`rewrite_initial_*` describes the graph after this pass and cleanup. Simple and
+With the default placement, `rewrite_initial_*` describes the graph after this
+pass and cleanup. With `after-siso`, `rewrite_initial_*` and `rewrite_final_*`
+describe SISO's own input and output; `and_input_redundancy_after_*` gives the
+graph handed to component solving after the subsequent pass. Simple and
 general SISO contribution counters use that snapshot, while `after_prune_*`
 retains the initial pruning counts. Additional SISO rewrites require comparing
 completed SISO region counts against a paired SISO-only run; they are not an
@@ -269,8 +301,12 @@ python3 evaluation/full/and_input_redundancy.py --mode benchmark --runs 3 \
   --output-root build/and-input-audit/benchmark
 ```
 
-This compares plain baseline, SISO, and SISO plus the input pass. It checks
-query keys/probabilities, includes detection costs in wall time, records BDD
+This compares plain baseline, SISO, and SISO plus the input pass.
+For an order comparison, use `--variants siso,siso_and_pass,siso_then_pass`.
+`siso_and_pass` runs AND before SISO; `siso_then_pass` runs AND after SISO.
+Use `--variants baseline,siso,pass,siso_and_pass` to include the independent
+AND pass; `pass` does not enable SISO. The benchmark checks query
+keys/probabilities, includes detection costs in wall time, records BDD
 node counts and signed changes in completed SISO counts, and retains failures
 and timeouts. Use `--variants siso,siso_and_pass` for just the paired rewrite
 runs and `--resume --variants baseline` to append baseline trials later with

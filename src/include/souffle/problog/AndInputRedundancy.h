@@ -90,6 +90,10 @@ struct AndInputRedundancySnapshot {
     };
 
     bool complete = false;
+    bool sourcesFinalized = false;
+    const WorkingDerivationGraph* preparedOwner = nullptr;
+    const std::unordered_set<NodePtr>* preparedViewNodes = nullptr;
+    const std::unordered_set<EdgePtr>* preparedViewEdges = nullptr;
     AndInputRedundancyStats baseStats;
     std::vector<NodePtr> nodes;
     // Ordinary graph IDs are dense enough for direct lookup. Sparse IDs or
@@ -110,6 +114,7 @@ struct AndInputRedundancySnapshot {
     std::size_t maxNodeId = 0;
     std::size_t maxInDegree = 0, maxOutDegree = 0, maxHyperedgeInputs = 0, disjunctionNodes = 0;
     bool completeRequested = false, endpointsValid = true, forcePointerIndex = false, trackCleanup = false;
+    bool traversalEdgeOpen = false;
 
     std::size_t indexOf(const NodePtr& node) const {
         if (!node) return none;
@@ -196,6 +201,88 @@ struct AndInputRedundancySnapshot {
         if (trackCleanup) outgoingOccurrences.assign(nodes.size(), 0);
     }
 
+    // Populate the same source/body indexes while query/evidence pruning visits
+    // the retained graph. No second owner or active-set traversal is required.
+    void beginTraversal(std::size_t nodeCapacity, std::size_t edgeCapacity,
+            std::size_t denseIdBound = 0) {
+        begin(nodeCapacity, edgeCapacity, true, true, denseIdBound, edgeCapacity);
+        baseStats.nodes = baseStats.edges = 0;
+        incomingOffsets.push_back(0);
+    }
+
+    std::size_t addTraversalNode(const NodePtr& node) {
+        if (!completeRequested || !endpointsValid) return none;
+        const auto existing = indexOf(node);
+        if (existing != none) return existing;
+        const auto index = nodes.size();
+        addNode(node);
+        if (!endpointsValid) return none;
+        // A traversal must support lookups immediately. Convert to pointer
+        // identity once if an ID bound or a colliding ID invalidates the index.
+        if (idIndex.empty()) {
+            if (pointerIndex.empty()) {
+                pointerIndex.reserve(nodes.capacity());
+                for (std::size_t i = 0; i < nodes.size(); ++i) pointerIndex.emplace(nodes[i].get(), i);
+            } else {
+                pointerIndex.emplace(node.get(), index);
+            }
+        }
+        incomingOffsets.push_back(0);
+        if (trackCleanup) outgoingOccurrences.push_back(0);
+        return index;
+    }
+
+    void beginTraversalEdge(const EdgePtr& edge) {
+        if (!completeRequested || !endpointsValid) return;
+        if (!edge || traversalEdgeOpen || edge->getInputs().size() != edge->getBodyNegations().size()) {
+            endpointsValid = false;
+            return;
+        }
+        const auto head = addTraversalNode(edge->getOutputRef());
+        if (head == none) return;
+        const auto bodyBegin = bodies.size();
+        edges.push_back({edge, head, {bodyBegin, bodyBegin},
+                static_cast<bool>(safe[head]) && edge->getInputs().size() == edge->getBodyNegations().size()});
+        ++incomingOffsets[head + 1];
+        traversalEdgeOpen = true;
+    }
+
+    void addTraversalInput(const NodePtr& input, bool negative) {
+        if (!completeRequested || !endpointsValid) return;
+        if (!traversalEdgeOpen) {
+            endpointsValid = false;
+            return;
+        }
+        const auto index = addTraversalNode(input);
+        if (index == none) return;
+        bodies.push_back(index);
+        auto& edge = edges.back();
+        edge.safe = edge.safe && safe[index] && !negative;
+        if (trackCleanup) ++outgoingOccurrences[index];
+    }
+
+    void endTraversalEdge() {
+        if (!completeRequested || !endpointsValid) return;
+        if (!traversalEdgeOpen) {
+            endpointsValid = false;
+            return;
+        }
+        auto& edge = edges.back();
+        edge.body.end = bodies.size();
+        const auto inputCount = edge.body.end - edge.body.begin;
+        if (inputCount != edge.edge->getInputs().size()) endpointsValid = false;
+        baseStats.inputAssociations += inputCount;
+        maxHyperedgeInputs = std::max(maxHyperedgeInputs, inputCount);
+        traversalEdgeOpen = false;
+    }
+
+    void finishTraversalSources() {
+        if (traversalEdgeOpen) endpointsValid = false;
+        baseStats.nodes = nodes.size();
+        baseStats.edges = edges.size();
+        finishSources();
+    }
+
     void addEdge(const EdgePtr& edge) {
         if (edge) {
             baseStats.inputAssociations += edge->getInputs().size();
@@ -231,21 +318,19 @@ struct AndInputRedundancySnapshot {
         ++incomingOffsets[head + 1];
     }
 
-    // Only the compiler-attested fresh original graph may omit SCC analysis.
-    // Ordinary callers and read-only diagnostics always request the full check.
-    void finish(bool collectCycleStats, bool compilerCertifiedFreshDag = false) {
-        if (!completeRequested || !endpointsValid || edges.size() != baseStats.edges) return;
+    // Finalize complete derivation sources without doing AND candidate or SCC
+    // analysis. Alias proofs can borrow this CSR before AND work is requested.
+    void finishSources() {
+        if (sourcesFinalized) return;
+        if (!completeRequested || !endpointsValid || nodes.size() != baseStats.nodes ||
+                edges.size() != baseStats.edges || incomingOffsets.size() != nodes.size() + 1) return;
         for (std::size_t i = 1; i < incomingOffsets.size(); ++i) incomingOffsets[i] += incomingOffsets[i - 1];
         auto cursor = incomingOffsets;
         incomingEdges.resize(edges.size());
         for (std::size_t i = 0; i < edges.size(); ++i) incomingEdges[cursor[edges[i].head]++] = i;
         complete = true;
-
-        // Preselect structural definitions and targets before SCC/Must_1 work.
-        // Bodies only shrink, so mutation cannot add a definition or target to
-        // this pool: unsupported edges are never edited and sources stay fixed.
-        definition.assign(nodes.size(), none);
-        std::size_t structuralDefinitions = 0;
+        sourcesFinalized = true;
+        maxInDegree = maxOutDegree = disjunctionNodes = 0;
         for (std::size_t node = 0; node < nodes.size(); ++node) {
             const auto incoming = incomingOffsets[node + 1] - incomingOffsets[node];
             maxInDegree = std::max(maxInDegree, incoming);
@@ -253,6 +338,21 @@ struct AndInputRedundancySnapshot {
             if ((!nodes[node]->isFact && incoming > 1) || (nodes[node]->isFact && incoming > 0)) {
                 ++disjunctionNodes;
             }
+        }
+    }
+
+    // Only the compiler-attested fresh original graph may omit SCC analysis.
+    // Ordinary callers and read-only diagnostics always request the full check.
+    void finish(bool collectCycleStats, bool compilerCertifiedFreshDag = false) {
+        finishSources();
+        if (!complete) return;
+
+        // Preselect structural definitions and targets before SCC/Must_1 work.
+        // Bodies only shrink, so mutation cannot add a definition or target to
+        // this pool: unsupported edges are never edited and sources stay fixed.
+        definition.assign(nodes.size(), none);
+        std::size_t structuralDefinitions = 0;
+        for (std::size_t node = 0; node < nodes.size(); ++node) {
             if (!safe[node] || fact[node] || incomingOffsets[node + 1] - incomingOffsets[node] != 1) continue;
             const auto edgeId = incomingEdges[incomingOffsets[node]];
             const auto& edge = edges[edgeId];
@@ -298,6 +398,82 @@ struct AndInputRedundancySnapshot {
         });
         if (targets.empty()) return;
         mustSlots.assign(nodes.size(), none);
+    }
+
+    // Physical alias mutation only removes alias heads and changes consumers
+    // of those nodes. Compact the retained source arrays, borrowing unchanged
+    // body segments and rereading only consumers whose bodies were rewritten.
+    bool rebaseEventAliases(const WorkingSubgraphView& view,
+            const std::vector<std::pair<NodePtr, NodePtr>>& aliases) {
+        if (!complete || !sourcesFinalized || !endpointsValid) return false;
+        if (aliases.empty()) {
+            if (nodes.size() != view.getNodes().size() || edges.size() != view.getEdges().size()) return false;
+            preparedViewNodes = &view.getNodes();
+            preparedViewEdges = &view.getEdges();
+            return true;
+        }
+        std::vector<std::size_t> aliasRoots(nodes.size(), none), remap(nodes.size(), none);
+        for (const auto& [alias, root] : aliases) {
+            const auto oldAlias = indexOf(alias), oldRoot = indexOf(root);
+            if (oldAlias == none || oldRoot == none || oldAlias == oldRoot || aliasRoots[oldAlias] != none) {
+                return false;
+            }
+            aliasRoots[oldAlias] = oldRoot;
+        }
+        for (const auto& [alias, root] : aliases) {
+            if (aliasRoots[indexOf(root)] != none) return false;
+        }
+        if (nodes.size() - aliases.size() != view.getNodes().size()) return false;
+
+        AndInputRedundancySnapshot rebased;
+        rebased.begin(view.getNodes().size(), view.getEdges().size(), true,
+                trackCleanup, idIndex.size(), bodies.size());
+        rebased.preparedOwner = preparedOwner;
+        rebased.preparedViewNodes = &view.getNodes();
+        rebased.preparedViewEdges = &view.getEdges();
+        for (std::size_t node = 0; node < nodes.size(); ++node) {
+            if (aliasRoots[node] != none) continue;
+            if (!view.getNodes().count(nodes[node])) return false;
+            remap[node] = rebased.nodes.size();
+            rebased.addNode(nodes[node]);
+        }
+        rebased.finishNodes();
+        for (const auto& edge : edges) {
+            if (aliasRoots[edge.head] != none) continue;
+            if (!view.getEdges().count(edge.edge)) return false;
+            bool changed = false;
+            for (auto input = edge.body.begin; input < edge.body.end; ++input) {
+                if (aliasRoots[bodies[input]] != none) {
+                    changed = true;
+                    break;
+                }
+            }
+            if (changed) {
+                rebased.addEdge(edge.edge);
+                continue;
+            }
+            const auto head = remap[edge.head];
+            const auto bodyBegin = rebased.bodies.size();
+            const auto& signs = edge.edge->getBodyNegations();
+            bool supported = rebased.safe[head] && signs.size() == edge.body.end - edge.body.begin &&
+                    std::none_of(signs.begin(), signs.end(), [](bool negative) { return negative; });
+            for (auto input = edge.body.begin; input < edge.body.end; ++input) {
+                const auto node = remap[bodies[input]];
+                if (node == none) return false;
+                rebased.bodies.push_back(node);
+                supported = supported && rebased.safe[node];
+                if (trackCleanup) ++rebased.outgoingOccurrences[node];
+            }
+            const auto inputCount = rebased.bodies.size() - bodyBegin;
+            rebased.baseStats.inputAssociations += inputCount;
+            rebased.maxHyperedgeInputs = std::max(rebased.maxHyperedgeInputs, inputCount);
+            rebased.edges.push_back({edge.edge, head, {bodyBegin, rebased.bodies.size()}, supported});
+            ++rebased.incomingOffsets[head + 1];
+        }
+        rebased.finishSources();
+        if (!rebased.complete) return false;
+        *this = std::move(rebased);
+        return true;
     }
 
     void excludeRecursiveNodes() {

@@ -117,6 +117,13 @@ add_test(NAME regression.full_event_order
 set_tests_properties(regression.full_event_order PROPERTIES
     LABELS "regression;full;exact" TIMEOUT 60)
 
+add_executable(regression_deterministic_event_aliases deterministic_event_aliases.cpp)
+target_link_libraries(regression_deterministic_event_aliases PRIVATE compiled)
+add_test(NAME regression.deterministic_event_aliases
+    COMMAND regression_deterministic_event_aliases)
+set_tests_properties(regression.deterministic_event_aliases PROPERTIES
+    LABELS "regression;full;exact" TIMEOUT 60)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression
@@ -125,5 +132,6 @@ if (NOT TARGET check-regression)
         COMMENT "Run maintained full and incremental artifact regression tests"
     )
     add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup
-        regression_compiler_acyclicity regression_and_input_fast regression_full_event_order)
+        regression_compiler_acyclicity regression_and_input_fast regression_full_event_order
+        regression_deterministic_event_aliases)
 endif()

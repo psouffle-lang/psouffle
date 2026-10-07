@@ -47,14 +47,31 @@ PASS_KEYS = (
     "remaining_input_associations", "remaining_proven_input_associations",
     "initial_input_associations", "final_input_associations", "before_nodes",
     "before_edges", "after_nodes", "after_edges", "detection_ms", "mutation_ms",
-    "initialization_ms", "workspace_summary_ms", "cleanup_planning_ms", "cleanup_strategy", "analysis_strategy", "pruning_ms", "total_ms",
+    "initialization_ms", "workspace_summary_ms", "cleanup_planning_ms", "cleanup_strategy", "analysis_strategy", "placement", "pruning_ms", "total_ms",
 )
 REWRITE_KEYS = ("rewrite_simple_regions", "rewrite_general_regions", "graph_rewrite_rewritten_regions",
                 "rewrite_ms", "graph_rewrite_total_ms", "implicit_total_ms")
+ALIAS_KEYS = ("candidates", "merged_aliases", "query_aliases", "promoted_output_roots",
+              "shared_prune_indexes",
+              "proven_true_nodes", "proven_derived_true_nodes", "deterministic_proof_edges",
+              "input_replacements", "duplicate_inputs_removed", "removed_nodes", "removed_edges",
+              "active_input_replacements", "active_duplicate_inputs_removed",
+              "removed_owner_edges", "skipped_cycle_aliases", "evidence_conflict_classes",
+              "analysis_ms", "mutation_ms", "summary_ms", "total_ms",
+              "before_nodes", "before_edges", "before_input_associations",
+              "after_nodes", "after_edges", "after_input_associations", "before_output_nodes", "after_output_nodes")
 VARIANTS = {
     "baseline": [], "siso": ["--rewrite"],
     "siso_and_pass": ["--rewrite", "--and-input-redundancy"],
     "pass": ["--and-input-redundancy"],
+    "siso_then_pass": ["--rewrite", "--and-input-redundancy",
+                       "--and-input-redundancy-placement=after-siso"],
+    "alias": ["--deterministic-event-aliases"],
+    "alias_and_pass": ["--deterministic-event-aliases", "--and-input-redundancy"],
+    "alias_and_siso": ["--deterministic-event-aliases", "--rewrite"],
+    "alias_pass_siso": ["--deterministic-event-aliases", "--and-input-redundancy", "--rewrite"],
+    "alias_siso_pass": ["--deterministic-event-aliases", "--rewrite", "--and-input-redundancy",
+                        "--and-input-redundancy-placement=after-siso"],
 }
 
 
@@ -111,7 +128,7 @@ def read_debugger(output_dir):
         except (OSError, ValueError, TypeError, AttributeError):
             continue
         result = {"path": str(path), "status": data.get("status"), "pipeline": {},
-                  "detector_timings": {}, "pass": {}, "rewrite": {}}
+                  "detector_timings": {}, "pass": {}, "aliases": {}, "rewrite": {}}
         peaks = [number(stage.get("peak_mem_kb")) for stage in stages if isinstance(stage, dict)]
         result["peak_mem_kb"] = max((peak for peak in peaks if peak is not None), default=None)
         # Between stages, Debugger::addInfo stores counters on the turn.
@@ -131,11 +148,15 @@ def read_debugger(output_dir):
                 field = f"and_input_redundancy_{key}"
                 if field in info:
                     result["pass"][key] = (info[field]
-                        if key in {"cleanup_strategy", "analysis_strategy"}
+                        if key in {"cleanup_strategy", "analysis_strategy", "placement"}
                         else number(info[field]))
             for key in REWRITE_KEYS:
                 if key in info:
                     result["rewrite"][key] = number(info[key])
+            for key in ALIAS_KEYS:
+                field = f"deterministic_event_aliases_{key}"
+                if field in info:
+                    result["aliases"][key] = number(info[field])
             for phase in PHASES:
                 for metric in ("analysis_ms", "write_ms"):
                     key = f"and_input_redundancy_{phase}_{metric}"
@@ -354,9 +375,11 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
     pipeline = debugger.get("pipeline", {})
     pass_stats = debugger.get("pass", {})
     for metric in ("nodes", "edges"):
-        record[f"final_{metric}"] = pipeline.get(f"rewrite_final_{metric}")
+        record[f"final_{metric}"] = (pass_stats.get(f"after_{metric}")
+                if pass_stats.get("placement") == "after-siso" else pipeline.get(f"rewrite_final_{metric}"))
         if record[f"final_{metric}"] is None:
-            record[f"final_{metric}"] = pass_stats.get(f"after_{metric}", pipeline.get(f"after_prune_{metric}"))
+            record[f"final_{metric}"] = pass_stats.get(f"after_{metric}",
+                    debugger.get("aliases", {}).get(f"after_{metric}", pipeline.get(f"after_prune_{metric}")))
     rewrite = debugger.get("rewrite", {})
     simple, general = rewrite.get("rewrite_simple_regions"), rewrite.get("rewrite_general_regions")
     record["completed_siso_rewrites"] = (
@@ -367,6 +390,10 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
         if "deleted_input_associations" not in pass_stats:
             record["status"] = "incomplete_metrics"
             record["notes"].append("Enabled pass did not emit its deletion counters.")
+    if record["status"] == "ok" and "--deterministic-event-aliases" in VARIANTS[variant]:
+        if "merged_aliases" not in debugger.get("aliases", {}):
+            record["status"] = "incomplete_metrics"
+            record["notes"].append("Enabled event alias pass did not emit its merge counters.")
     return record
 
 
@@ -394,11 +421,14 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
     for case in sorted({r["case"] for r in active}):
         cells = {g["variant"]: g for g in groups if g["case"] == case}
         comparison = {"case": case}
-        for reference in ("baseline", "siso"):
-            left, right = cells.get(reference), cells.get("siso_and_pass")
-            if left and right and left["successful_runs"] == runs and right["successful_runs"] == runs:
-                comparison[f"siso_and_pass_speedup_vs_{reference}"] = (
-                    left["wall_seconds_median"] / right["wall_seconds_median"])
+        for variant in VARIANTS:
+            for reference in ("baseline", "siso", "siso_and_pass", "alias"):
+                if variant == reference:
+                    continue
+                left, right = cells.get(reference), cells.get(variant)
+                if left and right and left["successful_runs"] == runs and right["successful_runs"] == runs:
+                    comparison[f"{variant}_speedup_vs_{reference}"] = (
+                        left["wall_seconds_median"] / right["wall_seconds_median"])
         left, right = cells.get("siso"), cells.get("siso_and_pass")
         if left and right and left["successful_runs"] == runs and right["successful_runs"] == runs:
             a, b = left["completed_siso_rewrites_median"], right["completed_siso_rewrites_median"]
@@ -413,8 +443,10 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                "memory_limit_scope": "RLIMIT_AS per child; each record preserves its configured cap (0 means unlimited).",
                "resume_semantics": "Latest attempt per case/variant/repeat enters comparisons; earlier failures remain in records as superseded. Changed timeout or memory cap retries failed cells.",
                "proof_dumps_enabled": False, "verbose_profiles_enabled": False,
-               "pass_placement": "After initial query/evidence pruning, before SISO and graph fastpaths.",
-               "remaining_opportunities_scope": "Core deletion fixpoint before SISO; SISO can expose more opportunities.",
+               "pass_placement": "Selected per variant; before-siso by default, siso_then_pass after-siso.",
+               "variant_pass_placements": {"pass": "before-siso", "siso_and_pass": "before-siso",
+                                           "siso_then_pass": "after-siso"},
+               "remaining_opportunities_scope": "Core deletion fixpoint at the selected placement; a later SISO rewrite may expose more opportunities.",
                "additional_siso_rewrites_delta_semantics": "Signed difference in completed SISO region counts, not identities of newly triggered regions.",
                "bdd_live_nodes_semantics": {"FC_WMC_HYBRID": "Sum after each slow component's formula compilation.",
                                             "FORWARD_COMPILATION": "Whole-graph manager count after formula compilation."},
@@ -427,6 +459,7 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                "timeout_seconds", "requested_mem_limit_mb", "mem_limit_mb", "effective_address_space_limit_bytes",
                "final_nodes", "final_edges", "completed_siso_rewrites", "siso_ms", *PIPELINE_KEYS]
     columns += [f"and_input_redundancy_{key}" for key in PASS_KEYS]
+    columns += [f"deterministic_event_aliases_{key}" for key in ALIAS_KEYS]
     columns += ["bdd_live_nodes", "bdd_stage_status", "peak_mem_kb", "probability_check", "probability_reference_variant",
                 "query_count", "max_absolute_difference", "run_dir", "notes"]
     csv_tmp = output_root / "summary.csv.tmp"
@@ -438,6 +471,8 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
             debugger = record.get("debugger", {})
             row.update(debugger.get("pipeline", {}))
             row.update({f"and_input_redundancy_{key}": value for key, value in debugger.get("pass", {}).items()})
+            row.update({f"deterministic_event_aliases_{key}": value
+                        for key, value in debugger.get("aliases", {}).items()})
             for key in ("bdd_live_nodes", "bdd_stage_status", "peak_mem_kb"):
                 row[key] = debugger.get(key)
             check = record.get("probability_check", {})
@@ -532,7 +567,7 @@ def main():
     parser.add_argument("--cases", nargs="+", help="Optional comma/space-separated case names.")
     parser.add_argument("--mode", choices=("audit", "benchmark"), default="audit")
     parser.add_argument("--runs", type=int, default=3, help="Repeats per variant in benchmark mode (default: 3).")
-    parser.add_argument("--variants", nargs="+", help="Benchmark variants: baseline,siso,siso_and_pass,pass.")
+    parser.add_argument("--variants", nargs="+", help="Benchmark variants: " + ",".join(VARIANTS))
     parser.add_argument("--resume", action="store_true", help="Resume or append benchmark cells with the same binary.")
     parser.add_argument("--mem-limit-mb", type=int, default=0,
                         help="Benchmark child address-space cap in MiB; 0 disables it.")

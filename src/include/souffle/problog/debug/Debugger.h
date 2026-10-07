@@ -28,6 +28,7 @@ enum class StageKind {
     SEMINAIVE,
     CREATE_GRAPH,
     PRUNING,
+    DETERMINISTIC_EVENT_ALIASES,
     AND_INPUT_REDUNDANCY,
     FORWARD_COMPILATION,
     WEIGHTED_MODEL_COUNTING,
@@ -60,6 +61,7 @@ inline std::string stageKindToString(const StageKind kind) {
         case StageKind::SEMINAIVE: return "SEMINAIVE";
         case StageKind::CREATE_GRAPH: return "CREATE_GRAPH";
         case StageKind::PRUNING: return "PRUNING";
+        case StageKind::DETERMINISTIC_EVENT_ALIASES: return "DETERMINISTIC_EVENT_ALIASES";
         case StageKind::AND_INPUT_REDUNDANCY: return "AND_INPUT_REDUNDANCY";
         case StageKind::FORWARD_COMPILATION: return "FORWARD_COMPILATION";
         case StageKind::WEIGHTED_MODEL_COUNTING: return "WEIGHTED_MODEL_COUNTING";

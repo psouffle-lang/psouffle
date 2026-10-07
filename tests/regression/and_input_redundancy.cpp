@@ -962,6 +962,233 @@ void certificateSerialization() {
     verifyEveryProof(f.graph, report);
 }
 
+void residualMacroEventsAndInactiveOwningSources() {
+    Fixture f;
+    const auto a = f.fact("A", 0.6);
+    const auto b = f.fact("B", 0.4);
+    const auto q = f.fact("Q", 0.3);
+    const auto c = f.node("FirstMacro");
+    const auto d = f.node("SecondMacro");
+    const auto y = f.node("Y");
+    f.edge({a, b}, c);
+    f.edge({a, b}, d);
+    const auto target = f.edge({c, d, q}, y, 0.7);
+    // The current macro rule event may summarize several hidden SISO events.
+    // These tokens are provenance, not extra independent events to register.
+    target->setProbabilisticSupportTokens({makeEdgeSupportToken(700), makeEdgeSupportToken(701)});
+    const auto retired = f.edge({a, q}, c, 0.8);
+    auto activeEdges = f.graph.getEdges();
+    activeEdges.erase(retired);
+    y->setQuery();
+    q->setEvidence(false);
+    WorkingSubgraphView view(f.graph.getNodes(), std::move(activeEdges));
+    require(!retired->pruned && containsEdge(c->getIncomingEdges(), retired),
+            "residual fixture lacks a retired raw owning source");
+    const auto report = detectReadOnly(view);
+    require(report.proofs.size() == 2 && hasProof(report, target, c) && hasProof(report, target, d),
+            "residual symmetric macro definitions were not recognized independently");
+    verifyEveryProof(view, report);
+    // Enumerate the current residual macro-event worlds, keeping exact event
+    // pointers and metadata. This does not reconstruct SISO-hidden worlds.
+    verifyActualPass(view, 1);
+    require(target->getInputs() == std::vector<NodePtr>{c, q},
+            "residual symmetric candidates were blindly deleted together");
+    require(view.getEdges().count(retired) == 0 && containsEdge(c->getIncomingEdges(), retired),
+            "post-SISO analysis revived or destroyed an inactive owning source");
+    require(!containsEdge(view.getIncomingEdges(c), retired),
+            "post-SISO active adjacency contains a retired source");
+}
+
+void deterministicMacroWithRandomSupportIsNotADefinition() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    const auto definition = f.edge({a}, c);
+    definition->setProbabilisticSupportTokens({makeEdgeSupportToken(900)});
+    f.edge({a}, x, 0.6);
+    const auto target = f.edge({c, x}, y, 0.8);
+    require(!hasProof(detectReadOnly(f.graph), target, c),
+            "p1 macro carrying random support was accepted as a deterministic definition");
+    verifyActualPass(f, 0);
+}
+
+using SourceSnapshot = souffle::problog::detail::AndInputRedundancySnapshot;
+
+SourceSnapshot collectTraversalSources(const DerivationGraphViewInterface& view,
+        std::size_t denseIdBound = 0) {
+    SourceSnapshot result;
+    result.beginTraversal(view.getNodes().size(), view.getEdges().size(), denseIdBound);
+    for (const auto& node : view.getNodes()) {
+        const auto index = result.addTraversalNode(node);
+        require(result.addTraversalNode(node) == index, "traversal registered a node twice");
+    }
+    for (const auto& edge : view.getEdges()) {
+        result.beginTraversalEdge(edge);
+        for (std::size_t i = 0; i < edge->getInputs().size(); ++i) {
+            result.addTraversalInput(edge->getInputs()[i], edge->getBodyNegations()[i]);
+        }
+        result.endTraversalEdge();
+    }
+    result.finishTraversalSources();
+    return result;
+}
+
+void requireEquivalentSources(const SourceSnapshot& left, const SourceSnapshot& right) {
+    require(left.complete && right.complete && left.sourcesFinalized && right.sourcesFinalized,
+            "source collection did not finalize a complete CSR");
+    require(left.baseStats.nodes == right.baseStats.nodes && left.baseStats.edges == right.baseStats.edges &&
+                    left.baseStats.inputAssociations == right.baseStats.inputAssociations &&
+                    left.maxInDegree == right.maxInDegree && left.maxOutDegree == right.maxOutDegree &&
+                    left.maxHyperedgeInputs == right.maxHyperedgeInputs &&
+                    left.disjunctionNodes == right.disjunctionNodes,
+            "collected source summaries disagree");
+    for (std::size_t i = 0; i < left.nodes.size(); ++i) {
+        const auto j = right.indexOf(left.nodes[i]);
+        require(j != right.none && left.safe[i] == right.safe[j] && left.fact[i] == right.fact[j] &&
+                        left.outgoingOccurrences[i] == right.outgoingOccurrences[j],
+                "collected node identity, metadata or outgoing occurrences disagree");
+        std::unordered_set<EdgePtr> leftSources, rightSources;
+        for (auto source = left.incomingOffsets[i]; source < left.incomingOffsets[i + 1]; ++source) {
+            leftSources.insert(left.edges[left.incomingEdges[source]].edge);
+        }
+        for (auto source = right.incomingOffsets[j]; source < right.incomingOffsets[j + 1]; ++source) {
+            rightSources.insert(right.edges[right.incomingEdges[source]].edge);
+        }
+        require(leftSources == rightSources, "collected incoming source identities disagree");
+    }
+    for (const auto& edge : left.edges) {
+        const auto other = std::find_if(right.edges.begin(), right.edges.end(),
+                [&](const auto& candidate) { return candidate.edge == edge.edge; });
+        require(other != right.edges.end() && left.nodes[edge.head] == right.nodes[other->head] &&
+                        edge.safe == other->safe && edge.body.end - edge.body.begin == other->body.end - other->body.begin,
+                "collected edge identity, safety or body size disagrees");
+        for (std::size_t i = 0; i < edge.body.end - edge.body.begin; ++i) {
+            require(left.nodes[left.bodies[edge.body.begin + i]] == right.nodes[right.bodies[other->body.begin + i]],
+                    "collected signed body occurrence order disagrees");
+        }
+    }
+}
+
+void requireEquivalentDetection(const AndInputRedundancyReport& left, const AndInputRedundancyReport& right) {
+    require(left.completeDerivations == right.completeDerivations &&
+                    left.stats.eligibleDefinitions == right.stats.eligibleDefinitions &&
+                    left.stats.recursiveNodes == right.stats.recursiveNodes && left.proofs.size() == right.proofs.size(),
+            "prepared and fresh AND eligibility disagree");
+    for (const auto& proof : left.proofs) {
+        require(std::any_of(right.proofs.begin(), right.proofs.end(), [&](const auto& candidate) {
+                    return proof.edge == candidate.edge && proof.inputIndex == candidate.inputIndex &&
+                            proof.redundant == candidate.redundant && proof.definition == candidate.definition;
+                }), "prepared and fresh AND certificates disagree");
+    }
+}
+
+void backwardCollectionPreservesSourcesAndPointerIdentity() {
+    for (bool unusualIds : {false, true}) {
+        Fixture f, otherOwner;
+        const auto a = f.fact("A"), q = unusualIds ? otherOwner.fact("Q") : f.fact("Q");
+        if (unusualIds) f.graph.startNodeIdsAt(std::numeric_limits<std::size_t>::max() - 6);
+        const auto c = f.node("C"), x = f.node("X"), y = f.node("Y");
+        const auto n = f.node("Negative"), u = f.node("CycleU"), v = f.node("CycleV");
+        f.edge({a}, c);
+        f.edge({a, q}, x, 0.8);
+        const auto target = f.edge({c, x}, y, 0.7);
+        f.edge({x}, n, 1, {true});
+        f.edge({u}, v);
+        f.edge({v}, u);
+        auto nodes = f.graph.getNodes();
+        nodes.insert(q);
+        WorkingSubgraphView view(std::move(nodes), f.graph.getEdges());
+        if (unusualIds) {
+            SourceSnapshot registration;
+            registration.beginTraversal(view.getNodes().size(), view.getEdges().size(), 16);
+            const auto firstIndex = registration.addTraversalNode(a);
+            require(!registration.idIndex.empty(), "dense traversal lookup was not enabled");
+            const auto secondIndex = registration.addTraversalNode(q);
+            require(registration.idIndex.empty() && firstIndex != secondIndex &&
+                            registration.indexOf(a) == firstIndex && registration.indexOf(q) == secondIndex,
+                    "ID collision did not preserve registered nodes when switching to pointers");
+            require(registration.addTraversalNode(c) != registration.none &&
+                            registration.indexOf(a) == firstIndex,
+                    "sparse node registration corrupted an existing pointer lookup");
+        }
+        auto collected = collectTraversalSources(view, 16);
+        SourceSnapshot fresh;
+        fresh.initialize(view, true, true, true);
+        // Delay cycle analysis until it is requested by AND, then compare the
+        // full safety/definition results with an independently built snapshot.
+        collected.finish(true);
+        requireEquivalentSources(collected, fresh);
+        const auto report = collected.detect(true);
+        requireEquivalentDetection(report, fresh.detect(true));
+        require(hasProof(report, target, c), "backward collection lost a real AND proof");
+        if (unusualIds) {
+            require(a->getId() == q->getId() && collected.idIndex.empty() &&
+                            collected.indexOf(a) != collected.indexOf(q),
+                    "dynamic registration merged a colliding or sparse node ID");
+        }
+        SourceSnapshot partial;
+        partial.beginTraversal(view.getNodes().size(), 1, 16);
+        partial.beginTraversalEdge(target);
+        partial.addTraversalInput(c, false);
+        partial.endTraversalEdge();
+        partial.finishTraversalSources();
+        require(!partial.complete, "partial backward edge collection was accepted as complete");
+        const auto malformed = f.edge({a, q}, n, 1, {false, false});
+        const_cast<std::vector<bool>&>(malformed->getBodyNegations()).pop_back();
+        SourceSnapshot misaligned;
+        misaligned.beginTraversal(view.getNodes().size(), 1, 16);
+        misaligned.beginTraversalEdge(malformed);
+        misaligned.finishTraversalSources();
+        require(!misaligned.complete, "misaligned signed body was accepted for alias source reuse");
+    }
+}
+
+void aliasRebasePreservesPreparedAndCertificates() {
+    Fixture f;
+    const auto a = f.fact("A"), b = f.fact("B", 0.4);
+    const auto first = f.node("AliasA"), second = f.node("AliasB"), c = f.node("C");
+    const auto x = f.node("X"), y = f.node("Y"), negative = f.node("Negative");
+    f.edge({a}, first);
+    f.edge({first}, second);
+    f.edge({a, b}, c);
+    const auto provider = f.edge({first, a, b}, x, 0.8);
+    const auto target = f.edge({c, x, second}, y, 0.7);
+    const auto signedConsumer = f.edge({second, a}, negative, 1, {true, false});
+    second->setQuery();
+    first->setEvidence(false);
+    WorkingSubgraphView view(f.graph.getNodes(), f.graph.getEdges());
+    auto prepared = collectTraversalSources(view, 16);
+    prepared.preparedOwner = &f.graph;
+    prepared.preparedViewNodes = &view.getNodes();
+    prepared.preparedViewEdges = &view.getEdges();
+    const std::vector<std::pair<NodePtr, NodePtr>> aliases{{first, a}, {second, a}};
+    f.graph.applyEventAliases(view, aliases);
+    require(prepared.rebaseEventAliases(view, aliases), "source arrays could not rebase certified alias mutation");
+    require(prepared.preparedOwner == &f.graph && prepared.preparedViewNodes == &view.getNodes() &&
+                    prepared.preparedViewEdges == &view.getEdges() && a->needOutput && a->hasEvidence(),
+            "alias rebase lost owner/view provenance or promoted root metadata");
+    require(provider->getInputs() == std::vector<NodePtr>{a, b} &&
+                    signedConsumer->getInputs() == std::vector<NodePtr>{a, a} &&
+                    signedConsumer->getBodyNegations() == std::vector<bool>({true, false}),
+            "alias fixture lost same-sign dedup or opposite-sign occurrences");
+    prepared.finish(true);
+    SourceSnapshot fresh;
+    fresh.initialize(view, true, true, true);
+    requireEquivalentSources(prepared, fresh);
+    const auto report = prepared.detect(true);
+    requireEquivalentDetection(report, fresh.detect(true));
+    require(report.proofs.size() == 1 && hasProof(report, target, c),
+            "rebased source arrays lost the expected downstream AND deletion");
+    verifyEveryProof(view, report);
+    const auto stats = souffle::problog::detail::eliminatePreparedSnapshot(
+            view, prepared, nullptr, std::chrono::steady_clock::now());
+    require(stats.deletedInputAssociations == 1 && target->getInputs() == std::vector<NodePtr>{x, a} &&
+                    detectReadOnly(view).proofs.empty(),
+            "rebased prepared AND pass disagrees with the fresh fixpoint");
+}
+
 }  // namespace
 
 int main() {
@@ -987,6 +1214,10 @@ int main() {
         sparseAndMaximumNodeIdsPreserveEvents();
         duplicateOccurrencesPreserveSurvivingDependency();
         certificateSerialization();
+        residualMacroEventsAndInactiveOwningSources();
+        deterministicMacroWithRandomSupportIsNotADefinition();
+        backwardCollectionPreservesSourcesAndPointerIdentity();
+        aliasRebasePreservesPreparedAndCertificates();
         std::cout << "AND-input redundancy detector and actual world-equivalence checks passed\n";
         return 0;
     } catch (const std::exception& error) {

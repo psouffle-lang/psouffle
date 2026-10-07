@@ -63,6 +63,8 @@ Execution selection and generated runtime defaults:
 | `--det-opt` | Compatibility flag for deterministic-relation analysis, which is already enabled. |
 | `--dump=LIST` | Bake a default set of graph/statistic dumps; none enabled by default. |
 | `--and-input-redundancy` | Enable exact AND-input elimination after pruning and before SISO/graph fastpaths. Off by default; standalone full only. |
+| `--and-input-redundancy-placement=<before-siso\|after-siso>` | Bake the pass placement; default `before-siso`. `after-siso` requires the pass and rewrite with inference. |
+| `--deterministic-event-aliases` | Merge proven copy events before AND-input elimination and SISO, retaining all output names. Off by default; standalone full inference only. |
 | `--profile-stage=LIST` | Bake default pipeline diagnostic stages; none enabled by default. These diagnostics can be used without `-p`. |
 | `--log-file=FILE` | Set the generated runtime's debugger log base name; default `log.txt`. |
 | `-v`, `--verbose` | Enable compiler diagnostics and default runtime informational diagnostics to on. Off by default. |
@@ -97,6 +99,8 @@ dump kinds. There is no `--no-rewrite` flag to undo a baked rewrite default;
 | `-Z`, `--det-opt` | Compatibility flag; deterministic-relation analysis is already enabled. |
 | `--dump=LIST` | Enable selected graph/statistic outputs; off by default unless baked at compilation. |
 | `--and-input-redundancy` | Delete individually proven redundant AND inputs after pruning, re-prune query/evidence roots, then run ordinary SISO/graph fastpaths. Independent of `--rewrite`; off by default. |
+| `--and-input-redundancy-placement=<before-siso\|after-siso>` | Select the enabled pass's order. `after-siso` runs on the residual active graph before component solving, requires rewrite, and excludes `--derv-only`. Default: `before-siso`. |
+| `--deterministic-event-aliases` | Merge proven copy events after initial pruning, retaining original query names. May run alone or before AND-input elimination and SISO; rejects online and `--derv-only`. Off by default. |
 | `--profile-stage=LIST` | Enable selected pipeline diagnostics; off by default unless baked at compilation. |
 | `-l FILE`, `--logfile=FILE`, `--log-file=FILE` | Override the debugger JSON log base name. Logs are written in the runtime output directory with a timestamped filename. |
 | `-v`, `--verbose` | Enable informational runtime diagnostics. |

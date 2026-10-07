@@ -15,8 +15,17 @@ contribution = importlib.util.module_from_spec(contribution_spec)
 contribution_spec.loader.exec_module(contribution)
 
 
+def stage_info(payload):
+    # Post-SISO placement closes the SISO stage and starts a second hybrid
+    # inference stage. Merge their different fields rather than losing SISO.
+    result = {}
+    for stage in payload['turns'][0]['stages']:
+        result.setdefault(stage['name'], {}).update(stage.get('info', {}))
+    return result
+
+
 def check_diagnostics(payload, *, rewrite=False):
-    stages = {stage['name']: stage.get('info', {}) for stage in payload['turns'][0]['stages']}
+    stages = stage_info(payload)
     prune = stages['PRUNING']
     for kind in ('nodes', 'edges'):
         assert int(prune['before_prune_' + kind]) >= int(prune['after_prune_' + kind]), prune
@@ -60,7 +69,7 @@ def check_and_redundancy(out, baseline, *, rewrite=False):
     phases = ['before-rewrite', 'after-rewrite'] if rewrite else ['before-rewrite']
     assert {path.name for path in out.glob('and-redundancy-*.json')} == {
         'and-redundancy-' + phase + '.json' for phase in phases}, out
-    stages = {stage['name']: stage.get('info', {}) for stage in baseline['turns'][0]['stages']}
+    stages = stage_info(baseline)
     for phase in phases:
         report = json.loads((out / ('and-redundancy-' + phase + '.json')).read_text())
         assert report['schema'] == 'and-input-redundancy-v1', report
@@ -93,17 +102,28 @@ def mutation_info(payload):
     return info
 
 
-def check_mutation(payload, *, positive=False, rewrite=False):
-    stages = {stage['name']: stage.get('info', {}) for stage in payload['turns'][0]['stages']}
+def check_mutation(payload, *, positive=False, rewrite=False, placement='before-siso'):
+    stages = stage_info(payload)
     names = [stage['name'] for stage in payload['turns'][0]['stages']]
-    assert names.index('AND_INPUT_REDUNDANCY') == names.index('PRUNING') + 1, names
-    for name in ('FC_WMC_HYBRID', 'FORWARD_COMPILATION'):
-        if name in names:
-            assert names.index(name) > names.index('AND_INPUT_REDUNDANCY'), names
+    if placement == 'after-siso':
+        hybrid_positions = [index for index, name in enumerate(names) if name == 'FC_WMC_HYBRID']
+        assert rewrite and len(hybrid_positions) == 2, names
+        assert names.index('PRUNING') < hybrid_positions[0] < names.index(
+            'AND_INPUT_REDUNDANCY') < hybrid_positions[1], names
+        if 'FORWARD_COMPILATION' in names:
+            assert names.index('FORWARD_COMPILATION') > names.index('AND_INPUT_REDUNDANCY'), names
+    else:
+        assert placement == 'before-siso', placement
+        assert names.index('AND_INPUT_REDUNDANCY') == names.index('PRUNING') + 1, names
+        for name in ('FC_WMC_HYBRID', 'FORWARD_COMPILATION'):
+            if name in names:
+                assert names.index(name) > names.index('AND_INPUT_REDUNDANCY'), names
     info = mutation_info(payload)
     prefix = 'and_input_redundancy_'
+    assert info[prefix + 'placement'] == placement, info
     assert info[prefix + 'analysis_strategy'] in (
-        'indexed', 'lazy_fresh_dag', 'indexed_fresh_dag', 'summary_no_definitions'), info
+        'indexed', 'lazy_fresh_dag', 'indexed_fresh_dag', 'indexed_active_view',
+        'summary_no_definitions'), info
     for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
                 'remaining_input_associations', 'initialization_ms', 'workspace_summary_ms', 'detection_ms',
                 'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
@@ -118,9 +138,12 @@ def check_mutation(payload, *, positive=False, rewrite=False):
     for kind in ('nodes', 'edges'):
         before = int(info[prefix + 'before_' + kind])
         after = int(info[prefix + 'after_' + kind])
-        assert before == int(stages['PRUNING']['after_prune_' + kind]), info
+        if placement == 'after-siso':
+            assert before == int(stages['FC_WMC_HYBRID']['rewrite_final_' + kind]), info
+        else:
+            assert before == int(stages['PRUNING']['after_prune_' + kind]), info
         assert after <= before, info
-        if rewrite:
+        if rewrite and placement == 'before-siso':
             assert after == int(stages['FC_WMC_HYBRID']['rewrite_initial_' + kind]), info
     if int(info[prefix + 'deleted_input_associations']) == 0:
         assert info[prefix + 'cleanup_strategy'] == 'none', info
@@ -137,6 +160,69 @@ def run(args, *, stdin=None, success=True):
                             capture_output=True, timeout=180)
     assert (result.returncode == 0) == success, (args, result.stdout, result.stderr)
     return result
+
+
+def check_event_aliases(args, root):
+    facts = root / 'event_alias_input'
+    facts.mkdir()
+    for name, probability in [('f', 0.4), ('r', 0.6), ('gate', 1.0)]:
+        (facts / (name + '.facts')).write_text('1\n')
+        (facts / (name + '.prob')).write_text(str(probability) + '\n')
+    source = (
+        ''.join(f'.decl {name}(k:number)\n' for name in
+                ('f', 'r', 'gate', 'gate2', 'guaranteed', 'a', 'b', 'c', 'joint', 'z', 'neg')) +
+        '.decl score(k:number,w:number)\n.decl total(k:number,s:number)\n' +
+        '.input f\n.input r\n.input gate\n' +
+        ''.join(f'.output {name}\n' for name in ('a', 'b', 'c', 'joint', 'z', 'neg', 'total')) +
+        'gate2(k) :- gate(k).\nguaranteed(k) :- gate2(k),gate(k).\n'
+        'a(k) :- f(k),guaranteed(k).\nb(k) :- a(k).\nc(k) :- f(k).\n'
+        'joint(k) :- a(k),b(k).\n0.7::z(k) :- a(k),b(k),r(k).\n'
+        'neg(k) :- gate(k),!a(k).\nscore(k,2) :- a(k).\nscore(k,3) :- b(k).\n'
+        'total(K,S) :- gate(K), S = sum W : {score(K,W)}.\n')
+    for observed in ('true', 'false'):
+        program = root / ('event_alias_' + observed + '.dl')
+        program.write_text(source + 'evidence(c(1),' + observed + ').\n')
+        binary = root / ('event_alias_' + observed)
+        run([args.souffle_bin, '--full-only', '-F', facts, program, '-o', binary])
+        baseline = None
+        for variant, flags in [
+                ('plain', []), ('alias', ['--deterministic-event-aliases']),
+                ('alias_and', ['--deterministic-event-aliases', '--and-input-redundancy']),
+                ('alias_explicit', ['--deterministic-event-aliases', '--explicit-rewrite']),
+                ('alias_implicit', ['--deterministic-event-aliases', '--implicit-rewrite']),
+                ('alias_after', ['--deterministic-event-aliases', '--rewrite', '--and-input-redundancy',
+                                 '--and-input-redundancy-placement=after-siso'])]:
+            out = root / ('event_alias_' + observed + '_' + variant)
+            out.mkdir()
+            run([binary, '-F', facts, '-D', out, *flags])
+            values = parse_prob_file(out / 'facts.prob')
+            assert 'f(1)' not in values and 'r(1)' not in values, (variant, values)
+            for name in ('a', 'b', 'c', 'joint'):
+                assert abs(values[name + '(1)'] - (observed == 'true')) < 1e-8, values
+            assert abs(values['z(1)'] - (0.42 if observed == 'true' else 0.0)) < 1e-8, values
+            assert abs(values['neg(1)'] - (observed == 'false')) < 1e-8, values
+            assert abs(values['total(1,5)'] - (observed == 'true')) < 1e-8, values
+            if baseline is None:
+                baseline = out
+            else:
+                assert_prob_close(baseline / 'facts.prob', out / 'facts.prob', label=variant)
+                payload = execution_log(out)
+                info = stage_info(payload)['DETERMINISTIC_EVENT_ALIASES']
+                assert int(info['deterministic_event_aliases_query_aliases']) >= 3, info
+                assert int(info['deterministic_event_aliases_duplicate_inputs_removed']) >= 1, info
+                assert int(info['deterministic_event_aliases_shared_prune_indexes']) == 1, info
+        if observed == 'true':
+            generated = root / 'event_alias_baked.cpp'
+            run([args.souffle_bin, '--full-only', '--deterministic-event-aliases',
+                 '-F', facts, program, '-g', generated])
+            assert 'setDeterministicEventAliasesEnabled(true)' in generated.read_text()
+            baked = root / 'event_alias_baked'
+            run([args.souffle_bin, '--full-only', '--deterministic-event-aliases',
+                 '-F', facts, program, '-o', baked])
+            out = root / 'event_alias_baked_output'
+            out.mkdir()
+            run([baked, '-F', facts, '-D', out])
+            assert_prob_close(baseline / 'facts.prob', out / 'facts.prob', label='baked aliases')
 
 
 def main():
@@ -277,6 +363,15 @@ def main():
         ('hybrid', ['--online', '--derv-only']),
         ('hybrid', ['--online', '--merge-bi-imp']),
         ('hybrid', ['--online', '--prune-extra']),
+        ('hybrid', ['--online', '--deterministic-event-aliases']),
+        ('full', ['--derv-only', '--deterministic-event-aliases']),
+        ('full', ['--and-input-redundancy', '--and-input-redundancy-placement=after-siso']),
+        ('full', ['--rewrite', '--and-input-redundancy-placement=after-siso']),
+        ('full', ['--rewrite', '--and-input-redundancy', '--and-input-redundancy-placement=unknown']),
+        ('full', ['--rewrite', '--and-input-redundancy', '--derv-only',
+                  '--and-input-redundancy-placement=after-siso']),
+        ('hybrid', ['--online', '--rewrite', '--and-input-redundancy',
+                    '--and-input-redundancy-placement=after-siso']),
     ]
     for index, (kind, flags) in enumerate(invalid):
         out, _ = execute(kind, 'invalid_' + str(index), flags, success=False)
@@ -284,7 +379,8 @@ def main():
     for flags in [['--full-only', '--inc-only'], ['--inc-only', '--full-only'],
                   ['--full-only', '--setmode', 'full'], ['--inc-only', '--rewrite'],
                   ['--online', '--rewrite'], ['--explicit-rewrite', '--implicit-rewrite'],
-                  ['--inc-only', '--derv-only']]:
+                  ['--inc-only', '--derv-only'], ['--inc-only', '--deterministic-event-aliases'],
+                  ['--derv-only', '--deterministic-event-aliases']]:
         run([args.souffle_bin, *flags, root / 'compute.dl', '-g', root / 'invalid.cpp'], success=False)
 
     # Capability validation must reject this standalone-only diagnostic before
@@ -305,6 +401,15 @@ def main():
                       *flags, root / 'compute.dl', '-g', generated], success=False)
         assert diagnostic_error in result.stderr, result.stderr
         assert not generated.exists(), generated
+
+    alias_error = '--deterministic-event-aliases requires standalone full inference'
+    for kind, flags in [('hybrid', ['--online']), ('inc', []), ('full', ['--derv-only'])]:
+        out = root / ('event_alias_invalid_' + kind)
+        out.mkdir()
+        result = run([binaries[kind], '-F', missing_facts, '-D', out,
+                      '--deterministic-event-aliases', *flags], stdin='q\n', success=False)
+        assert alias_error in result.stderr, result.stderr
+        assert not list(out.iterdir()), out
 
     out = root / 'and_online_mutable_invalid'
     out.mkdir()
@@ -400,6 +505,16 @@ def main():
             ('pass_prune_extra', ['--and-input-redundancy', '--prune-extra']),
             ('pass_explicit', ['--and-input-redundancy', '--explicit-rewrite']),
             ('pass_implicit', ['--and-input-redundancy', '--implicit-rewrite']),
+            ('after_auto', ['--and-input-redundancy', '--rewrite',
+                            '--and-input-redundancy-placement=after-siso']),
+            ('after_explicit', ['--and-input-redundancy', '--explicit-rewrite',
+                                '--and-input-redundancy-placement=after-siso']),
+            ('after_implicit', ['--and-input-redundancy', '--implicit-rewrite',
+                                '--and-input-redundancy-placement=after-siso']),
+            ('after_merge', ['--and-input-redundancy', '--rewrite', '--merge-bi-imp',
+                             '--and-input-redundancy-placement=after-siso']),
+            ('after_prune_extra', ['--and-input-redundancy', '--rewrite', '--prune-extra',
+                                   '--and-input-redundancy-placement=after-siso']),
             ('pass_lift', ['--and-input-redundancy', '--rewrite', '--lifted-wmc', '--lifted-threshold=0'])]:
         out = root / ('and_pass_' + variant)
         out.mkdir()
@@ -416,13 +531,17 @@ def main():
         rewriting = any(flag in flags for flag in ('--rewrite', '--explicit-rewrite', '--implicit-rewrite'))
         check_diagnostics(payload, rewrite=rewriting)
         if '--and-input-redundancy' in flags:
-            info = check_mutation(payload, positive=True, rewrite=rewriting)
+            placement = 'after-siso' if variant.startswith('after_') else 'before-siso'
+            info = check_mutation(payload, positive=True, rewrite=rewriting, placement=placement)
             assert int(info['and_input_redundancy_deleted_input_associations']) == 1, info
-            assert int(info['and_input_redundancy_cleaned_nodes']) == 1, info
-            assert int(info['and_input_redundancy_cleaned_hyperedges']) == 1, info
-            expected_cleanup = 'full' if variant in ('pass_merge', 'pass_prune_extra') else 'local'
+            body_only = variant in ('after_merge', 'after_prune_extra')
+            assert int(info['and_input_redundancy_cleaned_nodes']) == (0 if body_only else 1), info
+            assert int(info['and_input_redundancy_cleaned_hyperedges']) == (0 if body_only else 1), info
+            expected_cleanup = 'body_only' if body_only else (
+                'full' if variant in ('pass_merge', 'pass_prune_extra') else 'local')
             assert info['and_input_redundancy_cleanup_strategy'] == expected_cleanup, info
-            expected_analysis = 'indexed' if variant in ('pass_merge', 'pass_prune_extra') else 'indexed_fresh_dag'
+            expected_analysis = 'indexed_active_view' if placement == 'after-siso' else (
+                'indexed' if variant in ('pass_merge', 'pass_prune_extra') else 'indexed_fresh_dag')
             assert info['and_input_redundancy_analysis_strategy'] == expected_analysis, info
             if variant == 'pass':
                 pass_info = info
@@ -434,6 +553,26 @@ def main():
                         assert info[key] == value, (variant, key, info[key], value)
         else:
             assert 'and_input_redundancy_deleted_input_associations' not in mutation_info(payload), payload
+
+    # The compiler-baked placement must remain standalone-only and execute the
+    # same evidence-conditioned mutation without needing runtime flags.
+    baked_after = root / 'and_pass_baked_after'
+    baked_source = root / 'and_pass_baked_after.cpp'
+    baked_flags = ['--full-only', '--rewrite', '--and-input-redundancy',
+                   '--and-input-redundancy-placement=after-siso']
+    run([args.souffle_bin, *baked_flags, '-F', and_facts, and_program, '-g', baked_source])
+    assert 'setAndInputRedundancyPlacement("after-siso")' in baked_source.read_text()
+    run([args.souffle_bin, *baked_flags, '-F', and_facts, and_program, '-o', baked_after])
+    baked_output = root / 'and_pass_baked_after_output'
+    baked_output.mkdir()
+    run([baked_after, '-F', and_facts, '-D', baked_output])
+    assert_prob_close(baseline / 'facts.prob', baked_output / 'facts.prob', label='baked after-SISO')
+    baked_info = check_mutation(execution_log(baked_output), positive=True, rewrite=True, placement='after-siso')
+    assert int(baked_info['and_input_redundancy_deleted_input_associations']) == 1, baked_info
+    invalid_output = root / 'and_pass_baked_after_online_invalid'
+    invalid_output.mkdir()
+    run([baked_after, '--online', '-F', missing_facts, '-D', invalid_output], stdin='q\n', success=False)
+    assert not list(invalid_output.iterdir()), invalid_output
 
     # Every rule now has an independent random event. Although the same bodies
     # imply Candidate-like inputs, the random Conflict event cannot be removed.
@@ -482,7 +621,8 @@ def main():
     payload = next(json.loads(path.read_text()) for path in out.glob('*.json')
                    if path.name != 'derivation.json')
     check_mutation(payload, positive=True)
-    print('Execution capabilities, rewrite equivalence, and online isolation passed')
+    check_event_aliases(args, root)
+    print('Execution capabilities, rewrite equivalence, event aliases, and online isolation passed')
 
 
 if __name__ == '__main__':

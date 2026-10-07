@@ -4,6 +4,7 @@
 #include "souffle/problog/AndInputRedundancy.h"
 #include "souffle/problog/AndInputRedundancyFast.h"
 #include "souffle/problog/DerivationGraph.h"
+#include "souffle/problog/DeterministicEventAliases.h"
 #include "souffle/problog/ForwardCompilation.h"
 #include "souffle/problog/GraphAnalyzer.h"
 #include "souffle/problog/GraphRewriter.h"
@@ -160,6 +161,24 @@ static void reportAndInputRedundancy(
 static WorkingSubgraphView buildWorkingViewLocal(
         const std::unordered_set<NodePtr>& nodes, const std::unordered_set<EdgePtr>& edges) {
     return WorkingSubgraphView(nodes, edges);
+}
+
+static void restoreEventAliasBindings(
+        WorkingDerivationGraph& graph, DeterministicEventAliasResult& eventAliases) {
+    // Implicit SISO may replace the entire owner. Bind original names to its
+    // current nodes; representatives removed by SISO retain tuple precomputes.
+    for (auto& [alias, root] : eventAliases.aliases) {
+        if (auto current = graph.findNode(root->getTuple())) {
+            root = current;
+            graph.bindEventAliasTuple(alias->getTuple(), current);
+        }
+    }
+    for (auto& [alias, root] : eventAliases.outputAliases) {
+        if (auto current = graph.findNode(root->getTuple())) root = current;
+    }
+    for (auto& root : eventAliases.promotedOutputRoots) {
+        if (auto current = graph.findNode(root->getTuple())) root = current;
+    }
 }
 
 static std::size_t precomputeIsolatedOutputFactsLocal(SubgraphView& view) {
@@ -387,6 +406,93 @@ struct GraphSummary {
     std::size_t inputAssociations = 0;
 };
 
+static void classifySummaryNode(GraphSummary& summary, const NodePtr& node) {
+    if (node->isFact) {
+        ++summary.factNodes;
+        if (node->getProbability() < 1.0) ++summary.probabilisticFactNodes;
+    } else {
+        ++summary.derivedNodes;
+    }
+    summary.queryNodes += node->isQuery;
+    summary.outputNodes += node->needOutput;
+    summary.evidenceNodes += node->hasEvidence();
+    summary.shadowNodes += node->isShadow;
+}
+
+static GraphSummary summarizePreparedSources(const detail::AndInputRedundancySnapshot& prepared,
+        std::size_t probabilisticEdges) {
+    GraphSummary summary;
+    summary.nodes = prepared.nodes.size();
+    summary.edges = prepared.edges.size();
+    for (const auto& node : prepared.nodes) classifySummaryNode(summary, node);
+    summary.probabilisticEdges = probabilisticEdges;
+    summary.randomVariables = summary.probabilisticFactNodes + probabilisticEdges;
+    summary.inputAssociations = prepared.baseStats.inputAssociations;
+    summary.maxHyperedgeInputs = prepared.maxHyperedgeInputs;
+    summary.maxInDegree = prepared.maxInDegree;
+    summary.maxOutDegree = prepared.maxOutDegree;
+    summary.disjunctionNodes = prepared.disjunctionNodes;
+    return summary;
+}
+
+// Build the common source/body index during regular pruning's backward BFS.
+// Alias truth propagation and AND proofs subsequently use these integer arrays;
+// neither pass needs another walk over the graph's node/edge sets.
+struct BackwardPrunePreparation : BackwardTraversalObserver {
+    const WorkingDerivationGraph& owner;
+    AndInputRedundancyWorkspace& workspace;
+    GraphSummary summary;
+
+    BackwardPrunePreparation(const WorkingDerivationGraph& graph, AndInputRedundancyWorkspace& work)
+            : owner(graph), workspace(work) {
+        workspace.prepared = std::make_unique<detail::AndInputRedundancySnapshot>();
+        workspace.prepared->beginTraversal(graph.getNodes().size(), graph.getEdges().size(),
+                graph.getNodes().size());
+    }
+
+    void node(const NodePtr& node) override {
+        if (!node || !owner.getNodes().count(node)) {
+            workspace.prepared->endpointsValid = false;
+            return;
+        }
+        workspace.prepared->addTraversalNode(node);
+        classifySummaryNode(summary, node);
+    }
+    void beginEdge(const EdgePtr& edge) override {
+        if (!edge || !owner.getEdges().count(edge)) {
+            workspace.prepared->endpointsValid = false;
+            return;
+        }
+        workspace.prepared->beginTraversalEdge(edge);
+        if (!edge->isDeterministic()) ++summary.probabilisticEdges;
+    }
+    void input(const NodePtr& node, bool negative) override {
+        workspace.prepared->addTraversalInput(node, negative);
+    }
+    void endEdge() override { workspace.prepared->endTraversalEdge(); }
+
+    bool finish(const WorkingSubgraphView& view) {
+        auto& prepared = *workspace.prepared;
+        prepared.finishTraversalSources();
+        workspace.completeEndpoints = prepared.complete && prepared.nodes.size() == view.getNodes().size() &&
+                prepared.edges.size() == view.getEdges().size();
+        if (!workspace.completeEndpoints) return false;
+        prepared.preparedOwner = &owner;
+        prepared.preparedViewNodes = &view.getNodes();
+        prepared.preparedViewEdges = &view.getEdges();
+        summary.nodes = prepared.nodes.size();
+        summary.edges = prepared.edges.size();
+        summary.inputAssociations = prepared.baseStats.inputAssociations;
+        summary.maxHyperedgeInputs = prepared.maxHyperedgeInputs;
+        summary.maxInDegree = prepared.maxInDegree;
+        summary.maxOutDegree = prepared.maxOutDegree;
+        summary.disjunctionNodes = prepared.disjunctionNodes;
+        summary.randomVariables = summary.probabilisticFactNodes + summary.probabilisticEdges;
+        workspace.initialInputAssociations = summary.inputAssociations;
+        return true;
+    }
+};
+
 static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view,
         AndInputRedundancyWorkspace* workspace = nullptr,
         const AndInputRedundancyFreshDagCertificate& certificate = {}, std::size_t denseIdBound = 0) {
@@ -557,7 +663,7 @@ static void addGraphSummaryInfo(
 static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivationGraph& graph,
         WorkingSubgraphView& view, const std::vector<souffle::Relation*>& outputs,
         const GraphSummary& before, AndInputRedundancyWorkspace* workspace = nullptr,
-        const AndInputRedundancyFreshDagCertificate& certificate = {}) {
+        const AndInputRedundancyFreshDagCertificate& certificate = {}, bool afterSiso = false) {
     if (!opt.isAndInputRedundancyEnabled()) return before;
     auto& debugger = Debugger::getInstance();
     debugger.startStage(StageKind::AND_INPUT_REDUNDANCY);
@@ -566,15 +672,27 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     // The existing summary counts exact rule-event classifications. If every
     // edge is probabilistic, no deterministic candidate definition can exist.
     const bool summaryNoDefinitions = before.edges == before.probabilisticEdges;
-    const bool usedFreshDag = !summaryNoDefinitions && localCleanup && workspace &&
+    const bool usedFreshDag = !summaryNoDefinitions && !afterSiso && localCleanup && workspace &&
             canUseAndInputRedundancyFreshDag(view, *workspace, certificate);
-    const bool usedPrepared = usedFreshDag && workspace->prepared;
+    // A post-SISO summary indexes every source in the residual active view and
+    // runs the generic SCC checks. It cannot inherit the original DAG proof.
+    const bool usedActivePrepared = !summaryNoDefinitions &&
+            certificate.completeDerivations && !certificate.compilerAttestedDag && !certificate.originalGraph &&
+            workspace && workspace->completeEndpoints &&
+            workspace->prepared && workspace->prepared->complete &&
+            workspace->prepared->nodes.size() == view.getNodes().size() &&
+            workspace->prepared->edges.size() == view.getEdges().size();
+    const bool usedPrepared = usedActivePrepared || (usedFreshDag && workspace->prepared);
     const double workspaceSummaryMs = workspace ? workspace->summaryMs : 0.0;
     AndInputRedundancyCleanupPlan cleanupPlan;
     AndInputRedundancyPassStats stats;
     if (summaryNoDefinitions) {
         stats.initialInputAssociations = before.inputAssociations;
         stats.finalInputAssociations = before.inputAssociations;
+    } else if (usedActivePrepared) {
+        stats = detail::eliminatePreparedSnapshot(view, *workspace->prepared,
+                localCleanup ? &cleanupPlan : nullptr, start);
+        workspace->completeEndpoints = false;
     } else {
         stats = usedFreshDag
                 ? eliminateAndInputRedundancyFreshDag(view, *workspace, certificate, &cleanupPlan)
@@ -583,12 +701,15 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     const auto pruningStart = std::chrono::steady_clock::now();
     std::string cleanupStrategy = "none";
     if (stats.deletedInputAssociations != 0) {
-        // The original graph still owns the same edges/events. Re-prune before
-        // any SISO summary or formula fastpath, preserving queries and evidence.
+        // The original owner retains old SISO sources outside active membership.
+        // After SISO, only apply the deletion-induced local cleanup closure;
+        // a full owner prune could restore retired derivations.
         graph.invalidateCaches();
         if (localCleanup && !cleanupPlan.requiresFullPrune) {
             cleanupStrategy = "local";
             view.applyPruning(cleanupPlan.nodes, cleanupPlan.edges);
+        } else if (afterSiso) {
+            cleanupStrategy = "body_only";
         } else {
             cleanupStrategy = "full";
             view = graph.prune(outputs);
@@ -603,7 +724,7 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
                 ? summarizeAfterAndInputCleanup(before, view, cleanupPlan)
                 : summarizeGraphLight(view);
     }
-    // Release retained summary storage inside the measured pass, before SISO.
+    // Release retained summary storage inside the measured pass.
     if (workspace) *workspace = {};
     const double totalMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count();
@@ -632,8 +753,10 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addTime("pruning_ms", pruningMs);
     addTime("total_ms", totalMs);
     debugger.addInfo("and_input_redundancy_cleanup_strategy", cleanupStrategy);
+    debugger.addInfo("and_input_redundancy_placement", afterSiso ? "after-siso" : "before-siso");
     debugger.addInfo("and_input_redundancy_analysis_strategy",
             summaryNoDefinitions ? "summary_no_definitions" :
+            usedActivePrepared ? "indexed_active_view" :
             usedPrepared ? "indexed_fresh_dag" : usedFreshDag ? "lazy_fresh_dag" : "indexed");
     std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
               << " cleaned_nodes=" << before.nodes - after.nodes
@@ -769,7 +892,8 @@ static void runBddPipeline(
         DerivationGraph& graph,
         SubgraphView& view,
         const std::vector<std::pair<UntypedTuple, bool>>& evidences,
-        StageInfo* rewriteHybridStage) {
+        StageInfo* rewriteHybridStage,
+        const DeterministicEventAliasResult& eventAliases) {
     Debugger& debugger = Debugger::getInstance();
 
     std::map<NodePtr, BddNodeRef> nodeFormulas;
@@ -1389,7 +1513,8 @@ static void runBddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            dumpProbabilities(probResult, opt.getOutputFileDir());
+            dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
+                    eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - tDumpStart)
                                    .count();
@@ -1573,7 +1698,8 @@ static void runBddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            dumpProbabilities(probResult, opt.getOutputFileDir());
+            dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
+                    eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - tDumpStart)
                                    .count();
@@ -2027,7 +2153,8 @@ static void runSddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            dumpProbabilities(probResult, opt.getOutputFileDir());
+            dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
+                    eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - tDumpStart)
                                    .count();
@@ -2136,7 +2263,8 @@ static void runSddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            dumpProbabilities(probResult, opt.getOutputFileDir());
+            dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
+                    eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                    std::chrono::steady_clock::now() - tDumpStart)
                                    .count();
@@ -2182,13 +2310,16 @@ void runPipeline(
     std::map<std::string, double> liftedProbabilities;
     std::unordered_set<std::string> liftedOutputs;
     auto concreteOutputs = program.getOutputRelations();
-    if (opt.isLiftedWmcEnabled() && opt.isAndInputRedundancyEnabled()) {
+    const bool concretePassEnabled = opt.isAndInputRedundancyEnabled() || opt.isDeterministicEventAliasesEnabled();
+    if (opt.isLiftedWmcEnabled() && concretePassEnabled) {
         // An explicitly requested concrete graph pass must precede fastpaths.
         // Retain concrete provenance instead of returning from pointwise lift.
         debugger.addInfo("lifted_handled", "false");
-        debugger.addInfo("lifted_reason", "and_input_redundancy_requires_concrete_graph");
+        debugger.addInfo("lifted_reason", opt.isDeterministicEventAliasesEnabled()
+                ? "deterministic_event_aliases_requires_concrete_graph"
+                : "and_input_redundancy_requires_concrete_graph");
     }
-    if (opt.isLiftedWmcEnabled() && !opt.isAndInputRedundancyEnabled()) {
+    if (opt.isLiftedWmcEnabled() && !concretePassEnabled) {
         debugger.startStage(StageKind::LIFTED_WMC);
         auto lifted = tryEvaluateLiftedPointwise(opt, program, ruleManager, factProb, evidences);
         liftedOutputs.insert(lifted.handledOutputRelations.begin(), lifted.handledOutputRelations.end());
@@ -2274,7 +2405,7 @@ void runPipeline(
         }
     }
     graph->attachEvidence(evidences);
-    const auto graphEvidences = graph->getEvidences();
+    auto graphEvidences = graph->getEvidences();
     auto t1 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] create graph took "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
@@ -2303,18 +2434,42 @@ void runPipeline(
     AndInputRedundancyFreshDagCertificate freshDagCertificate;
     freshDagCertificate.completeDerivations = true;
     std::unique_ptr<AndInputRedundancyWorkspace> andInputWorkspace;
-    if (opt.isAndInputRedundancyEnabled() && !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled() &&
+    const bool andInputAfterSiso = opt.isAndInputRedundancyEnabled() && opt.isAndInputRedundancyAfterSiso();
+    if (opt.isAndInputRedundancyEnabled() && !andInputAfterSiso &&
+            !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled() &&
             ruleManager.hasCompilerAcyclicityCertificate() && program.getRelation("__agg_sum_state") == nullptr &&
             graph->getNodes().size() <= static_cast<std::size_t>(std::numeric_limits<RamSigned>::max())) {
         freshDagCertificate.compilerAttestedDag = true;
         // This is the original createFrom graph, before any SISO or aliases.
         freshDagCertificate.originalGraph = true;
-        andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+        if (!opt.isDeterministicEventAliasesEnabled()) {
+            andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+        }
     }
-    auto view = graph->prune(concreteOutputs);
-    const GraphSummary afterPruneSummary = summarizeGraphLight(
-            view, andInputWorkspace.get(), freshDagCertificate, graph->getNodes().size());
+    const bool collectBackwardIndexes = !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled() &&
+            (opt.isDeterministicEventAliasesEnabled() || (opt.isAndInputRedundancyEnabled() && !andInputAfterSiso));
+    std::unique_ptr<BackwardPrunePreparation> backwardPreparation;
+    if (collectBackwardIndexes) {
+        if (!andInputWorkspace) andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+        backwardPreparation = std::make_unique<BackwardPrunePreparation>(*graph, *andInputWorkspace);
+    }
+    auto view = graph->prune(concreteOutputs, backwardPreparation.get());
+    const auto prepareStart = std::chrono::steady_clock::now();
+    const bool sharedPruneIndexes = backwardPreparation && backwardPreparation->finish(view);
+    const GraphSummary afterPruneSummary = sharedPruneIndexes ? backwardPreparation->summary :
+            summarizeGraphLight(view, andInputWorkspace.get(), freshDagCertificate, graph->getNodes().size());
     if (afterPruneSummary.shadowNodes != 0) freshDagCertificate.originalGraph = false;
+    if (sharedPruneIndexes) {
+        if (!opt.isDeterministicEventAliasesEnabled()) {
+            const bool certifiedDag = freshDagCertificate.compilerAttestedDag &&
+                    freshDagCertificate.originalGraph && afterPruneSummary.shadowNodes == 0;
+            andInputWorkspace->prepared->finish(false, certifiedDag);
+        }
+        andInputWorkspace->summaryMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - prepareStart).count();
+    }
+    backwardPreparation.reset();
+    debugger.addInfo("prune_shared_indexes", std::to_string(sharedPruneIndexes));
     addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
     auto t3 = std::chrono::steady_clock::now();
     std::cout << "[pipeline] pruning took "
@@ -2322,10 +2477,87 @@ void runPipeline(
               << " ms\n";
     debugger.endStage();
 
+    DeterministicEventAliasResult eventAliases;
+    GraphSummary inputPassSummary = afterPruneSummary;
+    if (opt.isDeterministicEventAliasesEnabled()) {
+        debugger.startStage(StageKind::DETERMINISTIC_EVENT_ALIASES);
+        const auto aliasStart = std::chrono::steady_clock::now();
+        eventAliases = eliminateDeterministicEventAliases(*graph, view, true,
+                sharedPruneIndexes ? andInputWorkspace->prepared.get() : nullptr);
+        // Store evidence on the representative event before implicit SISO can
+        // replace this owner and its original tuple-to-node bindings.
+        for (auto& [tuple, value] : graphEvidences) {
+            if (auto node = graph->findNode(tuple)) tuple = node->getTuple();
+        }
+        const auto& stats = eventAliases.stats;
+        const bool changed = stats.mergedAliases != 0 || stats.duplicateInputsRemoved != 0;
+        if (changed) {
+            // The event quotient has fresh, complete sources; original-node
+            // indexes and the compiler's untouched-graph shortcut are stale.
+            freshDagCertificate.compilerAttestedDag = false;
+            freshDagCertificate.originalGraph = false;
+        }
+        const bool prepareInputs = opt.isAndInputRedundancyEnabled() && !andInputAfterSiso &&
+                !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled();
+        if (prepareInputs && !andInputWorkspace) andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+        const auto summaryStart = std::chrono::steady_clock::now();
+        const bool rebasedIndexes = sharedPruneIndexes &&
+                andInputWorkspace->prepared->rebaseEventAliases(view, eventAliases.aliases);
+        if (rebasedIndexes) {
+            auto& prepared = *andInputWorkspace->prepared;
+            inputPassSummary = summarizePreparedSources(prepared, afterPruneSummary.probabilisticEdges);
+            if (prepareInputs) {
+                const bool certifiedDag = freshDagCertificate.compilerAttestedDag &&
+                        freshDagCertificate.originalGraph && inputPassSummary.shadowNodes == 0;
+                prepared.finish(false, certifiedDag);
+                andInputWorkspace->initialInputAssociations = inputPassSummary.inputAssociations;
+                andInputWorkspace->completeEndpoints = prepared.complete;
+            }
+        } else if (changed || prepareInputs) {
+            inputPassSummary = summarizeGraphLight(view, andInputWorkspace.get(), freshDagCertificate,
+                    changed ? 0 : graph->getNodes().size());
+        }
+        const auto summaryMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - summaryStart).count();
+        if (prepareInputs && rebasedIndexes) andInputWorkspace->summaryMs += summaryMs;
+        if (!prepareInputs) andInputWorkspace.reset();
+        addGraphSummaryInfo(debugger, "deterministic_event_aliases_before_", afterPruneSummary);
+        addGraphSummaryInfo(debugger, "deterministic_event_aliases_after_", inputPassSummary);
+        auto addAliasInfo = [&](const std::string& key, const auto value) {
+            debugger.addInfo("deterministic_event_aliases_" + key, std::to_string(value));
+        };
+        addAliasInfo("candidates", stats.candidates);
+        addAliasInfo("shared_prune_indexes", stats.reusedPruneIndexes);
+        addAliasInfo("proven_true_nodes", stats.provenTrueNodes);
+        addAliasInfo("proven_derived_true_nodes", stats.provenDerivedTrueNodes);
+        addAliasInfo("deterministic_proof_edges", stats.deterministicProofEdges);
+        addAliasInfo("merged_aliases", stats.mergedAliases);
+        addAliasInfo("query_aliases", stats.queryAliases);
+        addAliasInfo("promoted_output_roots", eventAliases.promotedOutputRoots.size());
+        addAliasInfo("input_replacements", stats.inputReplacements);
+        addAliasInfo("duplicate_inputs_removed", stats.duplicateInputsRemoved);
+        addAliasInfo("active_input_replacements", stats.activeInputReplacements);
+        addAliasInfo("active_duplicate_inputs_removed", stats.activeDuplicateInputsRemoved);
+        addAliasInfo("removed_nodes", stats.removedNodes);
+        addAliasInfo("removed_edges", stats.removedEdges);
+        addAliasInfo("removed_owner_edges", stats.removedOwnerEdges);
+        addAliasInfo("skipped_cycle_aliases", stats.skippedCycleAliases);
+        addAliasInfo("evidence_conflict_classes", stats.evidenceConflictClasses);
+        addAliasInfo("analysis_ms", stats.analysisMs);
+        addAliasInfo("mutation_ms", stats.mutationMs);
+        addAliasInfo("summary_ms", summaryMs);
+        addAliasInfo("total_ms", std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - aliasStart).count());
+        std::cout << "[deterministic-event-aliases] merged_aliases=" << stats.mergedAliases
+                  << " query_aliases=" << stats.queryAliases
+                  << " duplicate_inputs_removed=" << stats.duplicateInputsRemoved << '\n';
+        debugger.endStage();
+    }
+
     reportAndInputRedundancy(opt, view, "before-rewrite");
 
-    const GraphSummary rewriteInitialSummary = runAndInputRedundancy(
-            opt, *graph, view, concreteOutputs, afterPruneSummary, andInputWorkspace.get(), freshDagCertificate);
+    const GraphSummary rewriteInitialSummary = andInputAfterSiso ? inputPassSummary : runAndInputRedundancy(
+            opt, *graph, view, concreteOutputs, inputPassSummary, andInputWorkspace.get(), freshDagCertificate);
     andInputWorkspace.reset();
 
     if (opt.isDumpDotEnabled()) {
@@ -2345,6 +2577,11 @@ void runPipeline(
         addGraphSummaryInfo(debugger, "rewrite_initial_", rewriteInitialSummary);
         GraphRewriteStats rewriteStats;
         GraphSummary rewriteFinalSummary;
+        AndInputRedundancyFreshDagCertificate activeViewCertificate;
+        activeViewCertificate.completeDerivations = true;
+        // Prepare the post-SISO generic index in the existing final-summary
+        // traversal, with no original-ID bound or compiler acyclicity shortcut.
+        std::unique_ptr<AndInputRedundancyWorkspace> postAndInputWorkspace;
         ImplicitSplitOverlayStats overlayRewriteStats;
         rewriteDecision = chooseRewriteDispatch(opt, ruleManager);
         haveRewriteDecision = true;
@@ -2449,6 +2686,7 @@ void runPipeline(
                 if (!graph) {
                     graph = std::make_unique<WorkingDerivationGraph>();
                 }
+                restoreEventAliasBindings(*graph, eventAliases);
                 view = buildWorkingViewLocal(
                         implicitResult.materialized.liveNodes, implicitResult.materialized.liveEdges);
                 const auto [recoveredIsolatedFacts, recoveredOutputFacts] =
@@ -2459,7 +2697,9 @@ void runPipeline(
                               << " tuple_output_facts=" << recoveredOutputFacts << std::endl;
                 }
             }
-            rewriteFinalSummary = summarizeGraphLight(view);
+            if (andInputAfterSiso) postAndInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+            rewriteFinalSummary = summarizeGraphLight(
+                    view, postAndInputWorkspace.get(), activeViewCertificate);
             const GraphSummary& implicitHandoffSummary = rewriteFinalSummary;
             const double implicitGraphDetectMs = rewriteStats.totalDetectMs;
             const double implicitTotalMs = std::chrono::duration<double, std::milli>(
@@ -2599,7 +2839,9 @@ void runPipeline(
             }
         } else {
             runGraphRewrite();
-            rewriteFinalSummary = summarizeGraphLight(view);
+            if (andInputAfterSiso) postAndInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
+            rewriteFinalSummary = summarizeGraphLight(
+                    view, postAndInputWorkspace.get(), activeViewCertificate);
         }
         auto rewriteMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  std::chrono::steady_clock::now() - rewriteStart)
@@ -2761,6 +3003,15 @@ void runPipeline(
             }
         }
         reportAndInputRedundancy(opt, view, "after-rewrite");
+        if (andInputAfterSiso) {
+            // Debugger stages are sequential. End the SISO stage before the
+            // pass; FC/WMC will open its own hybrid stage on the residual view.
+            debugger.endStage();
+            rewriteHybridStage = nullptr;
+            runAndInputRedundancy(opt, *graph, view, concreteOutputs,
+                    rewriteFinalSummary, postAndInputWorkspace.get(), activeViewCertificate, true);
+            postAndInputWorkspace.reset();
+        }
         if (opt.isDumpDotEnabled()) {
             view.dumpDot(makeOutputPath(opt, "rewrite_final.dot"));
         }
@@ -2773,7 +3024,8 @@ void runPipeline(
 
     precomputedTupleProbResult.insert(liftedProbabilities.begin(), liftedProbabilities.end());
     if (program.getKnowledge() == souffle::Knowledge::BDD) {
-        runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, graphEvidences, rewriteHybridStage);
+        runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, graphEvidences,
+                rewriteHybridStage, eventAliases);
     } else {
         std::cerr << "Unknown knowledge representation" << std::endl;
     }

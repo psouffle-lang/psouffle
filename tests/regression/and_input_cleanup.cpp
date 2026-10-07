@@ -483,6 +483,57 @@ void biImpMergeReturnsLiveEvidenceRoots() {
     DerivationGraph::setMergeBiImpEnabled(false);
 }
 
+void activeResidualCleanupNeverRevivesOwningEdges() {
+    Fixture f;
+    const auto a = f.fact("A", 0.6);
+    const auto b = f.fact("B", 0.4);
+    const auto q = f.fact("Q", 0.3);
+    const auto c = f.node("FirstMacro");
+    const auto d = f.node("SecondMacro");
+    const auto y = f.node("Y");
+    const auto orphan = f.node("ExistingDeadRemnant");
+    f.edge({a, b}, c);
+    const auto deadDefinition = f.edge({a, b}, d);
+    const auto target = f.edge({c, d, q}, y, 0.7);
+    const auto remnant = f.edge({q}, orphan, 0.2);
+    // SISO erases old owning edges from its active view, without rebuilding
+    // the raw owning graph. A subsequent owner-level prune would revive this.
+    const auto retired = f.edge({q}, c, 0.8);
+    y->setQuery();
+    q->setEvidence(false);
+    auto activeEdges = f.graph.getEdges();
+    activeEdges.erase(retired);
+    WorkingSubgraphView view(f.graph.getNodes(), std::move(activeEdges));
+    const Worlds worlds(view);
+    const PrunedFlags flags(f.graph);
+    warmCaches(view);
+    AndInputRedundancyCleanupPlan plan;
+    const auto stats = eliminateAndInputRedundancy(view, true, &plan);
+    require(stats.deletedInputAssociations == 1 && target->getInputs() == std::vector<NodePtr>{c, q},
+            "residual symmetric deletion did not retain one complete macro definition");
+    require(!plan.requiresFullPrune && plan.nodes == std::vector<NodePtr>{d} &&
+                    plan.edges == std::vector<EdgePtr>{deadDefinition},
+            "residual cleanup included inactive sources or unrelated pre-existing remnants");
+    flags.verifyUnchanged();
+    view.applyPruning(plan.nodes, plan.edges);
+    worlds.verify(view);
+    verifyCaches(view);
+    require(view.getNodes().count(y) && view.getNodes().count(q) &&
+                    view.getEvidenceNodes() == std::vector<NodePtr>{q},
+            "residual cleanup removed a query or evidence root");
+    require(view.getNodes().count(orphan) && view.getEdges().count(remnant),
+            "deletion-induced cleanup unexpectedly performed global pruning");
+    require(!view.getEdges().count(retired) && !retired->pruned &&
+                    std::find(c->getIncomingEdges().begin(), c->getIncomingEdges().end(), retired) !=
+                            c->getIncomingEdges().end(),
+            "residual cleanup revived or destroyed a retired owning edge");
+    const auto shape = graphShape(view);
+    require(plan.hasSummary && plan.finalInputAssociations == shape.associations &&
+                    plan.maxInDegree == shape.maxIncoming && plan.maxOutDegree == shape.maxOutgoing &&
+                    plan.maxHyperedgeInputs == shape.maxBody,
+            "residual cleanup summary does not describe the active graph");
+}
+
 }  // namespace
 
 int main() {
@@ -498,6 +549,7 @@ int main() {
         sparseAndCollidingNodeIds();
         zeroHitDoesNotProposeCleanup();
         biImpMergeReturnsLiveEvidenceRoots();
+        activeResidualCleanupNeverRevivesOwningEdges();
         std::cout << "AND-input local cleanup matches full pruning and random-world events\n";
         return 0;
     } catch (const std::exception& error) {

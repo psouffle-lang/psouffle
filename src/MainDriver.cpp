@@ -646,7 +646,11 @@ std::vector<MainOption> getMainOptions() {
       {"rewrite", nextOptChar++, "", "", false,
           "Enable rewrite by default for standalone full inference."},
       {"and-input-redundancy", nextOptChar++, "", "", false,
-          "Eliminate proven redundant AND inputs after pruning and before SISO/graph fastpaths."},
+          "Eliminate proven redundant AND inputs at the selected placement (default: before SISO)."},
+      {"and-input-redundancy-placement", nextOptChar++, "before-siso|after-siso", "before-siso", false,
+          "Place AND-input elimination before SISO (default) or after rewrite; after requires both flags and excludes --derv-only."},
+      {"deterministic-event-aliases", nextOptChar++, "", "", false,
+          "Merge proven deterministic copy events before input elimination and rewrite, retaining output names."},
       {"explicit-rewrite", nextOptChar++, "", "", false,
           "Force graph rewrite for standalone full inference."},
       {"implicit-rewrite", nextOptChar++, "", "", false,
@@ -745,6 +749,17 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     }
     if (online && config.has("and-input-redundancy")) {
         throw std::runtime_error("--and-input-redundancy requires standalone full execution");
+    }
+    if (config.has("deterministic-event-aliases") && (online || config.has("derv-only"))) {
+        throw std::runtime_error("--deterministic-event-aliases requires standalone full inference");
+    }
+    const auto& andInputPlacement = config.get("and-input-redundancy-placement");
+    if (andInputPlacement != "before-siso" && andInputPlacement != "after-siso") {
+        throw std::runtime_error("--and-input-redundancy-placement expects before-siso or after-siso");
+    }
+    if (andInputPlacement == "after-siso" &&
+            (!config.has("and-input-redundancy") || !rewrite || config.has("derv-only") || online)) {
+        throw std::runtime_error("--and-input-redundancy-placement=after-siso requires --and-input-redundancy and standalone --rewrite with inference");
     }
     if (online && config.has("lifted-wmc")) {
         throw std::runtime_error("--lifted-wmc requires standalone full execution");
