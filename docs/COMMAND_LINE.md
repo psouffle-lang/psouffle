@@ -140,11 +140,16 @@ between commits; see [docs/USAGE.md](USAGE.md#online-cli).
 `--dump` and `--profile-stage` accept comma-separated lists, such as
 `--dump=dot,json,stat` and `--profile-stage=fc,wmc`.
 
+`--dump=and-redundancy` enables the read-only AND-input opportunity audit before
+and after rewrite in standalone full execution. It is rejected for online
+execution. See [certificates and audit commands](AND_INPUT_REDUNDANCY.md).
+
 | Dump kind | Output |
 | --- | --- |
 | `json` | Derivation-graph JSON after pruning. |
 | `dot` | Graphviz DOT graphs. |
 | `stat` | Graph counters and additional diagnostic/statistic outputs. |
+| `and-redundancy` | Read-only standalone full AND-input proof reports before/after actual rewrite. |
 | `json-before-graph` | Online startup rule applications before graph materialization. |
 | `json-before-prune` | Online graphs before pruning. |
 

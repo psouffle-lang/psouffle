@@ -778,7 +778,10 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     applyListAliasToBackingFlags(config, "dump",
             {{"json", "dumpjson"}, {"json-before-graph", "dumpjson-before-graph"},
                     {"json-before-prune", "dumpjson-before-prune"}, {"dot", "dumpdot"},
-                    {"stat", "dumpstat"}});
+                    {"stat", "dumpstat"}, {"and-redundancy", "dump-and-redundancy"}});
+    if (online && config.has("dump-and-redundancy")) {
+        throw std::runtime_error("--dump=and-redundancy requires standalone full execution");
+    }
     applyListAliasToBackingFlags(config, "profile-stage",
             {{"dred", "dred-profile"}, {"inc", "inc-profile"}, {"fc", "fc-profile"},
                     {"wmc", "profile-wmc"}, {"inc-delete", "profile-inc-delete"},

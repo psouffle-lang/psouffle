@@ -44,6 +44,42 @@ def check_diagnostics(payload, *, rewrite=False):
         int(prune['after_prune_edges']) - int(info['rewrite_final_edges'])), row
 
 
+def execution_log(out):
+    paths = [path for path in out.glob('*.json')
+             if not path.name.startswith('and-redundancy-')]
+    assert len(paths) == 1, paths
+    return json.loads(paths[0].read_text())
+
+
+def check_and_redundancy(out, baseline, *, rewrite=False):
+    phases = ['before-rewrite', 'after-rewrite'] if rewrite else ['before-rewrite']
+    assert {path.name for path in out.glob('and-redundancy-*.json')} == {
+        'and-redundancy-' + phase + '.json' for phase in phases}, out
+    stages = {stage['name']: stage.get('info', {}) for stage in baseline['turns'][0]['stages']}
+    for phase in phases:
+        report = json.loads((out / ('and-redundancy-' + phase + '.json')).read_text())
+        assert report['schema'] == 'and-input-redundancy-v1', report
+        assert report['phase'] == phase, report
+        for flag in ('complete_derivations', 'read_only', 'independent_certificates'):
+            assert report[flag] is True, report
+        stats = report['stats']
+        for key in ('nodes', 'edges', 'input_associations', 'eligible_definitions',
+                    'proven_input_associations', 'affected_edges', 'distinct_redundant_nodes',
+                    'recursive_nodes', 'analysis_ms'):
+            assert stats[key] >= 0, stats
+        proofs = report['proofs']
+        assert stats['proven_input_associations'] == len(proofs), report
+        assert stats['affected_edges'] == len({proof['edge']['id'] for proof in proofs}), report
+        assert stats['distinct_redundant_nodes'] == len({proof['redundant']['id']
+                                                      for proof in proofs}), report
+        for kind in ('nodes', 'edges'):
+            if phase == 'before-rewrite':
+                expected = stages['PRUNING']['after_prune_' + kind]
+            else:
+                expected = stages['FC_WMC_HYBRID']['rewrite_final_' + kind]
+            assert stats[kind] == int(expected), (phase, stats, expected)
+
+
 def run(args, *, stdin=None, success=True):
     result = subprocess.run([str(a) for a in args], input=stdin, text=True,
                             capture_output=True, timeout=180)
@@ -67,7 +103,8 @@ def main():
 
     binaries = {}
     for kind, flags in [('hybrid', []), ('full', ['--full-only']),
-                        ('inc', ['--inc-only']), ('baked', ['--rewrite'])]:
+                        ('inc', ['--inc-only']),
+                        ('baked', ['--rewrite', '--dump=and-redundancy'])]:
         binary = root / kind
         generated = root / (kind + '.cpp')
         run([args.souffle_bin, *flags, '-F', facts, '-D', default_out,
@@ -81,6 +118,8 @@ def main():
         if kind == 'inc':
             assert 'stratum_inc_table_update' in source
             assert 'runFullPipeline(opt' not in source
+        if kind == 'baked':
+            assert 'setDumpAndRedundancyEnabled(true)' in source
         run([args.souffle_bin, *flags, '-F', facts, '-D', default_out,
              root / 'compute.dl', '-o', binary])
         binaries[kind] = binary
@@ -97,8 +136,11 @@ def main():
     expected = parse_prob_file(plain / 'facts.prob')
     assert abs(expected['path(1,4)'] - 0.6032) < 1e-8, expected
     plain_log = next(plain.glob('*.json')).read_text()
-    check_diagnostics(json.loads(plain_log))
+    plain_payload = json.loads(plain_log)
+    check_diagnostics(plain_payload)
+    assert not list(plain.glob('and-redundancy-*.json'))
     assert 'IO_LOAD_FULL' not in plain_log and 'CONSTRUCT_RULE_FULL' not in plain_log
+    rewrite_payloads = {}
     for kind, label, flags in [
             ('hybrid', 'smart', ['--full-only', '--rewrite']),
             ('hybrid', 'explicit', ['--explicit-rewrite']),
@@ -107,9 +149,36 @@ def main():
             ('baked', 'baked_rewrite', [])]:
         out, _ = execute(kind, label, flags)
         assert_prob_close(plain / 'facts.prob', out / 'facts.prob', label=label)
-        payload = json.loads(next(out.glob('*.json')).read_text())
+        payload = execution_log(out)
         check_diagnostics(payload, rewrite=True)
         assert 'rewrite_impl' in json.dumps(payload), payload
+        rewrite_payloads[label] = payload
+        if kind == 'baked':
+            check_and_redundancy(out, rewrite_payloads['full_rewrite'], rewrite=True)
+        else:
+            assert not list(out.glob('and-redundancy-*.json'))
+
+    for kind, label, flags, baseline in [
+            ('hybrid', 'and_plain', ['--dump=and-redundancy'], plain_payload),
+            ('full', 'and_rewrite', ['--rewrite', '--dump=and-redundancy'],
+             rewrite_payloads['full_rewrite'])]:
+        out, _ = execute(kind, label, flags)
+        assert_prob_close(plain / 'facts.prob', out / 'facts.prob', label=label)
+        payload = execution_log(out)
+        rewrite = label == 'and_rewrite'
+        check_diagnostics(payload, rewrite=rewrite)
+        check_and_redundancy(out, baseline, rewrite=rewrite)
+        actual_stages = {stage['name']: stage.get('info', {})
+                         for stage in payload['turns'][0]['stages']}
+        baseline_stages = {stage['name']: stage.get('info', {})
+                           for stage in baseline['turns'][0]['stages']}
+        for kind in ('nodes', 'edges'):
+            for prefix in ('before_prune_', 'after_prune_'):
+                key = prefix + kind
+                assert actual_stages['PRUNING'][key] == baseline_stages['PRUNING'][key]
+            if rewrite:
+                key = 'rewrite_final_' + kind
+                assert actual_stages['FC_WMC_HYBRID'][key] == baseline_stages['FC_WMC_HYBRID'][key]
 
     for label, flags in [('merge', ['--merge-bi-imp']),
                          ('extra_prune', ['--prune-extra']),
@@ -163,6 +232,33 @@ def main():
                   ['--online', '--rewrite'], ['--explicit-rewrite', '--implicit-rewrite'],
                   ['--inc-only', '--derv-only']]:
         run([args.souffle_bin, *flags, root / 'compute.dl', '-g', root / 'invalid.cpp'], success=False)
+
+    # Capability validation must reject this standalone-only diagnostic before
+    # input loading, even when the fact directory does not exist.
+    missing_facts = root / 'missing_and_input'
+    diagnostic_error = '--dump=and-redundancy requires standalone full execution'
+    for kind, flags in [('hybrid', ['--online']), ('hybrid', ['--setmode', 'full']),
+                        ('inc', [])]:
+        out = root / ('and_online_invalid_' + kind + '_' + str(len(flags)))
+        out.mkdir()
+        result = run([binaries[kind], '-F', missing_facts, '-D', out,
+                      '--dump=and-redundancy', *flags], stdin='q\n', success=False)
+        assert diagnostic_error in result.stderr, result.stderr
+        assert not list(out.iterdir()), out
+    for flags in (['--online'], ['--inc-only'], ['--setmode', 'full']):
+        generated = root / 'and_online_invalid.cpp'
+        result = run([args.souffle_bin, '-F', missing_facts, '--dump=and-redundancy',
+                      *flags, root / 'compute.dl', '-g', generated], success=False)
+        assert diagnostic_error in result.stderr, result.stderr
+        assert not generated.exists(), generated
+
+    out = root / 'and_online_mutable_invalid'
+    out.mkdir()
+    result = run([binaries['hybrid'], '--online', '-F', facts, '-D', out],
+                 stdin='set dump and-redundancy\nshow config\nq\n')
+    assert 'dump and-redundancy requires standalone full execution' in result.stdout, result.stdout
+    assert 'Enabled dump and-redundancy' not in result.stdout, result.stdout
+    assert not list(out.glob('and-redundancy-*.json')), out
 
     aggregate = Path(__file__).parent / 'cases' / 'problog_sum_exact_roundtrip'
     binary = root / 'unsupported_online_aggregate'

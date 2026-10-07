@@ -4767,6 +4767,8 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
          << (glb.config().has("dumpjson-before-prune") ? "true" : "false") << ");\n";
     hook << "opt.setDumpDotEnabled(" << (glb.config().has("dumpdot") ? "true" : "false") << ");\n";
     hook << "opt.setDumpStatEnabled(" << (glb.config().has("dumpstat") ? "true" : "false") << ");\n";
+    hook << "opt.setDumpAndRedundancyEnabled("
+         << (glb.config().has("dump-and-redundancy") ? "true" : "false") << ");\n";
     hook << "opt.setVerboseEnabled(" << (glb.config().has("verbose") ? "true" : "false") << ");\n";
     hook << "opt.setProfileStageToken(\"dred\", "
          << (glb.config().has("dred-profile") ? "true" : "false") << ");\n";

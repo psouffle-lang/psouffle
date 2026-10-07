@@ -1,6 +1,7 @@
 #include "souffle/problog/Pipeline.h"
 
 #include "souffle/Derivation.h"
+#include "souffle/problog/AndInputRedundancy.h"
 #include "souffle/problog/DerivationGraph.h"
 #include "souffle/problog/ForwardCompilation.h"
 #include "souffle/problog/GraphAnalyzer.h"
@@ -122,6 +123,37 @@ static std::size_t estimateBddVarCount(const SubgraphView& view) {
 
 static WorkingSubgraphView buildWorkingViewLocal(WorkingDerivationGraph& graph) {
     return WorkingSubgraphView(graph.getNodes(), graph.getEdges());
+}
+
+static void reportAndInputRedundancy(
+        const CmdOptions& opt, const DerivationGraphViewInterface& view, const std::string& phase) {
+    if (!opt.isDumpAndRedundancyEnabled()) return;
+    // This is the full query/evidence-aware working snapshot, not a component
+    // or SISO subview. Its active edges are authoritative after rewriting.
+    const auto report = detectAndInputRedundancy(view, true);
+    const auto writeStart = std::chrono::steady_clock::now();
+    const auto path = makeOutputPath(opt, "and-redundancy-" + phase + ".json");
+    std::ofstream out(path);
+    if (!out) throw std::runtime_error("Cannot open file: " + path);
+    writeAndInputRedundancyReport(out, report, phase);
+    out.close();
+    if (!out) throw std::runtime_error("Cannot write file: " + path);
+    const double writeMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - writeStart).count();
+    std::string keyPhase = phase;
+    std::replace(keyPhase.begin(), keyPhase.end(), '-', '_');
+    const auto prefix = "and_input_redundancy_" + keyPhase + "_";
+    auto& debugger = Debugger::getInstance();
+    debugger.addInfo(prefix + "analysis_ms", std::to_string(report.stats.analysisMs));
+    debugger.addInfo(prefix + "write_ms", std::to_string(writeMs));
+    debugger.addInfo(prefix + "proven_input_associations", std::to_string(report.stats.provenInputAssociations));
+    debugger.addInfo(prefix + "affected_edges", std::to_string(report.stats.affectedEdges));
+    debugger.addInfo(prefix + "distinct_redundant_nodes", std::to_string(report.stats.distinctRedundantNodes));
+    std::cout << "[and-input-redundancy] phase=" << phase
+              << " independent_input_associations=" << report.stats.provenInputAssociations
+              << " affected_edges=" << report.stats.affectedEdges
+              << " distinct_nodes=" << report.stats.distinctRedundantNodes
+              << " analysis_ms=" << report.stats.analysisMs << " write_ms=" << writeMs << '\n';
 }
 
 static WorkingSubgraphView buildWorkingViewLocal(
@@ -2107,6 +2139,8 @@ void runPipeline(
               << " ms\n";
     debugger.endStage();
 
+    reportAndInputRedundancy(opt, view, "before-rewrite");
+
     if (opt.isDumpDotEnabled()) {
         view.dumpDot(makeOutputPath(opt, "after_prune.dot"));
     }
@@ -2536,6 +2570,7 @@ void runPipeline(
                                 std::to_string(rewriteStats.numFastGeneralRegions));
             }
         }
+        reportAndInputRedundancy(opt, view, "after-rewrite");
         if (opt.isDumpDotEnabled()) {
             view.dumpDot(makeOutputPath(opt, "rewrite_final.dot"));
         }

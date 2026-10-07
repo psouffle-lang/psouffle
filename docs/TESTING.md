@@ -55,7 +55,12 @@ checks ProbLog BDD/SDD availability, VProbLog loader/help output, and Scallop
 exact inference plus the patched bitwise-and function. These tool checks do
 not run paper benchmarks.
 
-The maintained suite contains 32 tests. The initial unified integration passed
+The `and_input_redundancy` case checks individually certified deletions against
+every random world on small graphs, conservative rejection cases, graph/event
+identity preservation and certificate serialization. The execution contract
+also checks the opt-in read-only runtime reports and online rejection.
+
+The maintained suite contains 33 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

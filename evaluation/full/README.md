@@ -55,6 +55,11 @@ the other families. Runtime and compilation limits are configurable via
 `--compile-timeout`. `--mem-limit-mb` sets an optional child-process memory cap.
 Full paper workloads can take more than a day, especially with external engines.
 
+For the separate read-only AND-input redundancy audit, see
+[eligibility, certificates and measurement commands](../../docs/AND_INPUT_REDUNDANCY.md).
+`and_input_redundancy.py` records opportunities before and after existing rewrite
+for Symbolization; it does not apply the proposed elimination pass.
+
 Collect existing outputs without rerunning experiments:
 
 ```bash
