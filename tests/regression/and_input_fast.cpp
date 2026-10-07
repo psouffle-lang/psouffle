@@ -28,6 +28,7 @@ void require(bool condition, const std::string& message) {
 
 struct FixtureGraph : WorkingDerivationGraph {
     void startNodeIdsAt(std::size_t first) { nextNodeId = first; }
+    void startEdgeIdsAt(std::size_t first) { nextEdgeId = first; }
     void adopt(const NodePtr& node) { nodes.insert(node); }
 };
 
@@ -256,6 +257,47 @@ void verifyFast(WorkingSubgraphView& view, std::size_t expectedDeletions,
     const Events events(view);
     auto workspace = workspaceFor(view);
     const auto count = workspace.initialInputAssociations;
+    // Run the existing implementation on an independent graph with the same
+    // edge ordering. This checks proof opportunities as well as event equality.
+    FixtureGraph genericGraph;
+    std::unordered_map<NodePtr, NodePtr> copiedNodes;
+    std::unordered_map<EdgePtr, EdgePtr> copiedEdges;
+    auto nodes = std::vector<NodePtr>(view.getNodes().begin(), view.getNodes().end());
+    auto edges = std::vector<EdgePtr>(view.getEdges().begin(), view.getEdges().end());
+    auto order = [](const auto& left, const auto& right) {
+        if (left->getId() != right->getId()) return left->getId() < right->getId();
+        return std::less<const void*>{}(left.get(), right.get());
+    };
+    std::sort(nodes.begin(), nodes.end(), order);
+    std::sort(edges.begin(), edges.end(), order);
+    for (const auto& node : nodes) {
+        genericGraph.startNodeIdsAt(node->getId());
+        const auto copied = genericGraph.createNode(node->getTuple());
+        copied->isFact = node->isFact;
+        copied->setOriginalFact(node->isOriginalFactNode());
+        copied->setProbability(node->getProbability());
+        copied->setSemanticFactId(node->getSemanticFactId());
+        copied->setProbabilisticSupportTokens(node->getProbabilisticSupportTokens());
+        copied->isShadow = node->isShadow;
+        copied->needOutput = node->needOutput;
+        copied->isQuery = node->isQuery;
+        if (node->hasEvidence()) copied->setEvidence(node->getEvidenceValue());
+        copiedNodes.emplace(node, copied);
+    }
+    for (const auto& edge : edges) {
+        std::vector<NodePtr> body;
+        for (const auto& input : edge->getInputs()) body.push_back(copiedNodes.at(input));
+        genericGraph.startEdgeIdsAt(edge->getId());
+        const auto copied = body.empty()
+                ? genericGraph.createHyperedge(body, copiedNodes.at(edge->getOutput()), edge->getRuleApp())
+                : genericGraph.createHyperedge(body, copiedNodes.at(edge->getOutput()), edge->getRule(),
+                          edge->getBodyNegations(), edge->getRuleApp());
+        copied->setProbability(edge->getProbability());
+        copied->setProbabilisticSupportTokens(edge->getProbabilisticSupportTokens());
+        copiedEdges.emplace(edge, copied);
+    }
+    WorkingSubgraphView genericView(genericGraph.getNodes(), genericGraph.getEdges());
+    const auto genericStats = souffle::problog::eliminateAndInputRedundancy(genericView, true);
     const AndInputRedundancyFreshDagCertificate certificate{true, true, true};
     require(canUseAndInputRedundancyFreshDag(view, workspace, certificate), "valid fastpath fixture rejected its workspace");
     warmCaches(view);
@@ -268,9 +310,26 @@ void verifyFast(WorkingSubgraphView& view, std::size_t expectedDeletions,
                     std::to_string(count) + ", final=" + std::to_string(stats.finalInputAssociations));
     require(stats.remainingInputAssociations == 0 && detectAndInputRedundancy(view, true).proofs.empty(),
             "fastpath stopped before reaching the certified local fixed point");
+    require(stats.deletedInputAssociations == genericStats.deletedInputAssociations &&
+                    stats.affectedEdges == genericStats.affectedEdges,
+            "fastpath opportunities differ from the existing generic implementation");
+    for (const auto& edge : view.getEdges()) {
+        std::vector<NodePtr> expectedBody;
+        for (const auto& input : edge->getInputs()) expectedBody.push_back(copiedNodes.at(input));
+        require(copiedEdges.at(edge)->getInputs() == expectedBody &&
+                        copiedEdges.at(edge)->getBodyNegations() == edge->getBodyNegations(),
+                "fastpath final body differs from the existing generic implementation");
+    }
     events.verify(view);
     worlds.verify(view);
     verifyCaches(view);
+    require(!workspace.completeEndpoints && !canUseAndInputRedundancyFreshDag(view, workspace, certificate),
+            "consumed workspace was accepted for a second fastpath invocation");
+    const auto repeated = eliminateAndInputRedundancyFreshDag(view, workspace, certificate);
+    require(repeated.deletedInputAssociations == 0 && !workspace.completeEndpoints,
+            "consumed-workspace generic fallback was not idempotent");
+    events.verify(view);
+    worlds.verify(view);
 }
 
 void collectiveAndRepeatedProofs() {
@@ -295,6 +354,22 @@ void collectiveAndRepeatedProofs() {
         require(std::find(c->getOutgoingEdges().begin(), c->getOutgoingEdges().end(), target) == c->getOutgoingEdges().end(),
                 "last repeated occurrence did not detach raw adjacency");
     }
+}
+
+void duplicateCandidateWithPrivatePremise() {
+    Fixture f;
+    const auto a = f.fact("PrivateA");
+    const auto q = f.fact("IndependentQ", 0.4);
+    const auto c = f.node("C");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    const auto target = f.edge({c, c, q}, y, 0.7);
+    auto view = f.retainAll();
+    require(workspaceFor(view).degrees.at(a).outgoing == 1,
+            "duplicate-candidate fixture has no private singleton premise");
+    verifyFast(view, 1);
+    require(target->getInputs() == std::vector<NodePtr>{c, q},
+            "private premise rejection removed both candidates or refused a duplicate");
 }
 
 void refusalCases() {
@@ -374,8 +449,10 @@ void currentBodiesAndFixedPoint() {
             } else {
                 const auto target = f.edge({d, x}, y, 0.7);
                 f.edge({a}, x, 0.8);
-                const auto definition = f.edge({c, a}, d);
+                const auto definition = f.edge({a, c}, d);
                 auto view = f.retainAll();
+                require(workspaceFor(view).degrees.at(c).outgoing == 1 && definition->getInputs().back() == c,
+                        "definition-shrinking fixture lacks a private last premise");
                 verifyFast(view, 2);
                 require(target->getInputs() == std::vector<NodePtr>{x} && definition->getInputs() == std::vector<NodePtr>{a},
                         "definition shrinking did not revisit an earlier target");
@@ -473,6 +550,13 @@ void untrustedCertificateFallsBack() {
         const Events events(view);
         const auto stats = eliminateAndInputRedundancyFreshDag(view, workspace, certificate);
         require(stats.deletedInputAssociations == (mode == 0 ? 0 : 1), "fallback did not respect source completeness");
+        require(!workspace.completeEndpoints, "fallback retained a reusable stale workspace");
+        // An incomplete call leaves the graph intact, so a fresh complete
+        // analysis may still discover the original opportunity through fallback.
+        const auto repeated = eliminateAndInputRedundancyFreshDag(
+                view, workspace, AndInputRedundancyFreshDagCertificate{true, true, true});
+        require(repeated.deletedInputAssociations == (mode == 0 ? 1 : 0),
+                "consumed fallback workspace did not reanalyze the current graph");
         worlds.verify(view);
         events.verify(view);
     }
@@ -499,6 +583,8 @@ int main() {
     const char* current = "collectiveAndRepeatedProofs";
     try {
         collectiveAndRepeatedProofs();
+        current = "duplicateCandidateWithPrivatePremise";
+        duplicateCandidateWithPrivatePremise();
         current = "refusalCases";
         refusalCases();
         current = "alternativesIntersectAllSources";

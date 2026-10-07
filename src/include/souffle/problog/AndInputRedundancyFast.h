@@ -142,6 +142,15 @@ struct AndInputRedundancyFreshDag {
         if (inputs.size() < 2 || inputIndex >= inputs.size()) return false;
         const auto source = definition(inputs[inputIndex]);
         if (!source) return false;
+        const auto tailDegree = workspace.degrees.find(source->getInputs().back());
+        if (tailDegree != workspace.degrees.end() && tailDegree->second.outgoing == 1) {
+            // This current premise occurs only in the candidate's definition.
+            // A different provider would need another occurrence to guarantee it.
+            for (std::size_t other = 0; other < inputs.size(); ++other) {
+                if (other != inputIndex && inputs[other] == inputs[inputIndex]) return true;
+            }
+            return false;
+        }
         for (const auto& premise : source->getInputs()) {
             bool covered = false;
             for (std::size_t other = 0; other < inputs.size(); ++other) {
@@ -255,6 +264,7 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancyFreshDag(WorkingSu
         const AndInputRedundancyFreshDagCertificate& certificate = {},
         AndInputRedundancyCleanupPlan* cleanup = nullptr) {
     if (!canUseAndInputRedundancyFreshDag(view, workspace, certificate)) {
+        workspace.completeEndpoints = false;
         return eliminateAndInputRedundancy(view, certificate.completeDerivations, cleanup);
     }
     using Clock = std::chrono::steady_clock;
@@ -301,6 +311,7 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancyFreshDag(WorkingSu
         analysis.prepareCleanup(*cleanup);
         stats.cleanupPlanningMs = elapsedMs(cleanupStart);
     }
+    workspace.completeEndpoints = false;
     stats.totalMs = elapsedMs(start);
     return stats;
 }

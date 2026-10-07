@@ -18,11 +18,13 @@ from pathlib import Path
 import re
 import resource
 import subprocess
+import threading
 import statistics
 import time
 
 
 REPORT_SCHEMA = "and-input-redundancy-v1"
+TIMING_METHOD = "blocking_wait_with_watchdog"
 STATS_KEYS = (
     "nodes", "edges", "input_associations", "eligible_definitions",
     "proven_input_associations", "affected_edges", "distinct_redundant_nodes",
@@ -275,6 +277,32 @@ def compare_probabilities(reference, current):
             "changed_value_examples": changed[:8]}
 
 
+def wait_with_timeout(proc, timeout):
+    """Block until exit; use a watchdog instead of timeout wait's 50 ms polling."""
+    timed_out = threading.Event()
+
+    def expire():
+        if proc.poll() is None:
+            timed_out.set()
+            proc.kill()
+
+    watchdog = threading.Timer(timeout, expire)
+    watchdog.daemon = True
+    try:
+        watchdog.start()
+        return_code = proc.wait()
+    finally:
+        watchdog.cancel()
+        if watchdog.ident is not None:
+            watchdog.join()
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+    if timed_out.is_set():
+        raise subprocess.TimeoutExpired(proc.args, timeout)
+    return return_code
+
+
 def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, mem_limit_mb=0):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     run_dir = output_root / case_dir.name / variant / f"run_{repeat:02d}_{stamp}"
@@ -290,6 +318,7 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
         limit_bytes = min(limit_bytes, inherited_hard)
     record = {"case": case_dir.name, "variant": variant, "repeat": repeat,
               "cmd": cmd, "run_dir": str(run_dir), "status": "ok", "notes": [],
+              "timing_method": TIMING_METHOD,
               "timeout_seconds": timeout, "requested_mem_limit_mb": mem_limit_mb,
               "mem_limit_mb": limit_bytes / (1024 * 1024) if mem_limit_mb else 0,
               "effective_address_space_limit_bytes": None if limit_bytes == resource.RLIM_INFINITY else limit_bytes}
@@ -298,11 +327,12 @@ def run_benchmark_case(binary, case_dir, output_root, timeout, variant, repeat, 
     start = time.perf_counter()
     with (run_dir / "run.log").open("w", encoding="utf-8") as log:
         try:
-            proc = subprocess.run(cmd, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT,
-                                  timeout=timeout, check=False,
-                                  preexec_fn=limit_memory if mem_limit_mb else None)
-            record["exit_code"] = proc.returncode
-            if proc.returncode != 0:
+            # Start the watchdog after Popen, keeping fork/preexec single threaded.
+            with subprocess.Popen(cmd, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT,
+                                  preexec_fn=limit_memory if mem_limit_mb else None) as proc:
+                return_code = wait_with_timeout(proc, timeout)
+            record["exit_code"] = return_code
+            if return_code != 0:
                 record["status"] = "error"
         except subprocess.TimeoutExpired:
             record.update(status="timeout", exit_code=124)
@@ -376,6 +406,7 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
                 comparison["additional_siso_rewrites_delta"] = b - a
         comparisons.append(comparison)
     summary = {"schema": "and-input-redundancy-benchmark-v1", "binary": str(binary),
+               "timing_method": TIMING_METHOD,
                "binary_sha256": binary_hash, "cases_root": str(cases_root),
                "timeout_seconds": timeout, "runs": runs, "variant_flags": VARIANTS,
                "mem_limit_mb": mem_limit_mb,
@@ -392,7 +423,7 @@ def benchmark_summary(output_root, binary, cases_root, timeout, runs, records, b
     summary_tmp = output_root / "summary.json.tmp"
     summary_tmp.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     summary_tmp.replace(output_root / "summary.json")
-    columns = ["case", "variant", "repeat", "status", "superseded", "exit_code", "wall_seconds",
+    columns = ["case", "variant", "repeat", "status", "superseded", "exit_code", "timing_method", "wall_seconds",
                "timeout_seconds", "requested_mem_limit_mb", "mem_limit_mb", "effective_address_space_limit_bytes",
                "final_nodes", "final_edges", "completed_siso_rewrites", "siso_ms", *PIPELINE_KEYS]
     columns += [f"and_input_redundancy_{key}" for key in PASS_KEYS]
@@ -427,8 +458,9 @@ def run_benchmark(binary, cases_root, cases, output_root, args, variants):
         existing = json.loads(summary_path.read_text(encoding="utf-8"))
         if (existing.get("schema") != "and-input-redundancy-benchmark-v1"
                 or existing.get("binary_sha256") != binary_hash
-                or existing.get("cases_root") != str(cases_root)):
-            raise SystemExit("Resume requires the same benchmark binary and cases root; use a new output root.")
+                or existing.get("cases_root") != str(cases_root)
+                or existing.get("timing_method") != TIMING_METHOD):
+            raise SystemExit("Resume requires the same binary, cases root and timing method; use a new output root.")
         records = existing["records"]
     mem_limit_mb = getattr(args, "mem_limit_mb", 0)
     def retryable(record):

@@ -83,6 +83,14 @@ managers have no compiler certificate and use the indexed analysis above.
 Public rule-manager mutations invalidate the certificate. Read-only reports
 continue to build their own grounded analysis.
 
+Before consulting necessary-input sets, the lazy path checks the current last
+premise of the candidate's definition. If its outgoing occurrence count is one,
+only that definition uses it. Other inputs cannot contain it or require it in
+their own source bodies; only another occurrence of the same candidate can
+prove this deletion. This rejects unsuccessful proofs without constructing
+provider caches. The check reads current bodies and counts on every attempt,
+so a later shortened definition can still enable a proof.
+
 The indexed proof uses one body traversal and a single stamp epoch, retaining the
 existing lazy `Must_1` cache. Cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
@@ -209,6 +217,12 @@ at 4096 MiB; the default is uncapped. Resource limits and failed trials remain
 in the collected records. Probability comparisons use the printed decimal
 values with an absolute tolerance of `1e-8`, avoiding binary subtraction errors
 at that boundary. Pre/post opportunity counts alone do not establish a speedup.
+
+Timed children use blocking process waits with a separate timeout watchdog,
+avoiding Python's timeout-wait polling delay of up to roughly 50 ms. Wall time
+still includes process startup, all pipeline stages and ordinary output. The
+summary records the timing method, and resume requires the same method so older
+polling-based records cannot enter these comparisons.
 
 ## Verification
 
