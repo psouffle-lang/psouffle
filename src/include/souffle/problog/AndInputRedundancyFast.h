@@ -3,6 +3,7 @@
 #include "souffle/problog/AndInputRedundancy.h"
 
 #include <functional>
+#include <memory>
 
 namespace souffle::problog {
 
@@ -18,6 +19,9 @@ struct AndInputRedundancyWorkspace {
     std::size_t initialInputAssociations = 0;
     std::vector<EdgePtr> potentialTargets;
     std::vector<std::size_t> arityCounts;
+    std::unique_ptr<detail::AndInputRedundancySnapshot> prepared;
+    // The complete fused summary interval belongs to the initial pruning stage.
+    double summaryMs = 0.0;
     bool completeEndpoints = false;
 };
 
@@ -36,7 +40,11 @@ inline bool canUseAndInputRedundancyFreshDag(const WorkingSubgraphView& view,
         const AndInputRedundancyWorkspace& workspace,
         const AndInputRedundancyFreshDagCertificate& certificate) {
     return certificate.completeDerivations && certificate.compilerAttestedDag && certificate.originalGraph &&
-            workspace.completeEndpoints && workspace.degrees.size() == view.getNodes().size();
+            workspace.completeEndpoints &&
+            ((workspace.prepared && workspace.prepared->complete &&
+                     workspace.prepared->nodes.size() == view.getNodes().size() &&
+                     workspace.prepared->edges.size() == view.getEdges().size()) ||
+                    (!workspace.prepared && workspace.degrees.size() == view.getNodes().size()));
 }
 
 namespace detail {
@@ -273,10 +281,15 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancyFreshDag(WorkingSu
         AndInputRedundancyCleanupPlan* cleanup = nullptr) {
     if (!canUseAndInputRedundancyFreshDag(view, workspace, certificate)) {
         workspace.completeEndpoints = false;
+        if (workspace.prepared) workspace.prepared->complete = false;
         return eliminateAndInputRedundancy(view, certificate.completeDerivations, cleanup);
     }
     using Clock = std::chrono::steady_clock;
     const auto start = Clock::now();
+    if (workspace.prepared) {
+        workspace.completeEndpoints = false;
+        return detail::eliminatePreparedSnapshot(view, *workspace.prepared, cleanup, start);
+    }
     auto elapsedMs = [](Clock::time_point since) {
         return std::chrono::duration<double, std::milli>(Clock::now() - since).count();
     };

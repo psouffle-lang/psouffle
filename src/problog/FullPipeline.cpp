@@ -388,7 +388,10 @@ struct GraphSummary {
 };
 
 static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view,
-        AndInputRedundancyWorkspace* workspace = nullptr) {
+        AndInputRedundancyWorkspace* workspace = nullptr,
+        const AndInputRedundancyFreshDagCertificate& certificate = {}, std::size_t denseIdBound = 0) {
+    const auto summaryStart = workspace ? std::chrono::steady_clock::now()
+                                        : std::chrono::steady_clock::time_point{};
     GraphSummary s;
     const auto& nodes = view.getNodes();
     const auto& edges = view.getEdges();
@@ -396,18 +399,44 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
     s.edges = edges.size();
 
     AndInputRedundancyWorkspace::DegreeMap localDegrees;
+    detail::AndInputRedundancySnapshot* prepared = nullptr;
     if (workspace) {
         *workspace = {};
         workspace->completeEndpoints = true;
+        workspace->prepared = std::make_unique<detail::AndInputRedundancySnapshot>();
+        prepared = workspace->prepared.get();
+        // Most sources have inputs; one occurrence per edge is a cheap capacity
+        // estimate without another body-count traversal. Wider bodies can grow.
+        prepared->begin(nodes.size(), edges.size(), certificate.completeDerivations, true, denseIdBound, edges.size());
+    } else {
+        localDegrees.reserve(nodes.size());
     }
-    auto& degrees = workspace ? workspace->degrees : localDegrees;
-    degrees.reserve(nodes.size());
+    auto classifyNode = [&](const NodePtr& n) {
+        if (!n) return;
+        if (n->isFact) {
+            ++s.factNodes;
+            if (n->getProbability() < 1.0) ++s.probabilisticFactNodes;
+        } else {
+            ++s.derivedNodes;
+        }
+        if (n->isQuery) ++s.queryNodes;
+        if (n->needOutput) ++s.outputNodes;
+        if (n->hasEvidence()) ++s.evidenceNodes;
+        if (n->isShadow) ++s.shadowNodes;
+    };
     for (const auto& n : nodes) {
-        degrees.emplace(n, AndInputRedundancyDegree{});
-        if (workspace && (!n || n->pruned)) workspace->completeEndpoints = false;
+        if (prepared) {
+            prepared->addNode(n);
+            classifyNode(n);
+            if (!n || n->pruned) workspace->completeEndpoints = false;
+        } else {
+            localDegrees.emplace(n, AndInputRedundancyDegree{});
+        }
     }
+    if (prepared) prepared->finishNodes();
 
     for (const auto& e : edges) {
+        if (prepared) prepared->addEdge(e);
         if (!e) {
             if (workspace) workspace->completeEndpoints = false;
             continue;
@@ -415,62 +444,52 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
         const auto& inputs = e->getInputs();
         if (workspace) {
             if (e->pruned || inputs.size() != e->getBodyNegations().size()) workspace->completeEndpoints = false;
-            if (inputs.size() >= 2) workspace->potentialTargets.push_back(e);
-            if (workspace->arityCounts.size() <= inputs.size()) workspace->arityCounts.resize(inputs.size() + 1);
-            ++workspace->arityCounts[inputs.size()];
         }
         s.inputAssociations += inputs.size();
         s.maxHyperedgeInputs = std::max(s.maxHyperedgeInputs, inputs.size());
-        const auto& out = e->getOutputRef();
-        if (out) {
-            auto it = degrees.find(out);
-            if (it != degrees.end()) {
-                ++it->second.incoming;
-            } else if (workspace) {
-                workspace->completeEndpoints = false;
+        if (!prepared) {
+            const auto& out = e->getOutputRef();
+            if (out) {
+                auto it = localDegrees.find(out);
+                if (it != localDegrees.end()) ++it->second.incoming;
             }
-        } else if (workspace) {
-            workspace->completeEndpoints = false;
-        }
-        for (const auto& in : inputs) {
-            auto it = degrees.find(in);
-            if (it != degrees.end()) {
-                ++it->second.outgoing;
-            } else if (workspace) {
-                workspace->completeEndpoints = false;
+            for (const auto& in : inputs) {
+                auto it = localDegrees.find(in);
+                if (it != localDegrees.end()) ++it->second.outgoing;
             }
-            if (workspace && !in) workspace->completeEndpoints = false;
         }
         if (!e->isDeterministic()) {
             ++s.probabilisticEdges;
         }
     }
 
+    if (prepared) {
+        const bool certifiedDag = certificate.completeDerivations && certificate.compilerAttestedDag &&
+                certificate.originalGraph && workspace->completeEndpoints && s.shadowNodes == 0;
+        prepared->finish(false, certifiedDag);
+        workspace->completeEndpoints = workspace->completeEndpoints && prepared->complete;
+        if (prepared->complete) {
+            s.maxInDegree = prepared->maxInDegree;
+            s.maxOutDegree = prepared->maxOutDegree;
+            s.disjunctionNodes = prepared->disjunctionNodes;
+            s.randomVariables = s.probabilisticFactNodes + s.probabilisticEdges;
+        } else {
+            // Malformed or incomplete preparation uses the ordinary summary;
+            // the pass will also fall back to a fresh generic analysis.
+            s = summarizeGraphLight(view);
+        }
+        workspace->initialInputAssociations = s.inputAssociations;
+        workspace->summaryMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - summaryStart).count();
+        return s;
+    }
+
     for (const auto& n : nodes) {
         if (!n) continue;
-        if (n->isFact) {
-            ++s.factNodes;
-            if (n->getProbability() < 1.0) {
-                ++s.probabilisticFactNodes;
-            }
-        } else {
-            ++s.derivedNodes;
-        }
-        if (n->isQuery) {
-            ++s.queryNodes;
-        }
-        if (n->needOutput) {
-            ++s.outputNodes;
-        }
-        if (n->hasEvidence()) {
-            ++s.evidenceNodes;
-        }
-        if (n->isShadow) {
-            ++s.shadowNodes;
-        }
-        const auto degree = degrees.find(n);
-        const std::size_t in = (degree == degrees.end()) ? 0 : degree->second.incoming;
-        const std::size_t out = (degree == degrees.end()) ? 0 : degree->second.outgoing;
+        classifyNode(n);
+        const auto degree = localDegrees.find(n);
+        const std::size_t in = (degree == localDegrees.end()) ? 0 : degree->second.incoming;
+        const std::size_t out = (degree == localDegrees.end()) ? 0 : degree->second.outgoing;
         s.maxInDegree = std::max(s.maxInDegree, in);
         s.maxOutDegree = std::max(s.maxOutDegree, out);
         if ((!n->isFact && in > 1) || (n->isFact && in > 0)) {
@@ -478,7 +497,6 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
         }
     }
     s.randomVariables = s.probabilisticFactNodes + s.probabilisticEdges;
-    if (workspace) workspace->initialInputAssociations = s.inputAssociations;
     return s;
 }
 
@@ -546,6 +564,8 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     const auto start = std::chrono::steady_clock::now();
     const bool localCleanup = !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled();
     const bool usedFreshDag = localCleanup && workspace && canUseAndInputRedundancyFreshDag(view, *workspace, certificate);
+    const bool usedPrepared = usedFreshDag && workspace->prepared;
+    const double workspaceSummaryMs = workspace ? workspace->summaryMs : 0.0;
     AndInputRedundancyCleanupPlan cleanupPlan;
     const auto stats = usedFreshDag
             ? eliminateAndInputRedundancyFreshDag(view, *workspace, certificate, &cleanupPlan)
@@ -594,13 +614,15 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addCount("cleaned_nodes", before.nodes - after.nodes);
     addCount("cleaned_hyperedges", before.edges - after.edges);
     addTime("initialization_ms", stats.initializationMs);
+    addTime("workspace_summary_ms", workspaceSummaryMs);
     addTime("detection_ms", stats.detectionMs);
     addTime("mutation_ms", stats.mutationMs);
     addTime("cleanup_planning_ms", stats.cleanupPlanningMs);
     addTime("pruning_ms", pruningMs);
     addTime("total_ms", totalMs);
     debugger.addInfo("and_input_redundancy_cleanup_strategy", cleanupStrategy);
-    debugger.addInfo("and_input_redundancy_analysis_strategy", usedFreshDag ? "lazy_fresh_dag" : "indexed");
+    debugger.addInfo("and_input_redundancy_analysis_strategy",
+            usedPrepared ? "indexed_fresh_dag" : usedFreshDag ? "lazy_fresh_dag" : "indexed");
     std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
               << " cleaned_nodes=" << before.nodes - after.nodes
               << " cleaned_hyperedges=" << before.edges - after.edges
@@ -2278,7 +2300,8 @@ void runPipeline(
         andInputWorkspace = std::make_unique<AndInputRedundancyWorkspace>();
     }
     auto view = graph->prune(concreteOutputs);
-    const GraphSummary afterPruneSummary = summarizeGraphLight(view, andInputWorkspace.get());
+    const GraphSummary afterPruneSummary = summarizeGraphLight(
+            view, andInputWorkspace.get(), freshDagCertificate, graph->getNodes().size());
     if (afterPruneSummary.shadowNodes != 0) freshDagCertificate.originalGraph = false;
     addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
     auto t3 = std::chrono::steady_clock::now();

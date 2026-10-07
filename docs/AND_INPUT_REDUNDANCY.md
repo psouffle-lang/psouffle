@@ -63,14 +63,14 @@ identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
 
 Newly compiled programs can also attest that the original rule dependency graph
-is acyclic. For that certificate, standalone full execution retains the degree
-counts and potential targets from its existing initial graph-summary traversal.
-Immediately after ordinary pruning, a separate path uses the original incoming
-adjacency and computes definitions and necessary inputs only when a proof needs
-them. It avoids rebuilding whole-graph source, body and SCC indexes. The workspace
-is consumed in this invocation, and every deletion is still re-proved against
-the current bodies. It counts repeated occurrences separately and preserves the
-same rule events and query/evidence roots.
+is acyclic. For that certificate, standalone full execution prepares the existing
+flat source and body indexes during its initial graph-summary traversal. Those
+indexes provide the summary's degree counts and are then consumed directly by
+the indexed proof and deletion logic. This avoids a second graph traversal to
+prepare the pass, repeated pointer-keyed cache lookups, and grounded SCC analysis.
+Necessary-input sets still intersect every active source and are computed only
+when needed. Every deletion is re-proved against the current bodies. Repeated
+occurrences, rule events and query/evidence roots keep their original semantics.
 
 This path requires trusted compiler metadata, complete endpoints and the freshly
 constructed original graph before other rewrites. Recursive strata, eqrel,
@@ -96,11 +96,11 @@ cleanup is applied. This avoids repeated shared-ownership copies and releases.
 Targets, mutation candidates and cleanup plans retain their owning references.
 
 The indexed proof uses one body traversal and a single stamp epoch, retaining the
-existing lazy `Must_1` cache. Cycle analysis first peels acyclic sources using
+existing lazy `Must_1` cache. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
 still receives exact SCC analysis, with reverse traversal reusing the source
 and body indexes. Cleanup reuses the same source and body indexes and
-the outgoing occurrence counts already computed for SCCs. Starting at inputs
+the outgoing occurrence counts from preparation or SCC construction. Starting at inputs
 that lose their last active reference, it prepares a complete cleanup plan while
 preserving query/evidence roots. The pipeline applies the plan to the existing
 working view; it retains graph entities and raw adjacency, just as ordinary
@@ -186,9 +186,12 @@ counters include deleted input associations, affected edges, detection rounds,
 cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
 times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
 or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
-`analysis_strategy` records `lazy_fresh_dag` or `indexed`; the initial-summary
-workspace preparation is part of the existing pruning stage, and benchmark wall
-time includes it.
+`analysis_strategy` records `indexed_fresh_dag` for the prepared summary indexes,
+`lazy_fresh_dag` for a degree-only workspace supplied directly to the helper, or
+`indexed` for generic analysis. `workspace_summary_ms` measures the whole initial
+summary traversal when it prepares a workspace, including the common summary
+work. It is a subset of the existing pruning stage, separate from the pass's
+`total_ms`; benchmark wall time includes both stages.
 `initialization_ms` measures analysis setup and target preparation inside
 `detection_ms`; it is a submeasurement and must not be added to total time again.
 `remaining_proven_input_associations` counts opportunities at the pass's

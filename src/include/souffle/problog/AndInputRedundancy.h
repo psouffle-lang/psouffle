@@ -100,6 +100,9 @@ struct AndInputRedundancySnapshot {
     std::vector<std::size_t> mustScratch;
     std::vector<std::size_t> outgoingOccurrences, cleanupSeeds;
     std::size_t bodyEpoch = 0, coverageEpoch = 0;
+    std::size_t maxNodeId = 0;
+    std::size_t maxInDegree = 0, maxOutDegree = 0, maxHyperedgeInputs = 0, disjunctionNodes = 0;
+    bool completeRequested = false, endpointsValid = true, forcePointerIndex = false, trackCleanup = false;
 
     std::size_t indexOf(const NodePtr& node) const {
         if (!node) return none;
@@ -121,27 +124,54 @@ struct AndInputRedundancySnapshot {
         return epoch;
     }
 
-    void initialize(const DerivationGraphViewInterface& view, bool completeDerivations,
-            bool collectCycleStats, bool trackCleanup = false) {
-        baseStats.nodes = view.getNodes().size();
-        baseStats.edges = view.getEdges().size();
-        for (const auto& edge : view.getEdges()) {
-            if (edge) baseStats.inputAssociations += edge->getInputs().size();
+    void begin(std::size_t nodeCount, std::size_t edgeCount, bool completeDerivations,
+            bool collectCleanup = false, std::size_t denseIdBound = 0, std::size_t inputCapacity = 0) {
+        *this = {};
+        baseStats.nodes = nodeCount;
+        baseStats.edges = edgeCount;
+        completeRequested = completeDerivations;
+        trackCleanup = collectCleanup;
+        if (!completeRequested) return;
+        nodes.reserve(nodeCount);
+        safe.reserve(nodeCount);
+        fact.reserve(nodeCount);
+        edges.reserve(edgeCount);
+        bodies.reserve(inputCapacity);
+        // A fresh original owner can provide its exclusive ID bound, letting
+        // the existing summary node traversal populate the direct index too.
+        if (denseIdBound != 0 && denseIdBound < nodeCount * 4 + 4096) idIndex.assign(denseIdBound, none);
+    }
+
+    void addNode(const NodePtr& node) {
+        if (!completeRequested) return;
+        const auto index = nodes.size();
+        nodes.push_back(node);
+        safe.push_back(node && !node->isShadow);
+        fact.push_back(node && (node->isFact || node->isOriginalFactNode()));
+        if (!node) {
+            endpointsValid = false;
+            return;
         }
-        if (!completeDerivations) return;
-        nodes.assign(view.getNodes().begin(), view.getNodes().end());
-        safe.resize(nodes.size());
-        fact.resize(nodes.size());
-        std::size_t maxId = 0;
-        for (std::size_t i = 0; i < nodes.size(); ++i) {
-            const auto& node = nodes[i];
-            if (!node) return;
-            maxId = std::max(maxId, node->getId());
-            safe[i] = !node->isShadow;
-            fact[i] = node->isFact || node->isOriginalFactNode();
+        maxNodeId = std::max(maxNodeId, node->getId());
+        if (!idIndex.empty()) {
+            const auto id = node->getId();
+            if (id >= idIndex.size() || idIndex[id] != none) {
+                idIndex.clear();
+                forcePointerIndex = true;
+            } else {
+                idIndex[id] = index;
+            }
         }
-        if (!nodes.empty() && maxId != none && maxId < nodes.size() * 4 + 4096) {
-            idIndex.assign(maxId + 1, none);
+    }
+
+    void finishNodes() {
+        if (!completeRequested || !endpointsValid || nodes.size() != baseStats.nodes) {
+            endpointsValid = false;
+            return;
+        }
+        if (idIndex.empty() && !forcePointerIndex && !nodes.empty() && maxNodeId != none &&
+                maxNodeId < nodes.size() * 4 + 4096) {
+            idIndex.assign(maxNodeId + 1, none);
             for (std::size_t i = 0; i < nodes.size(); ++i) {
                 auto& slot = idIndex[nodes[i]->getId()];
                 if (slot != none) {
@@ -155,29 +185,49 @@ struct AndInputRedundancySnapshot {
             pointerIndex.reserve(nodes.size());
             for (std::size_t i = 0; i < nodes.size(); ++i) pointerIndex.emplace(nodes[i].get(), i);
         }
-
         incomingOffsets.assign(nodes.size() + 1, 0);
-        edges.reserve(baseStats.edges);
-        bodies.reserve(baseStats.inputAssociations);
-        // Validate EVERY endpoint before any early return or eligibility shortcut.
-        for (const auto& edge : view.getEdges()) {
-            if (!edge) return;
-            const auto head = indexOf(edge->getOutput());
-            if (head == none) return;
-            const auto& inputs = edge->getInputs();
-            const auto& negations = edge->getBodyNegations();
-            bool supported = safe[head] && inputs.size() == negations.size() &&
-                    std::none_of(negations.begin(), negations.end(), [](bool neg) { return neg; });
-            const auto begin = bodies.size();
-            for (const auto& input : inputs) {
-                const auto index = indexOf(input);
-                if (index == none) return;
-                bodies.push_back(index);
-                supported = supported && safe[index];
-            }
-            edges.push_back({edge, head, {begin, bodies.size()}, supported});
-            ++incomingOffsets[head + 1];
+        if (trackCleanup) outgoingOccurrences.assign(nodes.size(), 0);
+    }
+
+    void addEdge(const EdgePtr& edge) {
+        if (edge) {
+            baseStats.inputAssociations += edge->getInputs().size();
+            maxHyperedgeInputs = std::max(maxHyperedgeInputs, edge->getInputs().size());
         }
+        if (!completeRequested || !endpointsValid) return;
+        // Validate EVERY endpoint before any early return or eligibility shortcut.
+        if (!edge) {
+            endpointsValid = false;
+            return;
+        }
+        const auto head = indexOf(edge->getOutputRef());
+        if (head == none) {
+            endpointsValid = false;
+            return;
+        }
+        const auto& inputs = edge->getInputs();
+        const auto& negations = edge->getBodyNegations();
+        bool supported = safe[head] && inputs.size() == negations.size() &&
+                std::none_of(negations.begin(), negations.end(), [](bool neg) { return neg; });
+        const auto begin = bodies.size();
+        for (const auto& input : inputs) {
+            const auto index = indexOf(input);
+            if (index == none) {
+                endpointsValid = false;
+                return;
+            }
+            bodies.push_back(index);
+            supported = supported && safe[index];
+            if (trackCleanup) ++outgoingOccurrences[index];
+        }
+        edges.push_back({edge, head, {begin, bodies.size()}, supported});
+        ++incomingOffsets[head + 1];
+    }
+
+    // Only the compiler-attested fresh original graph may omit SCC analysis.
+    // Ordinary callers and read-only diagnostics always request the full check.
+    void finish(bool collectCycleStats, bool compilerCertifiedFreshDag = false) {
+        if (!completeRequested || !endpointsValid || edges.size() != baseStats.edges) return;
         for (std::size_t i = 1; i < incomingOffsets.size(); ++i) incomingOffsets[i] += incomingOffsets[i - 1];
         auto cursor = incomingOffsets;
         incomingEdges.resize(edges.size());
@@ -189,6 +239,12 @@ struct AndInputRedundancySnapshot {
         // this pool: unsupported edges are never edited and sources stay fixed.
         definition.assign(nodes.size(), none);
         for (std::size_t node = 0; node < nodes.size(); ++node) {
+            const auto incoming = incomingOffsets[node + 1] - incomingOffsets[node];
+            maxInDegree = std::max(maxInDegree, incoming);
+            if (trackCleanup) maxOutDegree = std::max(maxOutDegree, outgoingOccurrences[node]);
+            if ((!nodes[node]->isFact && incoming > 1) || (nodes[node]->isFact && incoming > 0)) {
+                ++disjunctionNodes;
+            }
             if (!safe[node] || fact[node] || incomingOffsets[node + 1] - incomingOffsets[node] != 1) continue;
             const auto edgeId = incomingEdges[incomingOffsets[node]];
             const auto& edge = edges[edgeId];
@@ -209,26 +265,44 @@ struct AndInputRedundancySnapshot {
         // still compute the complete recursive-node statistic.
         if (targets.empty() && !collectCycleStats) return;
 
+        if (!compilerCertifiedFreshDag) excludeRecursiveNodes();
+        for (std::size_t node = 0; node < nodes.size(); ++node) {
+            if (definition[node] != none && !edges[definition[node]].safe) definition[node] = none;
+            if (definition[node] != none) ++baseStats.eligibleDefinitions;
+        }
+        targets.erase(std::remove_if(targets.begin(), targets.end(),
+                              [&](auto edge) { return !edges[edge].safe || !hasCandidate(edges[edge]); }),
+                targets.end());
+        std::sort(targets.begin(), targets.end(), [&](auto a, auto b) {
+            const auto left = edges[a].edge->getId(), right = edges[b].edge->getId();
+            return left != right ? left < right : a < b;
+        });
+        if (targets.empty()) return;
+        mustSlots.assign(nodes.size(), none);
+        bodyMarks.assign(nodes.size(), 0);
+        coverageMarks.assign(nodes.size(), 0);
+    }
+
+    void excludeRecursiveNodes() {
         // Forward CSR over ALL signed body-to-head arcs. The existing incoming
         // source/body index already represents the reverse adjacency exactly.
         // Reuse DFS storage across roots instead of allocating per-node vectors.
         std::vector<std::size_t> nextOffsets(nodes.size() + 1, 0);
+        if (trackCleanup) std::copy(outgoingOccurrences.begin(), outgoingOccurrences.end(), nextOffsets.begin() + 1);
         std::vector<std::size_t> incomingOccurrences(nodes.size(), 0);
         std::vector<unsigned char> selfLoop(nodes.size(), 0);
         for (const auto& edge : edges) {
             incomingOccurrences[edge.head] += edge.body.end - edge.body.begin;
             for (auto i = edge.body.begin; i < edge.body.end; ++i) {
-                ++nextOffsets[bodies[i] + 1];
+                if (!trackCleanup) ++nextOffsets[bodies[i] + 1];
                 if (bodies[i] == edge.head) selfLoop[edge.head] = 1;
             }
         }
-        // Reuse the outgoing degrees already counted for SCC construction.
-        if (trackCleanup) outgoingOccurrences.assign(nextOffsets.begin() + 1, nextOffsets.end());
         for (std::size_t i = 1; i < nextOffsets.size(); ++i) {
             nextOffsets[i] += nextOffsets[i - 1];
         }
         std::vector<std::size_t> next(bodies.size());
-        cursor = nextOffsets;
+        auto cursor = nextOffsets;
         for (const auto& edge : edges) {
             for (auto i = edge.body.begin; i < edge.body.end; ++i) next[cursor[bodies[i]]++] = edge.head;
         }
@@ -310,21 +384,23 @@ struct AndInputRedundancySnapshot {
             edge.safe = edge.safe && safe[edge.head];
             for (auto i = edge.body.begin; edge.safe && i < edge.body.end; ++i) edge.safe = safe[bodies[i]];
         }
-        for (std::size_t node = 0; node < nodes.size(); ++node) {
-            if (definition[node] != none && !edges[definition[node]].safe) definition[node] = none;
-            if (definition[node] != none) ++baseStats.eligibleDefinitions;
+    }
+
+    void initialize(const DerivationGraphViewInterface& view, bool completeDerivations,
+            bool collectCycleStats, bool collectCleanup = false) {
+        std::size_t inputCount = 0;
+        for (const auto& edge : view.getEdges()) {
+            if (edge) inputCount += edge->getInputs().size();
         }
-        targets.erase(std::remove_if(targets.begin(), targets.end(),
-                              [&](auto edge) { return !edges[edge].safe || !hasCandidate(edges[edge]); }),
-                targets.end());
-        std::sort(targets.begin(), targets.end(), [&](auto a, auto b) {
-            const auto left = edges[a].edge->getId(), right = edges[b].edge->getId();
-            return left != right ? left < right : a < b;
-        });
-        if (targets.empty()) return;
-        mustSlots.assign(nodes.size(), none);
-        bodyMarks.assign(nodes.size(), 0);
-        coverageMarks.assign(nodes.size(), 0);
+        begin(view.getNodes().size(), view.getEdges().size(), completeDerivations, collectCleanup, 0, inputCount);
+        if (!completeDerivations) {
+            baseStats.inputAssociations = inputCount;
+            return;
+        }
+        for (const auto& node : view.getNodes()) addNode(node);
+        finishNodes();
+        for (const auto& edge : view.getEdges()) addEdge(edge);
+        finish(collectCycleStats);
     }
 
     Range mustFor(std::size_t node) {
@@ -572,19 +648,18 @@ struct AndInputRedundancyPassStats {
 // underlying graph caches and performs query/evidence-aware pruning afterwards.
 // A cleanup plan reuses these indexes only for a freshly pruned complete view;
 // special pruning policies must continue to use the ordinary graph pruner.
-inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
-        WorkingSubgraphView& view, bool completeDerivations = false,
-        AndInputRedundancyCleanupPlan* cleanup = nullptr) {
+namespace detail {
+
+inline AndInputRedundancyPassStats eliminatePreparedSnapshot(WorkingSubgraphView& view,
+        AndInputRedundancySnapshot& snapshot, AndInputRedundancyCleanupPlan* cleanup,
+        std::chrono::steady_clock::time_point start, double initializationMs = 0.0) {
     using Clock = std::chrono::steady_clock;
-    const auto start = Clock::now();
     auto elapsedMs = [](Clock::time_point since) {
         return std::chrono::duration<double, std::milli>(Clock::now() - since).count();
     };
     AndInputRedundancyPassStats stats;
-    detail::AndInputRedundancySnapshot snapshot;
     if (cleanup) *cleanup = {};
-    snapshot.initialize(view, completeDerivations, false, cleanup != nullptr);
-    stats.initializationMs = elapsedMs(start);
+    stats.initializationMs = initializationMs;
     stats.detectionMs = stats.initializationMs;
     stats.initialInputAssociations = snapshot.baseStats.inputAssociations;
     std::vector<unsigned char> affected(snapshot.edges.size(), 0);
@@ -626,8 +701,22 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
         snapshot.prepareCleanup(*cleanup);
         stats.cleanupPlanningMs = elapsedMs(cleanupStart);
     }
+    snapshot.complete = false;
     stats.totalMs = elapsedMs(start);
     return stats;
+}
+
+}  // namespace detail
+
+inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
+        WorkingSubgraphView& view, bool completeDerivations = false,
+        AndInputRedundancyCleanupPlan* cleanup = nullptr) {
+    const auto start = std::chrono::steady_clock::now();
+    detail::AndInputRedundancySnapshot snapshot;
+    snapshot.initialize(view, completeDerivations, false, cleanup != nullptr);
+    const auto initializationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - start).count();
+    return detail::eliminatePreparedSnapshot(view, snapshot, cleanup, start, initializationMs);
 }
 
 inline void writeAndInputRedundancyReport(

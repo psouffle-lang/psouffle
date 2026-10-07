@@ -6,6 +6,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -21,6 +22,8 @@ using souffle::problog::detectAndInputRedundancy;
 using souffle::problog::eliminateAndInputRedundancyFreshDag;
 
 namespace {
+
+bool preparedMode = false;
 
 void require(bool condition, const std::string& message) {
     if (!condition) throw std::runtime_error(message);
@@ -64,8 +67,19 @@ struct Fixture {
 };
 
 // Reproduce the public initial-summary contract, independently of the pass.
-AndInputRedundancyWorkspace workspaceFor(const WorkingSubgraphView& view) {
+AndInputRedundancyWorkspace workspaceFor(const WorkingSubgraphView& view, bool compilerCertifiedDag = true) {
     AndInputRedundancyWorkspace workspace;
+    if (preparedMode) {
+        workspace.prepared = std::make_unique<souffle::problog::detail::AndInputRedundancySnapshot>();
+        workspace.prepared->begin(view.getNodes().size(), view.getEdges().size(), true, true);
+        for (const auto& node : view.getNodes()) workspace.prepared->addNode(node);
+        workspace.prepared->finishNodes();
+        for (const auto& edge : view.getEdges()) workspace.prepared->addEdge(edge);
+        workspace.prepared->finish(false, compilerCertifiedDag);
+        workspace.completeEndpoints = workspace.prepared->complete;
+        workspace.initialInputAssociations = workspace.prepared->baseStats.inputAssociations;
+        return workspace;
+    }
     workspace.completeEndpoints = true;
     for (const auto& node : view.getNodes()) workspace.degrees.emplace(node, souffle::problog::AndInputRedundancyDegree{});
     for (const auto& edge : view.getEdges()) {
@@ -84,6 +98,14 @@ AndInputRedundancyWorkspace workspaceFor(const WorkingSubgraphView& view) {
         }
     }
     return workspace;
+}
+
+std::size_t outgoingOccurrences(const DerivationGraphViewInterface& view, const NodePtr& node) {
+    std::size_t result = 0;
+    for (const auto& edge : view.getEdges()) {
+        result += static_cast<std::size_t>(std::count(edge->getInputs().begin(), edge->getInputs().end(), node));
+    }
+    return result;
 }
 
 using Truth = std::unordered_map<NodePtr, bool>;
@@ -181,14 +203,16 @@ struct Events {
     }
 };
 
-void warmCaches(WorkingSubgraphView& view) {
+void warmCaches(WorkingSubgraphView& view, bool useViewAdjacencyCaches = true) {
     view.getValidNodes();
     view.getValidEdges();
-    view.getCycleDependencyGraph();
-    for (const auto& node : view.getNodes()) {
-        view.getIncomingEdges(node);
-        view.getIncomingEdgesStable(node);
-        view.getOutgoingEdges(node);
+    if (useViewAdjacencyCaches) {
+        view.getCycleDependencyGraph();
+        for (const auto& node : view.getNodes()) {
+            view.getIncomingEdges(node);
+            view.getIncomingEdgesStable(node);
+            view.getOutgoingEdges(node);
+        }
     }
     for (const auto& edge : view.getEdges()) {
         edge->getInputsStable();
@@ -198,7 +222,27 @@ void warmCaches(WorkingSubgraphView& view) {
     }
 }
 
-void verifyCaches(WorkingSubgraphView& view) {
+void verifyRawAdjacency(const DerivationGraphViewInterface& view) {
+    for (const auto& node : view.getNodes()) {
+        std::unordered_set<EdgePtr> expectedIncoming, expectedOutgoing, actualIncoming, actualOutgoing;
+        for (const auto& edge : view.getEdges()) {
+            if (edge->getOutput() == node) expectedIncoming.insert(edge);
+            if (std::find(edge->getInputs().begin(), edge->getInputs().end(), node) != edge->getInputs().end()) {
+                expectedOutgoing.insert(edge);
+            }
+        }
+        for (const auto& edge : node->getIncomingEdges()) {
+            if (view.getEdges().count(edge) != 0) actualIncoming.insert(edge);
+        }
+        for (const auto& edge : node->getOutgoingEdges()) {
+            if (view.getEdges().count(edge) != 0) actualOutgoing.insert(edge);
+        }
+        require(actualIncoming == expectedIncoming && actualOutgoing == expectedOutgoing,
+                "fastpath raw adjacency differs from the current pointer-identified bodies");
+    }
+}
+
+void verifyCaches(WorkingSubgraphView& view, bool useViewAdjacencyCaches = true) {
     require(view.getValidNodes().size() == view.getNodes().size() &&
                     view.getValidEdges().size() == view.getEdges().size(), "fastpath retained stale validity caches");
     for (const auto& edge : view.getEdges()) {
@@ -207,15 +251,18 @@ void verifyCaches(WorkingSubgraphView& view) {
                         edge->getBodyNegationsStable().size() == edge->getInputs().size(),
                 "fastpath retained stale/alignment-invalid body caches");
     }
-    for (const auto& node : view.getNodes()) {
-        for (const auto& edge : view.getOutgoingEdges(node)) {
-            require(view.getEdges().count(edge) != 0 &&
-                            std::find(edge->getInputs().begin(), edge->getInputs().end(), node) != edge->getInputs().end(),
-                    "fastpath retained an erased outgoing dependency");
+    verifyRawAdjacency(view);
+    if (useViewAdjacencyCaches) {
+        for (const auto& node : view.getNodes()) {
+            for (const auto& edge : view.getOutgoingEdges(node)) {
+                require(view.getEdges().count(edge) != 0 &&
+                                std::find(edge->getInputs().begin(), edge->getInputs().end(), node) != edge->getInputs().end(),
+                        "fastpath retained an erased outgoing dependency");
+            }
         }
+        require(view.getCycleDependencyGraph().nodeToCycleIndex.size() == view.getNodes().size(),
+                "fastpath retained a stale SCC cache");
     }
-    require(view.getCycleDependencyGraph().nodeToCycleIndex.size() == view.getNodes().size(),
-            "fastpath retained a stale SCC cache");
 }
 
 struct Shape {
@@ -252,7 +299,7 @@ void verifySummary(const AndInputRedundancyCleanupPlan& cleanup, const Shape& be
 }
 
 void verifyFast(WorkingSubgraphView& view, std::size_t expectedDeletions,
-        AndInputRedundancyCleanupPlan* cleanup = nullptr) {
+        AndInputRedundancyCleanupPlan* cleanup = nullptr, bool useViewAdjacencyCaches = true) {
     const Worlds worlds(view);  // Also independently verifies that the certified fixture is a DAG.
     const Events events(view);
     auto workspace = workspaceFor(view);
@@ -300,7 +347,7 @@ void verifyFast(WorkingSubgraphView& view, std::size_t expectedDeletions,
     const auto genericStats = souffle::problog::eliminateAndInputRedundancy(genericView, true);
     const AndInputRedundancyFreshDagCertificate certificate{true, true, true};
     require(canUseAndInputRedundancyFreshDag(view, workspace, certificate), "valid fastpath fixture rejected its workspace");
-    warmCaches(view);
+    warmCaches(view, useViewAdjacencyCaches);
     const auto stats = eliminateAndInputRedundancyFreshDag(view, workspace, certificate, cleanup);
     require(stats.deletedInputAssociations == expectedDeletions && stats.initialInputAssociations == count &&
                     stats.finalInputAssociations + stats.deletedInputAssociations == count,
@@ -322,7 +369,7 @@ void verifyFast(WorkingSubgraphView& view, std::size_t expectedDeletions,
     }
     events.verify(view);
     worlds.verify(view);
-    verifyCaches(view);
+    verifyCaches(view, useViewAdjacencyCaches);
     require(!workspace.completeEndpoints && !canUseAndInputRedundancyFreshDag(view, workspace, certificate),
             "consumed workspace was accepted for a second fastpath invocation");
     const auto repeated = eliminateAndInputRedundancyFreshDag(view, workspace, certificate);
@@ -365,7 +412,7 @@ void duplicateCandidateWithPrivatePremise() {
     f.edge({a}, c);
     const auto target = f.edge({c, c, q}, y, 0.7);
     auto view = f.retainAll();
-    require(workspaceFor(view).degrees.at(a).outgoing == 1,
+    require(outgoingOccurrences(view, a) == 1,
             "duplicate-candidate fixture has no private singleton premise");
     verifyFast(view, 1);
     require(target->getInputs() == std::vector<NodePtr>{c, q},
@@ -451,7 +498,7 @@ void currentBodiesAndFixedPoint() {
                 f.edge({a}, x, 0.8);
                 const auto definition = f.edge({a, c}, d);
                 auto view = f.retainAll();
-                require(workspaceFor(view).degrees.at(c).outgoing == 1 && definition->getInputs().back() == c,
+                require(outgoingOccurrences(view, c) == 1 && definition->getInputs().back() == c,
                         "definition-shrinking fixture lacks a private last premise");
                 verifyFast(view, 2);
                 require(target->getInputs() == std::vector<NodePtr>{x} && definition->getInputs() == std::vector<NodePtr>{a},
@@ -517,7 +564,7 @@ void foreignEndpointCannotBorrowMatchingId() {
     f.edge({foreign}, x, 0.8);
     const auto target = f.edge({c, x}, y, 0.7);
     WorkingSubgraphView view(f.graph.getNodes(), f.graph.getEdges());
-    auto workspace = workspaceFor(view);
+    auto workspace = workspaceFor(view, false);
     const AndInputRedundancyFreshDagCertificate certificate{true, true, true};
     require(!workspace.completeEndpoints && !canUseAndInputRedundancyFreshDag(view, workspace, certificate),
             "numeric-ID collision accepted a foreign pointer as a complete endpoint");
@@ -526,6 +573,42 @@ void foreignEndpointCannotBorrowMatchingId() {
     require(stats.deletedInputAssociations == 0 && target->getInputs() == std::vector<NodePtr>{c, x},
             "incomplete endpoint fallback mutated an unrelated event");
     events.verify(view);
+}
+
+void ownedCollidingAndSparseIdsPreserveEvents() {
+    for (bool sparse : {false, true}) {
+        Fixture f;
+        Fixture other;
+        const auto a = f.fact("A");
+        NodePtr q;
+        if (sparse) {
+            f.graph.startNodeIdsAt(std::numeric_limits<std::size_t>::max() - 4);
+            q = f.fact("IndependentQ", 0.4);
+        } else {
+            q = other.fact("IndependentQ", 0.4);
+            f.graph.adopt(q);
+            require(a != q && a->getId() == q->getId(),
+                    "owned-collision fixture lacks distinct pointers with matching IDs");
+        }
+        const auto c = f.node("C");
+        const auto x = f.node("X");
+        const auto y = f.node("Y");
+        const auto z = f.node("Z");
+        if (sparse) require(z->getId() == std::numeric_limits<std::size_t>::max(),
+                "sparse identity fixture did not reach the maximum ID");
+        f.edge({a}, c);
+        f.edge({q}, x, 0.8);
+        const auto unrelated = f.edge({c, x}, y, 0.7);
+        const auto justified = f.edge({c, a}, z, 0.9);
+        auto view = f.retainAll();
+        // The existing view adjacency caches require unique numeric IDs. The
+        // synthetic collision still verifies pointer identities and raw
+        // adjacency; sparse but unique IDs retain every cache check.
+        verifyFast(view, 1, nullptr, sparse);
+        require(unrelated->getInputs() == std::vector<NodePtr>{c, x} &&
+                        justified->getInputs() == std::vector<NodePtr>{a},
+                "numeric identity merged independent events or hid a real proof");
+    }
 }
 
 void untrustedCertificateFallsBack() {
@@ -570,7 +653,7 @@ void untrustedCertificateFallsBack() {
     const auto target = cyclic.edge({c, x}, y);
     cyclic.edge({y}, a);
     WorkingSubgraphView view(cyclic.graph.getNodes(), cyclic.graph.getEdges());
-    auto workspace = workspaceFor(view);
+    auto workspace = workspaceFor(view, false);
     const AndInputRedundancyFreshDagCertificate certificate{true, false, true};
     const auto stats = eliminateAndInputRedundancyFreshDag(view, workspace, certificate);
     require(stats.deletedInputAssociations == 0 && target->getInputs() == std::vector<NodePtr>{c, x},
@@ -580,26 +663,31 @@ void untrustedCertificateFallsBack() {
 }  // namespace
 
 int main() {
-    const char* current = "collectiveAndRepeatedProofs";
-    try {
-        collectiveAndRepeatedProofs();
-        current = "duplicateCandidateWithPrivatePremise";
-        duplicateCandidateWithPrivatePremise();
-        current = "refusalCases";
-        refusalCases();
-        current = "alternativesIntersectAllSources";
-        alternativesIntersectAllSources();
-        current = "currentBodiesAndFixedPoint";
-        currentBodiesAndFixedPoint();
-        current = "cleanupPreservesQueriesEvidenceAndActiveSources";
-        cleanupPreservesQueriesEvidenceAndActiveSources();
-        current = "foreignEndpointCannotBorrowMatchingId";
-        foreignEndpointCannotBorrowMatchingId();
-        current = "untrustedCertificateFallsBack";
-        untrustedCertificateFallsBack();
-    } catch (const std::exception& error) {
-        std::cerr << current << ": " << error.what() << '\n';
-        return 1;
+    for (const bool prepared : {false, true}) {
+        preparedMode = prepared;
+        const char* current = "collectiveAndRepeatedProofs";
+        try {
+            collectiveAndRepeatedProofs();
+            current = "duplicateCandidateWithPrivatePremise";
+            duplicateCandidateWithPrivatePremise();
+            current = "refusalCases";
+            refusalCases();
+            current = "alternativesIntersectAllSources";
+            alternativesIntersectAllSources();
+            current = "currentBodiesAndFixedPoint";
+            currentBodiesAndFixedPoint();
+            current = "cleanupPreservesQueriesEvidenceAndActiveSources";
+            cleanupPreservesQueriesEvidenceAndActiveSources();
+            current = "foreignEndpointCannotBorrowMatchingId";
+            foreignEndpointCannotBorrowMatchingId();
+            current = "ownedCollidingAndSparseIdsPreserveEvents";
+            ownedCollidingAndSparseIdsPreserveEvents();
+            current = "untrustedCertificateFallsBack";
+            untrustedCertificateFallsBack();
+        } catch (const std::exception& error) {
+            std::cerr << (prepared ? "prepared " : "legacy ") << current << ": " << error.what() << '\n';
+            return 1;
+        }
     }
     return 0;
 }
