@@ -46,11 +46,28 @@ struct AndInputRedundancyReport {
     std::vector<AndInputRedundancyProof> proofs;
 };
 
-// Analyze a complete semantic working snapshot, never a SISO/component subview.
-// The caller must confirm that all active derivation sources are represented.
-// Rebuild local indexes on every call; do not consult or mutate graph caches.
-inline AndInputRedundancyReport detectAndInputRedundancy(
-        const DerivationGraphViewInterface& view, bool completeDerivations = false) {
+namespace detail {
+
+struct AndInputRedundancySnapshot {
+    struct EdgeInfo {
+        EdgePtr edge;
+        std::size_t head;
+        std::vector<std::size_t> inputs;
+        bool positive = false;
+    };
+    std::vector<NodePtr> nodes;
+    std::unordered_map<NodePtr, std::size_t> index;
+    std::vector<EdgeInfo> edges;
+    std::vector<std::vector<std::size_t>> incoming;
+    std::vector<bool> recursive;
+    std::vector<std::unordered_set<std::size_t>> must;
+};
+
+// Mutation rounds reuse the indexed analysis and omit expensive certificate
+// witnesses. The ordinary read-only diagnostic still records complete proofs.
+inline AndInputRedundancyReport detectAndInputRedundancySnapshot(
+        const DerivationGraphViewInterface& view, bool completeDerivations,
+        AndInputRedundancySnapshot* snapshot, bool collectWitnesses) {
     const auto start = std::chrono::steady_clock::now();
     AndInputRedundancyReport report;
     report.completeDerivations = completeDerivations;
@@ -79,12 +96,7 @@ inline AndInputRedundancyReport detectAndInputRedundancy(
         }
         index.emplace(nodes[i], i);
     }
-    struct EdgeInfo {
-        EdgePtr edge;
-        std::size_t head;
-        std::vector<std::size_t> inputs;
-        bool positive = false;
-    };
+    using EdgeInfo = AndInputRedundancySnapshot::EdgeInfo;
     std::vector<EdgeInfo> edges;
     edges.reserve(view.getEdges().size());
     std::vector<std::vector<std::size_t>> incoming(nodes.size()), next(nodes.size()), prev(nodes.size());
@@ -223,20 +235,22 @@ inline AndInputRedundancyReport detectAndInputRedundancy(
             if (!std::all_of(def.inputs.begin(), def.inputs.end(),
                         [&](auto premise) { return providers.count(premise) != 0; })) continue;
             AndInputRedundancyProof proof{target.edge, inputIndex, nodes[candidate], def.edge, {}};
-            std::unordered_set<std::size_t> seenPremises;
-            for (auto premise : def.inputs) {
-                if (!seenPremises.insert(premise).second) continue;
-                const auto provider = providers.at(premise);
-                AndInputRedundancyWitness witness{nodes[premise], nodes[provider], {}};
-                if (premise != provider) {
-                    for (auto source : incoming[provider]) witness.sourceEdges.push_back(edges[source].edge);
-                    std::sort(witness.sourceEdges.begin(), witness.sourceEdges.end(),
-                            [](const auto& a, const auto& b) { return a->getId() < b->getId(); });
+            if (collectWitnesses) {
+                std::unordered_set<std::size_t> seenPremises;
+                for (auto premise : def.inputs) {
+                    if (!seenPremises.insert(premise).second) continue;
+                    const auto provider = providers.at(premise);
+                    AndInputRedundancyWitness witness{nodes[premise], nodes[provider], {}};
+                    if (premise != provider) {
+                        for (auto source : incoming[provider]) witness.sourceEdges.push_back(edges[source].edge);
+                        std::sort(witness.sourceEdges.begin(), witness.sourceEdges.end(),
+                                [](const auto& a, const auto& b) { return a->getId() < b->getId(); });
+                    }
+                    proof.witnesses.push_back(std::move(witness));
                 }
-                proof.witnesses.push_back(std::move(witness));
+                std::sort(proof.witnesses.begin(), proof.witnesses.end(),
+                        [](const auto& a, const auto& b) { return a.premise->getId() < b.premise->getId(); });
             }
-            std::sort(proof.witnesses.begin(), proof.witnesses.end(),
-                    [](const auto& a, const auto& b) { return a.premise->getId() < b.premise->getId(); });
             report.proofs.push_back(std::move(proof));
             affected.insert(target.edge);
             redundant.insert(nodes[candidate]);
@@ -249,8 +263,135 @@ inline AndInputRedundancyReport detectAndInputRedundancy(
     report.stats.provenInputAssociations = report.proofs.size();
     report.stats.affectedEdges = affected.size();
     report.stats.distinctRedundantNodes = redundant.size();
+    if (snapshot) {
+        snapshot->nodes = std::move(nodes);
+        snapshot->index = std::move(index);
+        snapshot->edges = std::move(edges);
+        snapshot->incoming = std::move(incoming);
+        snapshot->recursive = std::move(recursive);
+        snapshot->must = std::move(must);
+    }
     finish();
     return report;
+}
+
+}  // namespace detail
+
+// Analyze a complete semantic working snapshot, never a SISO/component subview.
+// The caller must confirm that all active derivation sources are represented.
+// Rebuild local indexes on every call; do not consult or mutate graph caches.
+inline AndInputRedundancyReport detectAndInputRedundancy(
+        const DerivationGraphViewInterface& view, bool completeDerivations = false) {
+    return detail::detectAndInputRedundancySnapshot(view, completeDerivations, nullptr, true);
+}
+
+struct AndInputRedundancyPassStats {
+    std::size_t deletedInputAssociations = 0;
+    std::size_t affectedEdges = 0;
+    // Includes the final detection round that establishes the fixpoint.
+    std::size_t rounds = 0;
+    std::size_t initialInputAssociations = 0;
+    std::size_t finalInputAssociations = 0;
+    // Remaining independently certified opportunities, not total body size.
+    std::size_t remainingInputAssociations = 0;
+    double detectionMs = 0.0;
+    double mutationMs = 0.0;
+    double totalMs = 0.0;
+};
+
+// Run before SISO on a complete working view. Only erase positive AND inputs;
+// preserve every node, edge object and random event. The caller invalidates the
+// underlying graph caches and performs query/evidence-aware pruning afterwards.
+inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
+        WorkingSubgraphView& view, bool completeDerivations = false) {
+    using Clock = std::chrono::steady_clock;
+    const auto start = Clock::now();
+    auto elapsedMs = [](Clock::time_point since) {
+        return std::chrono::duration<double, std::milli>(Clock::now() - since).count();
+    };
+    AndInputRedundancyPassStats stats;
+    std::unordered_set<EdgePtr> affected;
+    while (true) {
+        detail::AndInputRedundancySnapshot snapshot;
+        const auto detectionStart = Clock::now();
+        const auto report = detail::detectAndInputRedundancySnapshot(
+                view, completeDerivations, &snapshot, false);
+        ++stats.rounds;
+        stats.detectionMs += elapsedMs(detectionStart);
+        if (stats.rounds == 1) stats.initialInputAssociations = report.stats.inputAssociations;
+        stats.finalInputAssociations = report.stats.inputAssociations;
+        stats.remainingInputAssociations = report.stats.provenInputAssociations;
+        if (!report.completeDerivations || report.proofs.empty()) break;
+
+        const auto mutationStart = Clock::now();
+        // Deletions cannot create a cycle, so the snapshot's cycle guards remain
+        // conservative for this round. All dynamic bodies are read from edges.
+        auto safeNode = [&](std::size_t node) {
+            return !snapshot.nodes[node]->isShadow && !snapshot.recursive[node];
+        };
+        auto safeEdge = [&](const EdgePtr& edge) {
+            if (!edge || !safeNode(snapshot.index.at(edge->getOutput()))) return false;
+            const auto& inputs = edge->getInputs();
+            const auto& negations = edge->getBodyNegations();
+            return inputs.size() == negations.size() &&
+                    std::none_of(negations.begin(), negations.end(), [](bool neg) { return neg; }) &&
+                    std::all_of(inputs.begin(), inputs.end(),
+                            [&](const auto& input) { return safeNode(snapshot.index.at(input)); });
+        };
+        std::size_t deletedThisRound = 0;
+        // The report is sorted by edge ID and ascending occurrence. Descending
+        // within each edge keeps pending occurrence indexes stable after erases.
+        for (std::size_t begin = 0; begin < report.proofs.size();) {
+            std::size_t end = begin + 1;
+            while (end < report.proofs.size() && report.proofs[end].edge == report.proofs[begin].edge) ++end;
+            for (std::size_t current = end; current > begin;) {
+                const auto& proof = report.proofs[--current];
+                const auto& edge = proof.edge;
+                const auto& inputs = edge->getInputs();
+                if (inputs.size() <= 1 || proof.inputIndex >= inputs.size() ||
+                        inputs[proof.inputIndex] != proof.redundant || !safeEdge(edge)) continue;
+                const auto candidate = snapshot.index.at(proof.redundant);
+                const auto& node = proof.redundant;
+                if (!safeNode(candidate) || node->isFact || node->isOriginalFactNode() ||
+                        snapshot.incoming[candidate].size() != 1) continue;
+                const auto& definition = snapshot.edges[snapshot.incoming[candidate][0]].edge;
+                if (definition != proof.definition || !safeEdge(definition) || definition->getInputs().empty() ||
+                        !definition->isDeterministic() || !definition->getProbabilisticSupportTokens().empty()) continue;
+
+                // Re-prove against CURRENT inputs and refreshed Must_1 sets.
+                // Independently valid snapshot proofs may invalidate each other.
+                std::unordered_set<std::size_t> guaranteed;
+                for (std::size_t i = 0; i < inputs.size(); ++i) {
+                    if (i == proof.inputIndex) continue;
+                    const auto other = snapshot.index.at(inputs[i]);
+                    guaranteed.insert(other);
+                    guaranteed.insert(snapshot.must[other].begin(), snapshot.must[other].end());
+                }
+                if (!std::all_of(definition->getInputs().begin(), definition->getInputs().end(),
+                            [&](const auto& premise) { return guaranteed.count(snapshot.index.at(premise)) != 0; })) continue;
+                if (!edge->eraseInputOccurrence(proof.inputIndex)) continue;
+                ++deletedThisRound;
+                ++stats.deletedInputAssociations;
+                affected.insert(edge);
+                // Incoming source sets are fixed and bodies stay positive and
+                // nonempty. This deletion can only remove this one node from
+                // Must_1(head), once its last body occurrence disappears. This
+                // is the exact updated intersection without rescanning every
+                // alternative derivation of a high-fan-in head.
+                if (std::find(inputs.begin(), inputs.end(), node) == inputs.end()) {
+                    snapshot.must[snapshot.index.at(edge->getOutput())].erase(candidate);
+                }
+            }
+            begin = end;
+        }
+        if (deletedThisRound != 0) view.invalidateCaches();
+        stats.mutationMs += elapsedMs(mutationStart);
+        stats.finalInputAssociations -= deletedThisRound;
+        if (deletedThisRound == 0) break;
+    }
+    stats.affectedEdges = affected.size();
+    stats.totalMs = elapsedMs(start);
+    return stats;
 }
 
 inline void writeAndInputRedundancyReport(

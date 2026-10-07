@@ -400,6 +400,29 @@ public:
         cachedSelfDependency.reset();
     }
 
+    // Remove one certified AND-input occurrence without replacing its rule event.
+    // The caller owns the proof and must invalidate every graph/view cache that
+    // observes this edge. Keep at least one input and preserve negation alignment.
+    bool eraseInputOccurrence(size_t inputIndex) {
+        if (inputs.size() <= 1 || inputIndex >= inputs.size() || bodyNegations.size() != inputs.size()) {
+            return false;
+        }
+        const auto removed = inputs[inputIndex];
+        inputs.erase(inputs.begin() + inputIndex);
+        bodyNegations.erase(bodyNegations.begin() + inputIndex);
+        if (removed && std::find(inputs.begin(), inputs.end(), removed) == inputs.end()) {
+            auto& outgoing = removed->outgoingEdges;
+            outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
+                                   [&](const EdgePtr& edge) { return edge.get() == this; }),
+                    outgoing.end());
+        }
+        cachedSortedInputs.reset();
+        cachedSortedBodyNegations.reset();
+        cachedEdgeKey.reset();
+        cachedSelfDependency.reset();
+        return true;
+    }
+
 private:
     Hyperedge(const std::vector<NodePtr>& inputs, NodePtr output, size_t edgeId, RuleApplication ruleApp)
         : inputs(inputs), output(output), id(edgeId), rule(nullptr), ruleApp(ruleApp) {

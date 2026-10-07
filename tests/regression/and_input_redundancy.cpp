@@ -14,6 +14,7 @@
 
 using souffle::problog::AndInputRedundancyReport;
 using souffle::problog::detectAndInputRedundancy;
+using souffle::problog::eliminateAndInputRedundancy;
 
 namespace {
 
@@ -58,6 +59,11 @@ bool hasProof(const AndInputRedundancyReport& report, const EdgePtr& edge, const
     return std::any_of(report.proofs.begin(), report.proofs.end(), [&](const auto& proof) {
         return proof.edge == edge && proof.redundant == input;
     });
+}
+
+template <class Edges>
+bool containsEdge(const Edges& edges, const EdgePtr& edge) {
+    return std::find(edges.begin(), edges.end(), edge) != edges.end();
 }
 
 std::string snapshot(const DerivationGraphViewInterface& view) {
@@ -160,6 +166,78 @@ struct WorldEvaluator {
     }
 };
 
+std::string eventIdentity(const DerivationGraphViewInterface& view) {
+    std::ostringstream out;
+    out.precision(17);
+    auto nodes = std::vector<NodePtr>(view.getNodes().begin(), view.getNodes().end());
+    auto edges = std::vector<EdgePtr>(view.getEdges().begin(), view.getEdges().end());
+    std::sort(nodes.begin(), nodes.end(), [](const auto& a, const auto& b) { return a->getId() < b->getId(); });
+    std::sort(edges.begin(), edges.end(), [](const auto& a, const auto& b) { return a->getId() < b->getId(); });
+    for (const auto& node : nodes) {
+        out << node.get() << ' ' << node->getId() << ' ' << node->getSemanticFactId() << ' '
+            << node->getTuple().toString() << ' ' << node->getProbability() << ' '
+            << node->isFact << node->isOriginalFactNode() << node->isShadow << node->pruned
+            << node->needOutput << node->isQuery << node->hasEvidence() << node->getEvidenceValue();
+        for (auto token : node->getProbabilisticSupportTokens()) out << " s" << token;
+        out << '\n';
+    }
+    for (const auto& edge : edges) {
+        out << edge.get() << ' ' << edge->getId() << ' ' << edge->getOutput().get() << ' '
+            << edge->getProbability() << ' ' << edge->getRule() << ' '
+            << edge->getRuleApp().ruleId << ' ' << edge->pruned;
+        for (auto value : edge->getRuleApp().varValuesPure) out << " v" << value;
+        for (auto token : edge->getProbabilisticSupportTokens()) out << " s" << token;
+        out << '\n';
+    }
+    return out.str();
+}
+
+void verifyActualPass(WorkingSubgraphView& view, std::size_t expectedDeletions) {
+    WorldEvaluator evaluator(view);
+    std::vector<Truth> before;
+    for (std::uint64_t world = 0; world < (std::uint64_t{1} << evaluator.randomEvents); ++world) {
+        before.push_back(evaluator.evaluate(world));
+    }
+    const auto identity = eventIdentity(view);
+    std::size_t associations = 0;
+    for (const auto& edge : view.getEdges()) associations += edge->getInputs().size();
+    const auto stats = eliminateAndInputRedundancy(view, true);
+    require(stats.deletedInputAssociations == expectedDeletions, "actual pass deleted the wrong number of inputs");
+    require(stats.initialInputAssociations == associations &&
+                    stats.finalInputAssociations + stats.deletedInputAssociations == associations,
+            "actual pass association accounting is incorrect");
+    require(eventIdentity(view) == identity, "actual pass changed a node, rule event, edge identity or probability");
+    require(stats.remainingInputAssociations == 0 && detectAndInputRedundancy(view, true).proofs.empty(),
+            "actual pass did not reach a locally certified fixpoint");
+    // Keep the original factBits and edgeBits: renumbering or replacing an
+    // independent random event cannot hide behind matching marginal probabilities.
+    for (std::uint64_t world = 0; world < before.size(); ++world) {
+        require(before[world] == evaluator.evaluate(world), "actual mutation changed the complete world truth vector");
+    }
+    std::size_t finalAssociations = 0;
+    for (const auto& edge : view.getEdges()) {
+        finalAssociations += edge->getInputs().size();
+        require(edge->getInputs().size() == edge->getBodyNegations().size(), "mutation misaligned body polarity");
+    }
+    require(finalAssociations == stats.finalInputAssociations, "final input count does not describe the mutated graph");
+    const auto final = snapshot(view);
+    const auto second = eliminateAndInputRedundancy(view, true);
+    require(second.deletedInputAssociations == 0 && snapshot(view) == final, "pass is not idempotent");
+}
+
+void verifyActualPass(Fixture& fixture, std::size_t expectedDeletions) {
+    WorkingSubgraphView view(fixture.graph.getNodes(), fixture.graph.getEdges());
+    verifyActualPass(view, expectedDeletions);
+}
+
+void requireNoMutation(Fixture& fixture, bool complete = true) {
+    WorkingSubgraphView view(fixture.graph.getNodes(), fixture.graph.getEdges());
+    const auto before = snapshot(view);
+    const auto stats = eliminateAndInputRedundancy(view, complete);
+    require(stats.deletedInputAssociations == 0 && snapshot(view) == before,
+            "unsupported structure was changed by the actual pass");
+}
+
 void verifyEveryProof(const DerivationGraphViewInterface& view, const AndInputRedundancyReport& report) {
     const auto before = snapshot(view);
     WorldEvaluator evaluator(view);
@@ -212,6 +290,8 @@ void collectiveProofAndEventIdentity() {
     require(report.stats.affectedEdges == 1 && report.stats.distinctRedundantNodes == 1,
             "collective-proof counts are incorrect");
     verifyEveryProof(f.graph, report);
+    verifyActualPass(f, 1);
+    require(target->getInputs() == std::vector<NodePtr>{x, z}, "collective deletion did not preserve other input order");
 }
 
 void randomDefinitionAndFactSources() {
@@ -225,6 +305,7 @@ void randomDefinitionAndFactSources() {
         f.edge({a}, x, 0.8);
         const auto target = f.edge({c, x}, y);
         require(!hasProof(detectReadOnly(f.graph), target, c), "random definition was treated as deterministic");
+        verifyActualPass(f, 0);
     }
     for (bool currentFact : {false, true}) {
         Fixture f;
@@ -237,6 +318,7 @@ void randomDefinitionAndFactSources() {
         f.edge({a}, x, 0.8);
         const auto target = f.edge({c, x}, y);
         require(!hasProof(detectReadOnly(f.graph), target, c), "additional/original fact source was ignored");
+        verifyActualPass(f, 0);
     }
 }
 
@@ -253,6 +335,7 @@ void alternativeDefinitionsAndWitnesses() {
         f.edge({a}, x, 0.8);
         const auto target = f.edge({c, x}, y);
         require(!hasProof(detectReadOnly(f.graph), target, c), "alternative definition of C was ignored");
+        verifyActualPass(f, 0);
     }
     for (int alternative = 0; alternative != 3; ++alternative) {
         Fixture f;
@@ -270,6 +353,7 @@ void alternativeDefinitionsAndWitnesses() {
         const auto report = detectReadOnly(f.graph);
         require(hasProof(report, target, c) == (alternative == 0), "Must_1 failed to intersect all sources");
         if (alternative == 0) verifyEveryProof(f.graph, report);
+        verifyActualPass(f, alternative == 0 ? 1 : 0);
     }
     {
         Fixture f;
@@ -281,6 +365,7 @@ void alternativeDefinitionsAndWitnesses() {
         f.edge({a}, x, 0.8);
         const auto target = f.edge({c, x}, y);
         require(!hasProof(detectReadOnly(f.graph), target, c), "Must_1 ignored a witness fact source");
+        verifyActualPass(f, 0);
     }
 }
 
@@ -299,6 +384,7 @@ void absentEmptyNegativeAndAliasCases() {
         const auto target = f.edge({c, x}, y, 0.7, mode == 5 ? std::vector<bool>{true, false}
                                                                           : std::vector<bool>{});
         require(!hasProof(detectReadOnly(f.graph), target, c), "unsupported empty/negative/alias source accepted");
+        verifyActualPass(f, 0);
     }
     {
         Fixture f;
@@ -311,6 +397,7 @@ void absentEmptyNegativeAndAliasCases() {
         f.edge({a}, c);
         const auto target = f.edge({c, alias}, y);
         require(!hasProof(detectReadOnly(f.graph), target, c), "proof crossed an alias identity");
+        requireNoMutation(f);
     }
 }
 
@@ -336,6 +423,7 @@ void recursiveCases() {
             f.edge({z}, a);
         }
         require(!hasProof(detectReadOnly(f.graph), target, c), "local recursive structure was accepted");
+        requireNoMutation(f);
     }
 }
 
@@ -352,6 +440,7 @@ void completeSnapshotsAndStaleAdjacency() {
     const auto target = f.edge({c, x}, y);
     require(detectAndInputRedundancy(f.graph).proofs.empty(), "default API assumed complete derivations");
     require(detectReadOnly(f.graph, false).proofs.empty(), "incomplete snapshot produced a proof");
+    requireNoMutation(f, false);
     require(!hasProof(detectReadOnly(f.graph), target, c), "active alternative source was ignored");
     auto activeEdges = f.graph.getEdges();
     activeEdges.erase(oldSource);
@@ -366,6 +455,11 @@ void completeSnapshotsAndStaleAdjacency() {
     incompleteNodes.erase(a);
     WorkingSubgraphView missingEndpoint(incompleteNodes, activeEdges);
     require(!hasProof(detectReadOnly(missingEndpoint), target, c), "missing input endpoint was accepted");
+    const auto incomplete = snapshot(missingEndpoint);
+    require(eliminateAndInputRedundancy(missingEndpoint, true).deletedInputAssociations == 0 &&
+                    snapshot(missingEndpoint) == incomplete,
+            "mutation accepted a snapshot with a missing endpoint");
+    verifyActualPass(residual, 1);
 }
 
 void independentProofsAreNotBatchDeletions() {
@@ -391,6 +485,80 @@ void independentProofsAreNotBatchDeletions() {
         }
     }
     require(batchChangesEvent, "test failed to expose mutually dependent batch deletions");
+    verifyActualPass(f, 1);
+    require(target->getInputs().size() == 1, "mutually redundant inputs were removed together");
+}
+
+void multipleDeletionsRefreshBodyAndAdjacencyCaches() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto b = f.fact("B");
+    const auto c = f.node("C");
+    const auto d = f.node("D");
+    const auto x = f.node("X");
+    const auto z = f.node("Z");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    f.edge({b}, d);
+    f.edge({a}, x, 0.8);
+    f.edge({b}, z, 0.6);
+    const auto target = f.edge({c, x, d, z}, y, 0.7);
+    WorkingSubgraphView view(f.graph.getNodes(), f.graph.getEdges());
+    target->getInputsStable();
+    target->getBodyNegationsStable();
+    const auto originalKey = target->getEdgeKey();
+    target->hasSelfDependency();
+    view.getIncomingEdges(y);
+    view.getOutgoingEdges(c);
+    view.getOutgoingEdges(d);
+    verifyActualPass(view, 2);
+    require(target->getInputs() == std::vector<NodePtr>{x, z}, "multiple deletions changed surviving input order");
+    require(target->getInputsStable().size() == 2 && target->getBodyNegationsStable().size() == 2 &&
+                    target->getEdgeKey() != originalKey,
+            "edge body caches retained the old inputs");
+    require(!containsEdge(view.getOutgoingEdges(c), target) && !containsEdge(view.getOutgoingEdges(d), target),
+            "view adjacency caches retained removed input associations");
+    require(!containsEdge(c->getOutgoingEdges(), target) && !containsEdge(d->getOutgoingEdges(), target),
+            "raw node adjacency retained removed input associations");
+    require(containsEdge(view.getIncomingEdges(y), target) && containsEdge(view.getOutgoingEdges(x), target) &&
+                    containsEdge(view.getOutgoingEdges(z), target),
+            "deletion detached the head or a surviving input");
+}
+
+void crossEdgeCertificatesAreRevalidated() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto c = f.node("C");
+    const auto d = f.node("D");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    f.edge({c}, d);
+    const auto source = f.edge({c, a}, x, 0.8);
+    const auto target = f.edge({d, x}, y, 0.7);
+    const auto report = detectReadOnly(f.graph);
+    require(hasProof(report, source, c) && hasProof(report, target, d), "cross-edge fixture lacks initial proofs");
+    // Mutating the earlier source removes C from Must_1(X). The later
+    // certificate must be checked against this new body rather than reused.
+    verifyActualPass(f, 1);
+    require(source->getInputs() == std::vector<NodePtr>{a} &&
+                    target->getInputs() == std::vector<NodePtr>{d, x},
+            "cross-edge deletion reused an outdated one-layer witness");
+}
+
+void duplicateOccurrencesPreserveSurvivingDependency() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    f.edge({a}, x, 0.8);
+    const auto target = f.edge({c, c, x}, y, 0.7);
+    verifyActualPass(f, 2);
+    require(target->getInputs() == std::vector<NodePtr>{x} &&
+                    !containsEdge(c->getOutgoingEdges(), target) && containsEdge(x->getOutgoingEdges(), target),
+            "duplicate occurrences detached the surviving dependency or retained a deleted one");
 }
 
 void certificateSerialization() {
@@ -477,8 +645,11 @@ int main() {
         recursiveCases();
         completeSnapshotsAndStaleAdjacency();
         independentProofsAreNotBatchDeletions();
+        multipleDeletionsRefreshBodyAndAdjacencyCaches();
+        crossEdgeCertificatesAreRevalidated();
+        duplicateOccurrencesPreserveSurvivingDependency();
         certificateSerialization();
-        std::cout << "AND-input redundancy detector checks passed\n";
+        std::cout << "AND-input redundancy detector and actual world-equivalence checks passed\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
