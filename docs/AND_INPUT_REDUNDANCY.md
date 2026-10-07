@@ -2,7 +2,7 @@
 
 `--and-input-redundancy` enables a conservative elimination pass in standalone
 full execution. The default remains off. Its order is initial query/evidence
-pruning, AND-input elimination, query/evidence re-pruning, then ordinary SISO
+pruning, AND-input elimination, query/evidence cleanup, then ordinary SISO
 rewrite and graph/formula fastpaths. `--rewrite` is independent: the input pass
 can run alone or before explicit, implicit, or automatic rewrite.
 
@@ -61,6 +61,25 @@ body. Dense stamp arrays replace per-candidate hash sets. Dense node IDs speed
 lookup only after uniqueness checks, and each lookup still checks pointer
 identity; sparse or colliding IDs use a pointer index. None of these indexes is
 reused across separate calls or online updates.
+
+Proof coverage tracks only distinct required premises. Direct inputs are checked
+first, and provider analysis stops as soon as all premises are covered; unused
+providers do not need a `Must_1` intersection. Cleanup reuses the same source and
+body indexes and outgoing occurrence counts. Starting at inputs that lose their
+last active reference, it prepares a complete cleanup plan while preserving
+query/evidence roots. The pipeline applies the plan to the existing working view;
+it retains graph entities and raw adjacency, just as ordinary pruning does.
+Touching unsupported or recursive structure falls back to full pruning before
+any cleanup plan is applied. `--merge-bi-imp` and `--prune-extra` always use the
+existing full pruner. This optional plan requires a freshly pruned complete view;
+the default core API continues to erase bodies only.
+
+The pipeline directly uses the working view returned by initial or fallback
+pruning; equivalence merging refreshes that view's evidence roots after moving
+observations to representative nodes. Graph statistics read bodies by reference,
+and a zero-deletion pass
+reuses the initial summary. No additional dependency/component/depth graph is
+built for cleanup.
 
 ## Run
 
@@ -127,12 +146,15 @@ The `AND_INPUT_REDUNDANCY` debugger stage sits after `PRUNING` and before
 `FC_WMC_HYBRID` or plain formula compilation. Its `and_input_redundancy_*`
 counters include deleted input associations, affected edges, detection rounds,
 cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
-times. `remaining_proven_input_associations` counts opportunities at the pass's
+times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
+or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.
+`remaining_proven_input_associations` counts opportunities at the pass's
 fixpoint **before SISO**; SISO may subsequently expose new opportunities.
 `initial_input_associations` and `final_input_associations` count all body links
 before the pass and after cleanup. Their difference includes links on pruned
 edges as well as explicitly deleted inputs. The core pass alone removes no
-nodes or edges; the existing query/evidence-aware pruning does that cleanup.
+nodes or edges; the pipeline applies the query/evidence-aware cleanup plan or
+uses ordinary pruning.
 
 `rewrite_initial_*` describes the graph after this pass and cleanup. Simple and
 general SISO contribution counters use that snapshot, while `after_prune_*`
@@ -171,6 +193,9 @@ occurrences, and preserved random-event/cache/adjacency identities. The
 optimized detector also covers shortened definitions enabling later deletions,
 shared providers with alternative derivations, unrelated recursive components,
 colliding or maximum sparse IDs, and foreign endpoints with matching IDs.
+The cleanup regression compares planned cleanup with ordinary full pruning,
+including shared consumers, query/evidence roots, duplicate occurrences,
+inactive raw adjacency, and cascading removals.
 The execution-contract regression checks runtime reports, stage ordering, actual
 deletion/cleanup, correlated evidence-conditioned outputs, opt-in behavior,
 both rewrite dispatchers and online rejection.

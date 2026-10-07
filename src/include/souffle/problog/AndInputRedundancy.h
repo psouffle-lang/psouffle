@@ -47,6 +47,14 @@ struct AndInputRedundancyReport {
     std::vector<AndInputRedundancyProof> proofs;
 };
 
+// Optional, atomic cleanup proposal for a freshly query/evidence-pruned view.
+// Applying it is the caller's responsibility; the core pass only edits bodies.
+struct AndInputRedundancyCleanupPlan {
+    std::vector<NodePtr> nodes;
+    std::vector<EdgePtr> edges;
+    bool requiresFullPrune = false;
+};
+
 namespace detail {
 
 struct AndInputRedundancySnapshot {
@@ -83,6 +91,7 @@ struct AndInputRedundancySnapshot {
     std::vector<std::size_t> mustSlots, mustBodies, bodyMarks, coverageMarks, providers;
     std::vector<Range> mustEntries;
     std::vector<std::size_t> mustScratch;
+    std::vector<std::size_t> outgoingOccurrences, cleanupSeeds;
     std::size_t bodyEpoch = 0, coverageEpoch = 0;
 
     std::size_t indexOf(const NodePtr& node) const {
@@ -106,7 +115,7 @@ struct AndInputRedundancySnapshot {
     }
 
     void initialize(const DerivationGraphViewInterface& view, bool completeDerivations,
-            bool collectCycleStats) {
+            bool collectCycleStats, bool trackCleanup = false) {
         baseStats.nodes = view.getNodes().size();
         baseStats.edges = view.getEdges().size();
         for (const auto& edge : view.getEdges()) {
@@ -205,6 +214,8 @@ struct AndInputRedundancySnapshot {
                 if (bodies[i] == edge.head) selfLoop[edge.head] = 1;
             }
         }
+        // Reuse the outgoing degrees already counted for SCC construction.
+        if (trackCleanup) outgoingOccurrences.assign(nextOffsets.begin() + 1, nextOffsets.end());
         for (std::size_t i = 1; i < nextOffsets.size(); ++i) {
             nextOffsets[i] += nextOffsets[i - 1];
             prevOffsets[i] += prevOffsets[i - 1];
@@ -336,24 +347,41 @@ struct AndInputRedundancySnapshot {
         if (definition[candidate] == none) return false;
         const auto premises = edges[definition[candidate]].body;
         if (premises.begin == premises.end) return false;
-        const auto epoch = nextEpoch(coverageEpoch, coverageMarks);
+        // Mark only the definition's distinct premises. Direct inputs may
+        // settle the proof without intersecting any provider's sources.
+        if (coverageEpoch > none - 2) {
+            std::fill(coverageMarks.begin(), coverageMarks.end(), 0);
+            coverageEpoch = 0;
+        }
+        const auto needed = ++coverageEpoch, covered = ++coverageEpoch;
+        std::size_t remaining = 0;
+        for (auto i = premises.begin; i < premises.end; ++i) {
+            const auto premise = bodies[i];
+            if (coverageMarks[premise] == needed) continue;
+            coverageMarks[premise] = needed;
+            ++remaining;
+        }
         if (collectProviders && providers.empty()) providers.resize(nodes.size());
         auto cover = [&](std::size_t premise, std::size_t provider) {
-            if (coverageMarks[premise] == epoch) return;
-            coverageMarks[premise] = epoch;
+            if (coverageMarks[premise] != needed) return;
+            coverageMarks[premise] = covered;
+            --remaining;
             if (collectProviders) providers[premise] = provider;
         };
         for (auto i = edge.body.begin; i < edge.body.end; ++i) {
             if (i == edge.body.begin + inputIndex) continue;
             const auto other = bodies[i];
             cover(other, other);
+        }
+        if (remaining == 0) return true;
+        for (auto i = edge.body.begin; i < edge.body.end; ++i) {
+            if (i == edge.body.begin + inputIndex) continue;
+            const auto other = bodies[i];
             const auto must = mustFor(other);
             for (auto j = must.begin; j < must.end; ++j) cover(mustBodies[j], other);
+            if (remaining == 0) return true;
         }
-        for (auto i = premises.begin; i < premises.end; ++i) {
-            if (coverageMarks[bodies[i]] != epoch) return false;
-        }
-        return true;
+        return false;
     }
 
     AndInputRedundancyReport detect(bool collectWitnesses, std::vector<Candidate>* compact = nullptr) {
@@ -418,6 +446,9 @@ struct AndInputRedundancySnapshot {
         for (auto i = position + 1; i < edge.body.end; ++i) bodies[i - 1] = bodies[i];
         --edge.body.end;
         --baseStats.inputAssociations;
+        if (!outgoingOccurrences.empty() && --outgoingOccurrences[candidate.node] == 0) {
+            cleanupSeeds.push_back(candidate.node);
+        }
         const auto slot = mustSlots[edge.head];
         if (slot != none && std::find(bodies.begin() + edge.body.begin,
                                    bodies.begin() + edge.body.end, candidate.node) == bodies.begin() + edge.body.end) {
@@ -427,6 +458,41 @@ struct AndInputRedundancySnapshot {
             must.end = static_cast<std::size_t>(newEnd - mustBodies.begin());
         }
         return true;
+    }
+
+    void prepareCleanup(AndInputRedundancyCleanupPlan& plan) {
+        plan = {};
+        // All roots and active sources come from the initial pruning. Only
+        // deletion can change reachability, so start where an erased input
+        // loses its final active outgoing occurrence; reuse our source index.
+        for (std::size_t current = 0; current < cleanupSeeds.size(); ++current) {
+            const auto node = cleanupSeeds[current];
+            if (nodes[node]->needOutput || nodes[node]->hasEvidence()) continue;
+            if (!safe[node]) {
+                plan = {{}, {}, true};
+                return;
+            }
+            plan.nodes.push_back(nodes[node]);
+            for (auto i = incomingOffsets[node]; i < incomingOffsets[node + 1]; ++i) {
+                const auto& edge = edges[incomingEdges[i]];
+                if (!edge.safe) {
+                    plan = {{}, {}, true};
+                    return;
+                }
+                plan.edges.push_back(edge.edge);
+                for (auto j = edge.body.begin; j < edge.body.end; ++j) {
+                    const auto input = bodies[j];
+                    // A detached recursive component can retain its internal
+                    // references forever. Fall back upon touching it, even
+                    // before its outgoing count reaches zero.
+                    if (!safe[input] || outgoingOccurrences[input] == 0) {
+                        plan = {{}, {}, true};
+                        return;
+                    }
+                    if (--outgoingOccurrences[input] == 0) cleanupSeeds.push_back(input);
+                }
+            }
+        }
     }
 };
 
@@ -457,14 +523,18 @@ struct AndInputRedundancyPassStats {
     std::size_t remainingInputAssociations = 0;
     double detectionMs = 0.0;
     double mutationMs = 0.0;
+    double cleanupPlanningMs = 0.0;
     double totalMs = 0.0;
 };
 
 // Run before SISO on a complete working view. Only erase positive AND inputs;
 // preserve every node, edge object and random event. The caller invalidates the
 // underlying graph caches and performs query/evidence-aware pruning afterwards.
+// A cleanup plan reuses these indexes only for a freshly pruned complete view;
+// special pruning policies must continue to use the ordinary graph pruner.
 inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
-        WorkingSubgraphView& view, bool completeDerivations = false) {
+        WorkingSubgraphView& view, bool completeDerivations = false,
+        AndInputRedundancyCleanupPlan* cleanup = nullptr) {
     using Clock = std::chrono::steady_clock;
     const auto start = Clock::now();
     auto elapsedMs = [](Clock::time_point since) {
@@ -472,7 +542,8 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
     };
     AndInputRedundancyPassStats stats;
     detail::AndInputRedundancySnapshot snapshot;
-    snapshot.initialize(view, completeDerivations, false);
+    if (cleanup) *cleanup = {};
+    snapshot.initialize(view, completeDerivations, false, cleanup != nullptr);
     stats.detectionMs = elapsedMs(start);
     stats.initialInputAssociations = snapshot.baseStats.inputAssociations;
     std::vector<unsigned char> affected(snapshot.edges.size(), 0);
@@ -509,6 +580,11 @@ inline AndInputRedundancyPassStats eliminateAndInputRedundancy(
         if (deletedThisRound == 0) break;
     }
     stats.finalInputAssociations = snapshot.baseStats.inputAssociations;
+    if (cleanup && stats.deletedInputAssociations != 0) {
+        const auto cleanupStart = Clock::now();
+        snapshot.prepareCleanup(*cleanup);
+        stats.cleanupPlanningMs = elapsedMs(cleanupStart);
+    }
     stats.totalMs = elapsedMs(start);
     return stats;
 }

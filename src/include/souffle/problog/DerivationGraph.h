@@ -1210,6 +1210,21 @@ public:
         return evidenceNodes_;
     }
 
+    // Apply a certified cleanup plan that preserves every query/evidence root.
+    void applyPruning(const std::vector<NodePtr>& nodes, const std::vector<EdgePtr>& edges) {
+        for (const auto& edge : edges) {
+            if (edges_.erase(edge) != 0) {
+                edge->pruned = true;
+            }
+        }
+        for (const auto& node : nodes) {
+            if (nodes_.erase(node) != 0) {
+                node->pruned = true;
+            }
+        }
+        invalidateCaches();
+    }
+
 protected:
     std::vector<NodePtr> evidenceNodes_;
 };
@@ -2378,6 +2393,14 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
         FunctionTimer scopeTimer("prune: canonical cleanup");
         if (mergeBiImpEnabled) {
             mergeBiImpEquivalences(liveNodes, liveEdges);
+            // Merging may move evidence to a representative and remove the
+            // original observed node. Return only the current live roots.
+            evidenceNodes.clear();
+            for (const auto& node : liveNodes) {
+                if (node->hasEvidence()) {
+                    evidenceNodes.push_back(node);
+                }
+            }
         }
         removeSelfLoopEdges(liveNodes, liveEdges);
         if (profileEnabled) {

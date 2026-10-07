@@ -393,30 +393,31 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
     s.nodes = nodes.size();
     s.edges = edges.size();
 
-    std::unordered_map<NodePtr, std::size_t> indeg;
-    std::unordered_map<NodePtr, std::size_t> outdeg;
-    indeg.reserve(nodes.size());
-    outdeg.reserve(nodes.size());
+    struct Degree {
+        std::size_t incoming = 0;
+        std::size_t outgoing = 0;
+    };
+    std::unordered_map<NodePtr, Degree> degrees;
+    degrees.reserve(nodes.size());
     for (const auto& n : nodes) {
-        indeg.emplace(n, 0);
-        outdeg.emplace(n, 0);
+        degrees.emplace(n, Degree{});
     }
 
     for (const auto& e : edges) {
-        const auto inputs = view.getInputs(e);
+        const auto& inputs = e->getInputs();
         s.inputAssociations += inputs.size();
         s.maxHyperedgeInputs = std::max(s.maxHyperedgeInputs, inputs.size());
-        NodePtr out = view.getOutput(e);
+        NodePtr out = e->getOutput();
         if (out) {
-            auto it = indeg.find(out);
-            if (it != indeg.end()) {
-                ++it->second;
+            auto it = degrees.find(out);
+            if (it != degrees.end()) {
+                ++it->second.incoming;
             }
         }
         for (const auto& in : inputs) {
-            auto it = outdeg.find(in);
-            if (it != outdeg.end()) {
-                ++it->second;
+            auto it = degrees.find(in);
+            if (it != degrees.end()) {
+                ++it->second.outgoing;
             }
         }
         if (!e->isDeterministic()) {
@@ -445,10 +446,9 @@ static GraphSummary summarizeGraphLight(const DerivationGraphViewInterface& view
         if (n->isShadow) {
             ++s.shadowNodes;
         }
-        const auto inIt = indeg.find(n);
-        const auto outIt = outdeg.find(n);
-        const std::size_t in = (inIt == indeg.end()) ? 0 : inIt->second;
-        const std::size_t out = (outIt == outdeg.end()) ? 0 : outIt->second;
+        const auto degree = degrees.find(n);
+        const std::size_t in = (degree == degrees.end()) ? 0 : degree->second.incoming;
+        const std::size_t out = (degree == degrees.end()) ? 0 : degree->second.outgoing;
         s.maxInDegree = std::max(s.maxInDegree, in);
         s.maxOutDegree = std::max(s.maxOutDegree, out);
         if ((!n->isFact && in > 1) || (n->isFact && in > 0)) {
@@ -489,18 +489,26 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     auto& debugger = Debugger::getInstance();
     debugger.startStage(StageKind::AND_INPUT_REDUNDANCY);
     const auto start = std::chrono::steady_clock::now();
-    const auto stats = eliminateAndInputRedundancy(view, true);
+    const bool localCleanup = !opt.isMergeBiImpEnabled() && !opt.isPruneExtraEnabled();
+    AndInputRedundancyCleanupPlan cleanupPlan;
+    const auto stats = eliminateAndInputRedundancy(view, true, localCleanup ? &cleanupPlan : nullptr);
     const auto pruningStart = std::chrono::steady_clock::now();
+    std::string cleanupStrategy = "none";
     if (stats.deletedInputAssociations != 0) {
         // The original graph still owns the same edges/events. Re-prune before
         // any SISO summary or formula fastpath, preserving queries and evidence.
         graph.invalidateCaches();
-        auto pruned = graph.prune(outputs);
-        view = buildWorkingViewLocal(pruned.getNodes(), pruned.getEdges());
+        if (localCleanup && !cleanupPlan.requiresFullPrune) {
+            cleanupStrategy = "local";
+            view.applyPruning(cleanupPlan.nodes, cleanupPlan.edges);
+        } else {
+            cleanupStrategy = "full";
+            view = graph.prune(outputs);
+        }
     }
     const double pruningMs = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - pruningStart).count();
-    const auto after = summarizeGraphLight(view);
+            std::chrono::steady_clock::now() - pruningStart).count() + stats.cleanupPlanningMs;
+    const auto after = stats.deletedInputAssociations == 0 ? before : summarizeGraphLight(view);
     const double totalMs = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - start).count();
     addGraphSummaryInfo(debugger, "and_input_redundancy_before_", before);
@@ -522,8 +530,10 @@ static GraphSummary runAndInputRedundancy(const CmdOptions& opt, WorkingDerivati
     addCount("cleaned_hyperedges", before.edges - after.edges);
     addTime("detection_ms", stats.detectionMs);
     addTime("mutation_ms", stats.mutationMs);
+    addTime("cleanup_planning_ms", stats.cleanupPlanningMs);
     addTime("pruning_ms", pruningMs);
     addTime("total_ms", totalMs);
+    debugger.addInfo("and_input_redundancy_cleanup_strategy", cleanupStrategy);
     std::cout << "[and-input-redundancy] deleted_input_associations=" << stats.deletedInputAssociations
               << " cleaned_nodes=" << before.nodes - after.nodes
               << " cleaned_hyperedges=" << before.edges - after.edges
@@ -2189,8 +2199,7 @@ void runPipeline(
     debugger.addInfo("before_prune_nodes", std::to_string(graph->getNodes().size()));
     debugger.addInfo("before_prune_edges", std::to_string(graph->getEdges().size()));
     auto t2 = std::chrono::steady_clock::now();
-    auto prunedView = graph->prune(concreteOutputs);
-    auto view = buildWorkingViewLocal(prunedView.getNodes(), prunedView.getEdges());
+    auto view = graph->prune(concreteOutputs);
     const GraphSummary afterPruneSummary = summarizeGraphLight(view);
     addGraphSummaryInfo(debugger, "after_prune_", afterPruneSummary);
     auto t3 = std::chrono::steady_clock::now();
