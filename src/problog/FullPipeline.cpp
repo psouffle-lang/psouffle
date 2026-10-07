@@ -3035,9 +3035,12 @@ void runPipeline(
         }
         debugger.startStage(StageKind::PRIVATE_FACTOR_REWRITE);
         // The complete residual view certifies active definitions and factor
-        // ownership. Plan both passes in one index; commit only after a hit.
+        // ownership. This is the final graph rewrite before solving that view;
+        // unrelated owner history need not be reclaimed. Plan both passes in
+        // one index and commit only their affected objects after a hit.
         auto privateFactors = rewritePrivateFactors(*graph, view,
-                opt.isLocalSeriesContractionEnabled(), opt.isTerminalQueryFactorsEnabled(), true, true);
+                opt.isLocalSeriesContractionEnabled(), opt.isTerminalQueryFactorsEnabled(), true, true,
+                WorkingDerivationGraph::OwnerCommitMode::TerminalView);
         const auto& shared = privateFactors.stats;
         const auto addShared = [&](const std::string& key, auto value) {
             debugger.addInfo("private_factor_" + key, std::to_string(value));
@@ -3054,6 +3057,13 @@ void runPipeline(
         addShared("retired_owner_nodes", shared.removedOwnerNodes);
         addShared("retired_owner_edges", shared.removedOwnerEdges);
         addShared("zero_hit_owner_commits", shared.zeroHitOwnerCommits);
+        addShared("owner_nodes_before", shared.ownerNodesBefore);
+        addShared("owner_edges_before", shared.ownerEdgesBefore);
+        addShared("owner_nodes_after", shared.ownerNodesAfter);
+        addShared("owner_edges_after", shared.ownerEdgesAfter);
+        addShared("owner_edges_examined", shared.ownerEdgesExamined);
+        addShared("touched_owner_nodes", shared.touchedOwnerNodes);
+        addShared("terminal_view_commits", shared.terminalViewCommits);
         addShared("preparation_ms", shared.preparationMs);
         addShared("series_plan_ms", shared.seriesPlanMs);
         addShared("terminal_plan_ms", shared.terminalPlanMs);

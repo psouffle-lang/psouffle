@@ -91,6 +91,12 @@ def check_passes(output, flags, *, require_hits=False):
     hits = int(stage.get('local_series_contractions', 0)) + int(
         stage.get('terminal_query_factored_queries', 0))
     assert int(stage['private_factor_retirement_batches']) == int(hits > 0), stage
+    assert int(stage['private_factor_terminal_view_commits']) == int(hits > 0), stage
+    assert int(stage['private_factor_owner_nodes_before']) - int(
+        stage['private_factor_retired_owner_nodes']) == int(stage['private_factor_owner_nodes_after']), stage
+    assert int(stage['private_factor_owner_edges_before']) - int(
+        stage['private_factor_retired_owner_edges']) + int(
+        stage['private_factor_materialized_compound_edges']) == int(stage['private_factor_owner_edges_after']), stage
     for stage in ('FORWARD_COMPILATION', 'IO_DUMP'):
         if stage in order:
             assert order.index(stage) > preparation, order

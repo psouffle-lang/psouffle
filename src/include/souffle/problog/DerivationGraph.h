@@ -2323,7 +2323,10 @@ public:
         size_t removedEdges = 0;
         size_t removedOwnerNodes = 0;
         size_t removedOwnerEdges = 0;
+        size_t ownerEdgesExamined = 0;
+        size_t touchedOwnerNodes = 0;
     };
+    enum class OwnerCommitMode { CompleteOwner, TerminalView };
     struct RewriteEdgeSpec {
         std::vector<NodePtr> inputs;
         NodePtr output;
@@ -2343,9 +2346,12 @@ public:
     // Insertions are staged without changing ownership, adjacency or IDs.
     // The complete-view certificate permits retiring owner-only SISO history;
     // ordinary callers preserve that history and require full owned closure.
+    // TerminalView retains unrelated history for the final full-inference view.
+    // It requires a complete view and forbids subsequent owner pruning.
     RewriteViewCommitResult commitRewriteView(WorkingSubgraphView& view,
             const std::vector<NodePtr>& retiredActiveNodes, const std::vector<EdgePtr>& retiredActiveEdges,
-            const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs, bool completeActiveDerivations = false);
+            const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs, bool completeActiveDerivations = false,
+            OwnerCommitMode mode = OwnerCommitMode::CompleteOwner);
     // Commit a complete residual view after SISO. Historical owner definitions
     // must not revive during later owner pruning or appear as factor consumers.
     RewriteRetirementStats retainRewriteView(WorkingSubgraphView& view);
@@ -2431,6 +2437,8 @@ public:
         }
         return graph;
     }
+private:
+    bool terminalViewCommitted = false;
 };
 
 inline WorkingDerivationGraph::EventAliasMutationStats WorkingDerivationGraph::applyEventAliases(
@@ -2645,7 +2653,10 @@ inline WorkingDerivationGraph::RewriteRetirementStats WorkingDerivationGraph::re
 inline WorkingDerivationGraph::RewriteViewCommitResult WorkingDerivationGraph::commitRewriteView(
         WorkingSubgraphView& view, const std::vector<NodePtr>& retiredActiveNodes,
         const std::vector<EdgePtr>& retiredActiveEdges, const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs,
-        bool completeActiveDerivations) {
+        bool completeActiveDerivations, OwnerCommitMode mode) {
+    if (mode == OwnerCommitMode::TerminalView && !completeActiveDerivations) {
+        throw std::logic_error("Terminal rewrite commit requires a complete active view");
+    }
     const auto& originalNodes = view.getNodes();
     const auto& originalEdges = view.getEdges();
     if (nodes.count(NodePtr{}) || edges.count(EdgePtr{})) {
@@ -2728,6 +2739,140 @@ inline WorkingDerivationGraph::RewriteViewCommitResult WorkingDerivationGraph::c
         if (!node || !finalNodes.count(node) || !node->hasEvidence()) {
             throw std::logic_error("Residual rewrite view has an invalid evidence root");
         }
+    }
+
+    if (mode == OwnerCommitMode::TerminalView) {
+        // Unlike a complete owner synchronization, the final full-inference
+        // commit only retires history that can touch a changed definition.
+        // The active view remains authoritative; unrelated owner history stays
+        // allocated and must never be used to reconstruct this view later.
+        const std::unordered_set<NodePtr> retiredNodes(retiredActiveNodes.begin(), retiredActiveNodes.end());
+        std::unordered_set<NodePtr> changedHeads;
+        changedHeads.reserve(retiredActiveEdges.size() + insertedEdgeSpecs.size());
+        for (const auto& edge : retiredActiveEdges) changedHeads.insert(edge->getOutput());
+        for (const auto& spec : insertedEdgeSpecs) changedHeads.insert(spec.output);
+        std::unordered_set<EdgePtr> retiredOwnerEdges;
+        retiredOwnerEdges.reserve(retiredActiveEdges.size());
+        std::unordered_set<NodePtr> touched(retiredNodes);
+        touched.reserve(retiredNodes.size() + retiredActiveEdges.size() + insertedEdgeSpecs.size());
+        const auto touchEdge = [&](const EdgePtr& edge) {
+            touched.insert(edge->getOutput());
+            touched.insert(edge->getInputs().begin(), edge->getInputs().end());
+        };
+        // Historical raw adjacency can omit owned edges after SISO. Inspect
+        // actual endpoints once instead of trusting retiring nodes' lists.
+        for (const auto& edge : edges) {
+            ++result.stats.ownerEdgesExamined;
+            bool retire;
+            if (originalEdges.count(edge)) {
+                // The common validation already proved closure of every
+                // original active survivor; never retire it as history.
+                retire = !finalEdges.count(edge);
+            } else {
+                retire = retiredNodes.count(edge->getOutput()) || changedHeads.count(edge->getOutput());
+                if (!retire) {
+                    for (const auto& input : edge->getInputs()) {
+                        if (retiredNodes.count(input)) {
+                            retire = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (retire) {
+                retiredOwnerEdges.insert(edge);
+                touchEdge(edge);
+            }
+        }
+        for (const auto& edge : result.insertedEdges) touchEdge(edge);
+        for (const auto& [tuple, value] : evidences) {
+            const auto node = findNode(tuple);
+            if (!node || !finalNodes.count(node) || !node->hasEvidence() || node->getEvidenceValue() != value) {
+                throw std::logic_error("Terminal rewrite view loses attached evidence");
+            }
+        }
+
+        struct StagedAdjacency {
+            std::vector<EdgePtr> incoming, outgoing;
+        };
+        std::unordered_map<NodePtr, StagedAdjacency> stagedAdjacency;
+        stagedAdjacency.reserve(touched.size());
+        for (const auto& node : touched) {
+            if (!node) continue;
+            if (node->hasEvidence() && !finalNodes.count(node)) {
+                throw std::logic_error("Terminal rewrite affects an absent observed node");
+            }
+            if (nodes.count(node)) ++result.stats.touchedOwnerNodes;
+            if (retiredNodes.count(node)) continue;
+            auto& staged = stagedAdjacency.try_emplace(node).first->second;
+            // Scrub unowned stale handles as well as the retired owned edges.
+            // Every actual counterpart of a retired edge is in touched.
+            for (const auto& edge : node->getIncomingEdges()) {
+                if (edges.count(edge) && !retiredOwnerEdges.count(edge)) staged.incoming.push_back(edge);
+            }
+            for (const auto& edge : node->getOutgoingEdges()) {
+                if (edges.count(edge) && !retiredOwnerEdges.count(edge)) staged.outgoing.push_back(edge);
+            }
+        }
+        for (const auto& edge : result.insertedEdges) {
+            stagedAdjacency.at(edge->getOutput()).incoming.push_back(edge);
+            // Preserve signed body occurrences, including repeated endpoints.
+            for (const auto& input : edge->getInputs()) stagedAdjacency.at(input).outgoing.push_back(edge);
+        }
+        // Allocate new owner hash nodes while the edges are still detached.
+        // The commit can then transfer them without allocating per insertion.
+        std::unordered_set<EdgePtr> stagedOwnerEdges;
+        stagedOwnerEdges.reserve(result.insertedEdges.size());
+        stagedOwnerEdges.insert(result.insertedEdges.begin(), result.insertedEdges.end());
+        const size_t finalOwnerEdgeCount = edges.size() - retiredOwnerEdges.size() + stagedOwnerEdges.size();
+        if (static_cast<double>(finalOwnerEdgeCount) >
+                static_cast<double>(edges.bucket_count()) * edges.max_load_factor()) {
+            // This is the last possible allocation before visible mutation.
+            // Ordinary contractions only shrink membership and avoid rehash.
+            edges.reserve(finalOwnerEdgeCount);
+        }
+
+        auto& stats = result.stats;
+        stats.removedNodes = retiredActiveNodes.size();
+        stats.removedEdges = retiredActiveEdges.size();
+        stats.removedOwnerNodes = retiredNodes.size();
+        stats.removedOwnerEdges = retiredOwnerEdges.size();
+        for (auto& [node, staged] : stagedAdjacency) {
+            node->getIncomingEdges().swap(staged.incoming);
+            node->getOutgoingEdges().swap(staged.outgoing);
+        }
+        for (const auto& node : retiredActiveNodes) {
+            node->getIncomingEdges().clear();
+            node->getOutgoingEdges().clear();
+            node->pruned = true;
+            nodes.erase(node);
+        }
+        for (const auto& edge : retiredOwnerEdges) {
+            edge->pruned = true;
+            edges.erase(edge);
+        }
+        for (auto it = tupleToNodeMap.begin(); it != tupleToNodeMap.end();) {
+            if (retiredNodes.count(it->second)) {
+                existingTuples.erase(it->first);
+                it = tupleToNodeMap.erase(it);
+            } else ++it;
+        }
+        for (auto it = nodeRepMap.begin(); it != nodeRepMap.end();) {
+            if (retiredNodes.count(it->second)) it = nodeRepMap.erase(it);
+            else ++it;
+        }
+        for (auto it = edgeKeyToEdgeMap.begin(); it != edgeKeyToEdgeMap.end();) {
+            if (retiredOwnerEdges.count(it->second)) it = edgeKeyToEdgeMap.erase(it);
+            else ++it;
+        }
+        edges.merge(stagedOwnerEdges);
+        view.mutableNodes().swap(finalNodes);
+        view.mutableEdges().swap(finalEdges);
+        nextEdgeId = stagedNextEdgeId;
+        terminalViewCommitted = true;
+        view.invalidateCaches();
+        invalidateCaches();
+        return result;
     }
 
     // Compact owner membership once. In the uncertified case, unrelated owner
@@ -2875,6 +3020,9 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Rel
 
 WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>& outputRelations,
         BackwardTraversalObserver* observer) {
+    if (terminalViewCommitted) {
+        throw std::logic_error("Cannot reconstruct an owner view after a terminal rewrite commit");
+    }
     FunctionTimer totalTimer("prune working graph");
     const bool profileEnabled = fcProfileEnabled;
     using Clock = std::chrono::steady_clock;

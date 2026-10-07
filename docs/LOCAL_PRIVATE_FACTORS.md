@@ -76,11 +76,20 @@ index, signed consumer index, SCC result and private-factor certificates. SCC
 analysis borrows the same consumer CSR rather than rebuilding its forward arcs.
 Series substitution updates local sources and degrees; terminal factoring then
 uses that virtual graph without another collection or privacy/SCC analysis.
-Only surviving compound edges are materialized. After any successful rewrite,
-one owner/view commit retires the planned objects and historical SISO definitions,
-filters maps and adjacency once, and invalidates caches once. A zero-hit run leaves
-the owner unchanged. The standalone helper APIs retain conservative owner checks;
-only the full pipeline certifies its complete post-SISO active view.
+Only surviving compound edges are materialized. At the final full-inference
+stage, one `TerminalView` owner/view commit retires the planned objects and
+historical edges touching retired nodes or replaced definitions. One owner-edge
+scan checks actual endpoints, including edges missing from stale raw adjacency.
+Only affected adjacency is rebuilt; unrelated owner history remains allocated.
+Inference uses the complete active view. A later owner prune is rejected after
+this terminal commit so it cannot revive historical definitions. A zero-hit run
+leaves the owner unchanged and permits ordinary pruning.
+
+The standalone helpers retain their conservative owner checks. The default
+`CompleteOwner` commit and `retainRewriteView` keep their original cleanup
+contracts, including full owner/view synchronization for a certified complete
+view. Only the final full pipeline selects `TerminalView`; online initialization
+and full recomputation do not use these rewrites.
 
 The single stage records candidates, contractions, removed nodes and
 edges, added edges, removed rule variables, input associations, recursive nodes,
@@ -95,6 +104,8 @@ Physical output representatives can supply several original alias names.
 Phase node, edge and input counts come from the workspace, without full graph
 summary scans. Shared preparation, plan and final commit timings are recorded
 once; collection/SCC/support counters and retirement batches expose repeated work.
+Owner before/after counts, examined edges and affected nodes describe the local
+commit separately from the final active graph's counts.
 With rewrite enabled,
 `rewrite_final.dot/json` includes these passes. The existing `rewrite_final_*`
 counters describe SISO's residual view; use `local_series_after_*` or

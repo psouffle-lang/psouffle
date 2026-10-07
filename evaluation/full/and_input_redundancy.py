@@ -69,6 +69,8 @@ PRIVATE_FACTOR_METRICS = {
         "collection_passes", "scc_passes", "support_passes", "retirement_batches",
         "virtual_compound_edges", "materialized_compound_edges", "terminal_virtual_sources",
         "retired_active_nodes", "retired_active_edges", "zero_hit_owner_commits",
+        "owner_nodes_before", "owner_edges_before", "owner_nodes_after", "owner_edges_after",
+        "owner_edges_examined", "touched_owner_nodes", "terminal_view_commits",
         "preparation_ms", "series_plan_ms", "terminal_plan_ms",
         "mutation_ms", "total_ms", "owner_commit_ms", "retired_owner_nodes",
         "retired_owner_edges", "stage_time_seconds")),

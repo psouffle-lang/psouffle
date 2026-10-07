@@ -33,8 +33,10 @@ The second defers terminal unary marginal queries until conditional parent
 probabilities are available. Both share one active graph collection, signed source
 and consumer indexes, SCC analysis and global primitive support ownership.
 Terminal factoring consumes the virtual series result before edge materialization.
-A successful rewrite commits the owner and active view once, including inactive
-history retirement; zero hits leave the owner unchanged.
+A successful rewrite commits the active view and affected owner objects once.
+This final solve uses `TerminalView` to preserve unrelated owner history and
+reject subsequent owner pruning; zero hits leave the owner unchanged. Generic
+owner synchronization and standalone helper contracts remain unchanged.
 Original output names survive through explicit records. Online and graph-only
 execution reject both flags. See [private-factor semantics](LOCAL_PRIVATE_FACTORS.md).
 

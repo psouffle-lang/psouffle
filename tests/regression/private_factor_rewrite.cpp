@@ -15,6 +15,7 @@
 
 using souffle::problog::evaluateTerminalQueryFactors;
 using souffle::problog::rewritePrivateFactors;
+using OwnerCommitMode = WorkingDerivationGraph::OwnerCommitMode;
 
 namespace {
 
@@ -590,6 +591,13 @@ void zeroHitsDoNotCommitOwnerHistory() {
     require(disabled.stats.collectionPasses == 0 && disabled.stats.retirementBatches == 0 &&
                     structure(f.graph) == ownerBefore && structure(view) == viewBefore,
             "disabled rewrites collected or changed the source graph");
+    const auto terminalView = rewritePrivateFactors(f.graph, view, true, true, true, true,
+            OwnerCommitMode::TerminalView);
+    require(terminalView.stats.retirementBatches == 0 && terminalView.stats.terminalViewCommits == 0 &&
+                    structure(f.graph) == ownerBefore && structure(view) == viewBefore,
+            "zero-hit terminal view committed unrelated owner history");
+    // No commit occurred, so the ordinary owner-prune contract still applies.
+    f.graph.prune(std::vector<std::string>{"Q"});
 }
 
 void authoritativeViewDefersOwnerCommitUntilAHit() {
@@ -626,6 +634,135 @@ void authoritativeViewDefersOwnerCommitUntilAHit() {
     close(probabilities.at(query), worlds.conditional(query, {}), "certified owner cleanup changed the marginal");
 }
 
+void terminalViewCommitsOnlyAffectedHistory(bool observed) {
+    Fixture f;
+    const auto a = f.fact("A"), b = f.fact("B", 0.5), z = f.node("Z");
+    const auto out = f.node("Out"), query = f.node("Q");
+    const auto unrelated = f.node("UnrelatedHistory"), historicalConsumer = f.node("HistoricalConsumer");
+    const auto first = f.edge({a}, z, 0.6);
+    const auto second = f.edge({z, b}, out, 0.7);
+    const auto querySource = f.edge({out}, query, 0.8);
+    const auto unrelatedEdge = f.edge({b}, unrelated, 0.9);
+    const auto historicalSource = f.edge({a}, out, 0.3);
+    const auto consumer = f.edge({query, a}, historicalConsumer, 0.2);
+    out->setQuery();
+    query->setQuery();
+    for (const auto& edge : {unrelatedEdge, historicalSource, consumer}) edge->pruned = true;
+    unrelated->pruned = historicalConsumer->pruned = true;
+    const UntypedTuple evidenceName{"EvidenceAlias", {}}, retainedName{"RetainedOutputAlias", {}};
+    const UntypedTuple cachedName{"CachedHistoryAlias", {}}, retiredName{"DeferredOutputAlias", {}};
+    f.graph.bindEventAliasTuple(evidenceName, a);
+    f.graph.bindEventAliasTuple(retainedName, out);
+    f.graph.bindEventAliasTuple(cachedName, unrelated);
+    f.graph.bindEventAliasTuple(retiredName, query);
+    f.graph.attachEvidence({{evidenceName, observed}});
+    precomputedProbResult[unrelated] = 0.45;
+    precomputedTupleProbResult[cachedName.toString()] = 0.45;
+
+    // Legacy ownership can retain an edge after one endpoint's raw adjacency
+    // loses it. Actual owned endpoints, not just raw lists, define retirement.
+    auto& queryConsumers = query->getOutgoingEdges();
+    queryConsumers.erase(std::remove(queryConsumers.begin(), queryConsumers.end(), consumer), queryConsumers.end());
+    auto& oldSources = out->getIncomingEdges();
+    oldSources.erase(std::remove(oldSources.begin(), oldSources.end(), historicalSource), oldSources.end());
+    WorkingSubgraphView view({a, b, z, out, query}, {first, second, querySource});
+    const Worlds worlds(view);
+    const auto unrelatedBefore = structure(WorkingSubgraphView({unrelated}, {unrelatedEdge}));
+    const auto ownerNodesBefore = f.graph.getNodes().size();
+    const auto ownerEdgesBefore = f.graph.getEdges().size();
+    view.getIncomingEdges(out);
+    f.graph.getIncomingEdges(out);
+    const auto result = rewritePrivateFactors(f.graph, view, true, true, true, true,
+            OwnerCommitMode::TerminalView);
+    sharedWork(result, 1);
+    require(result.series.stats.contractions == 1 && result.terminal.records.size() == 1 &&
+                    result.terminal.records[0].query == query && result.terminal.records[0].parent == out &&
+                    result.stats.terminalViewCommits == 1 && result.stats.ownerEdgesExamined == ownerEdgesBefore &&
+                    result.stats.removedOwnerNodes == 2 && result.stats.removedOwnerEdges == 5,
+            "terminal view did not retire affected owner edges exactly once");
+    require(result.stats.ownerNodesBefore == ownerNodesBefore && result.stats.ownerEdgesBefore == ownerEdgesBefore &&
+                    result.stats.ownerNodesAfter == f.graph.getNodes().size() &&
+                    result.stats.ownerEdgesAfter == f.graph.getEdges().size() &&
+                    result.stats.ownerNodesBefore - result.stats.removedOwnerNodes == result.stats.ownerNodesAfter &&
+                    result.stats.ownerEdgesBefore - result.stats.removedOwnerEdges +
+                            result.stats.materializedCompoundEdges == result.stats.ownerEdgesAfter &&
+                    result.stats.touchedOwnerNodes > 0 && result.stats.touchedOwnerNodes < ownerNodesBefore,
+            "local owner counters do not match retirement/addition or examined unrelated nodes");
+    require(f.graph.getNodes().count(unrelated) && f.graph.getNodes().count(historicalConsumer) &&
+                    f.graph.getEdges().count(unrelatedEdge) &&
+                    structure(WorkingSubgraphView({unrelated}, {unrelatedEdge})) == unrelatedBefore,
+            "terminal view changed unrelated owner history");
+    require(!f.graph.getEdges().count(historicalSource) && !f.graph.getEdges().count(consumer) &&
+                    historicalConsumer->getIncomingEdges().empty() && query->getOutgoingEdges().empty(),
+            "terminal view ignored actual historical endpoints absent from raw adjacency");
+    for (const auto& edge : a->getOutgoingEdges()) require(edge != historicalSource && edge != consumer,
+            "retiring an actual historical edge left a counterpart raw adjacency reference");
+    require(view.getIncomingEdges(out) == result.series.compoundEdges &&
+                    f.graph.getIncomingEdges(out) == result.series.compoundEdges,
+            "changed-head source caches retained historical definitions");
+    require(f.graph.findNode(evidenceName) == a && f.graph.findNode(retainedName) == out &&
+                    f.graph.findNode(cachedName) == unrelated && !f.graph.findNode(retiredName) &&
+                    a->hasEvidence() && a->getEvidenceValue() == observed &&
+                    precomputedProbResult.at(unrelated) == 0.45 &&
+                    precomputedTupleProbResult.at(cachedName.toString()) == 0.45,
+            "local owner commit lost surviving evidence/output/cache aliases");
+    auto probabilities = worlds.verify(view, {a});
+    evaluateTerminalQueryFactors(result.terminal, probabilities);
+    close(probabilities.at(query), worlds.conditional(query, {a}),
+            "terminal-view history changed a full-active conditional output");
+    precomputedProbResult.clear();
+    precomputedTupleProbResult.clear();
+    const auto ownerBeforePrune = structure(f.graph), viewBeforePrune = structure(view);
+    bool rejected = false;
+    try {
+        f.graph.prune(std::vector<std::string>{"Out", "Q"});
+    } catch (const std::logic_error&) {
+        rejected = true;
+    }
+    require(rejected && structure(f.graph) == ownerBeforePrune && structure(view) == viewBeforePrune,
+            "terminal-only owner allowed later owner pruning or changed the graph while rejecting it");
+}
+
+void terminalViewRejectsInvalidCommitAtomically(bool omittedEvidence) {
+    Fixture f;
+    const auto a = f.fact("A"), b = f.fact("B"), z = f.node("Z"), out = f.node("Out");
+    const auto first = f.edge({a}, z, 0.6), second = f.edge({z, b}, out, 0.7);
+    out->setQuery();
+    const UntypedTuple evidenceName{"EvidenceAlias", {}};
+    NodePtr evidence;
+    if (omittedEvidence) {
+        evidence = f.node("ObservedHistory");
+        f.edge({z}, evidence, 0.9)->pruned = true;
+        f.graph.bindEventAliasTuple(evidenceName, evidence);
+        f.graph.attachEvidence({{evidenceName, true}});
+    }
+    WorkingSubgraphView view({a, b, z, out}, {first, second});
+    WorkingDerivationGraph::RewriteEdgeSpec compound;
+    compound.inputs = {a, b};
+    compound.output = out;
+    compound.probability = 0.42;
+    compound.bodyNegations = {false, false};
+    compound.supportTokens = mergeSupportTokenLists(
+            {&first->getProbabilisticSupportTokens(), &second->getProbabilisticSupportTokens()});
+    const auto ownerBefore = structure(f.graph), viewBefore = structure(view);
+    const auto allocations = f.graph.allocatedEdges();
+    bool rejected = false;
+    try {
+        // Without the second retirement, an active edge still uses Z. With
+        // both retirements, attached historical evidence is missing from the
+        // complete final evidence view. Neither invalid plan may partially commit.
+        f.graph.commitRewriteView(view, {z}, omittedEvidence ? std::vector<EdgePtr>{first, second}
+                                                            : std::vector<EdgePtr>{first},
+                {compound}, true, OwnerCommitMode::TerminalView);
+    } catch (const std::logic_error&) {
+        rejected = true;
+    }
+    require(rejected && f.graph.allocatedEdges() == allocations && structure(f.graph) == ownerBefore &&
+                    structure(view) == viewBefore && f.graph.findNode(z->getTuple()) == z &&
+                    (!omittedEvidence || f.graph.findNode(evidenceName) == evidence),
+            "invalid terminal-view commit changed adjacency, aliases, flags or edge ids");
+}
+
 }  // namespace
 
 int main() {
@@ -645,6 +782,10 @@ int main() {
         conservativeCombinedRefusals();
         zeroHitsDoNotCommitOwnerHistory();
         authoritativeViewDefersOwnerCommitUntilAHit();
+        terminalViewCommitsOnlyAffectedHistory(false);
+        terminalViewCommitsOnlyAffectedHistory(true);
+        terminalViewRejectsInvalidCommitAtomically(false);
+        terminalViewRejectsInvalidCommitAtomically(true);
         std::cout << "private factor fused rewrite regression passed\n";
         return 0;
     } catch (const std::exception& error) {

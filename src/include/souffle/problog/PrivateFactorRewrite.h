@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -63,6 +64,8 @@ struct PrivateFactorRewriteStats {
     std::size_t virtualCompoundEdges = 0, materializedCompoundEdges = 0, terminalVirtualSources = 0;
     std::size_t retiredActiveNodes = 0, retiredActiveEdges = 0;
     std::size_t removedOwnerNodes = 0, removedOwnerEdges = 0, zeroHitOwnerCommits = 0;
+    std::size_t ownerNodesBefore = 0, ownerEdgesBefore = 0, ownerNodesAfter = 0, ownerEdgesAfter = 0;
+    std::size_t ownerEdgesExamined = 0, touchedOwnerNodes = 0, terminalViewCommits = 0;
     double preparationMs = 0.0, seriesPlanMs = 0.0, terminalPlanMs = 0.0;
     double mutationMs = 0.0, ownerCommitMs = 0.0, totalMs = 0.0;
 };
@@ -77,13 +80,19 @@ struct PrivateFactorRewriteResult {
 // that index, then commit once. A pipeline-certified residual view can retire
 // inactive owner history at that final commit. Standalone callers fail closed
 // if a retiring node has unknown owner sources or consumers outside the view.
+// TerminalView is reserved for the final standalone-full solve: it preserves
+// unrelated history and prevents a later owner prune from reviving that history.
 inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& graph,
         WorkingSubgraphView& view, bool enableSeries, bool enableTerminal,
-        bool completeDerivations = false, bool certifiedActiveView = false) {
+        bool completeDerivations = false, bool certifiedActiveView = false,
+        WorkingDerivationGraph::OwnerCommitMode ownerMode = WorkingDerivationGraph::OwnerCommitMode::CompleteOwner) {
     using Snapshot = detail::AndInputRedundancySnapshot;
     constexpr auto none = Snapshot::none;
     using Clock = std::chrono::steady_clock;
     const auto start = Clock::now();
+    if (ownerMode == WorkingDerivationGraph::OwnerCommitMode::TerminalView && !certifiedActiveView) {
+        throw std::logic_error("Terminal-view rewrite requires a certified final full-inference view");
+    }
     const auto elapsed = [](Clock::time_point from) {
         return std::chrono::duration<double, std::milli>(Clock::now() - from).count();
     };
@@ -91,6 +100,8 @@ inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& 
     auto& stats = result.stats;
     auto& series = result.series;
     auto& terminal = result.terminal;
+    stats.ownerNodesBefore = stats.ownerNodesAfter = graph.getNodes().size();
+    stats.ownerEdgesBefore = stats.ownerEdgesAfter = graph.getEdges().size();
     stats.nodesBefore = stats.nodesAfterSeries = stats.nodesAfter = series.stats.nodesBefore = view.getNodes().size();
     stats.edgesBefore = stats.edgesAfterSeries = stats.edgesAfter = series.stats.edgesBefore = view.getEdges().size();
     terminal.stats.nodes = stats.nodesBefore;
@@ -464,11 +475,16 @@ inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& 
     stats.materializedCompoundEdges = compoundSpecs.size();
     const auto commitStart = Clock::now();
     auto committed = graph.commitRewriteView(view, retiredNodes, retiredEdges,
-            compoundSpecs, certifiedActiveView);
+            compoundSpecs, certifiedActiveView, ownerMode);
     series.compoundEdges = std::move(committed.insertedEdges);
     stats.ownerCommitMs = elapsed(commitStart);
     stats.removedOwnerNodes = committed.stats.removedOwnerNodes;
     stats.removedOwnerEdges = committed.stats.removedOwnerEdges;
+    stats.ownerEdgesExamined = committed.stats.ownerEdgesExamined;
+    stats.touchedOwnerNodes = committed.stats.touchedOwnerNodes;
+    stats.ownerNodesAfter = graph.getNodes().size();
+    stats.ownerEdgesAfter = graph.getEdges().size();
+    stats.terminalViewCommits = ownerMode == WorkingDerivationGraph::OwnerCommitMode::TerminalView ? 1 : 0;
     stats.retirementBatches = 1;
     for (const auto& parent : terminal.promotedOutputRoots) {
         if (view.getNodes().count(parent)) parent->needOutput = true;
