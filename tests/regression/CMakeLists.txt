@@ -82,6 +82,13 @@ add_test(NAME regression.and_input_redundancy
 set_tests_properties(regression.and_input_redundancy PROPERTIES
     LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
 
+add_executable(regression_and_input_cleanup and_input_cleanup.cpp)
+target_link_libraries(regression_and_input_cleanup PRIVATE compiled)
+add_test(NAME regression.and_input_cleanup
+    COMMAND regression_and_input_cleanup)
+set_tests_properties(regression.and_input_cleanup PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression
@@ -89,5 +96,5 @@ if (NOT TARGET check-regression)
         USES_TERMINAL
         COMMENT "Run maintained full and incremental artifact regression tests"
     )
-    add_dependencies(check-regression souffle regression_and_input_redundancy)
+    add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup)
 endif()

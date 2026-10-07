@@ -103,8 +103,9 @@ def check_mutation(payload, *, positive=False, rewrite=False):
     info = mutation_info(payload)
     prefix = 'and_input_redundancy_'
     for key in ('deleted_input_associations', 'cleaned_nodes', 'cleaned_hyperedges',
-                'remaining_input_associations', 'total_ms'):
+                'remaining_input_associations', 'cleanup_planning_ms', 'pruning_ms', 'total_ms'):
         assert float(info[prefix + key]) >= 0, info
+    assert float(info[prefix + 'cleanup_planning_ms']) <= float(info[prefix + 'pruning_ms']) + 1e-6, info
     if positive:
         assert int(info[prefix + 'deleted_input_associations']) > 0, info
     assert int(info[prefix + 'remaining_input_associations']) == 0, info
@@ -117,6 +118,13 @@ def check_mutation(payload, *, positive=False, rewrite=False):
         assert after <= before, info
         if rewrite:
             assert after == int(stages['FC_WMC_HYBRID']['rewrite_initial_' + kind]), info
+    if int(info[prefix + 'deleted_input_associations']) == 0:
+        assert info[prefix + 'cleanup_strategy'] == 'none', info
+        for key, value in info.items():
+            if key.startswith(prefix + 'before_') and not key.startswith(prefix + 'before_rewrite_'):
+                assert value == info[key.replace(prefix + 'before_', prefix + 'after_', 1)], info
+        assert int(info[prefix + 'cleaned_nodes']) == 0, info
+        assert int(info[prefix + 'cleaned_hyperedges']) == 0, info
     return info
 
 
@@ -380,9 +388,12 @@ def main():
     expected = {'a(1)': 1.0, 'b(1)': 0.7, 'q(1)': 0.2, 'tx(1)': 1.0,
                 'ty(1)': 0.63, 'y(1)': 0.3561, 'jb(1)': 0.3381, 'jz(1)': 0.3339}
     baseline = None
+    pass_info = None
     for variant, flags in [
             ('plain', []), ('rewrite', ['--rewrite']),
             ('pass', ['--and-input-redundancy']),
+            ('pass_merge', ['--and-input-redundancy', '--merge-bi-imp']),
+            ('pass_prune_extra', ['--and-input-redundancy', '--prune-extra']),
             ('pass_explicit', ['--and-input-redundancy', '--explicit-rewrite']),
             ('pass_implicit', ['--and-input-redundancy', '--implicit-rewrite']),
             ('pass_lift', ['--and-input-redundancy', '--rewrite', '--lifted-wmc', '--lifted-threshold=0'])]:
@@ -405,6 +416,16 @@ def main():
             assert int(info['and_input_redundancy_deleted_input_associations']) == 1, info
             assert int(info['and_input_redundancy_cleaned_nodes']) == 1, info
             assert int(info['and_input_redundancy_cleaned_hyperedges']) == 1, info
+            expected_cleanup = 'full' if variant in ('pass_merge', 'pass_prune_extra') else 'local'
+            assert info['and_input_redundancy_cleanup_strategy'] == expected_cleanup, info
+            if variant == 'pass':
+                pass_info = info
+            elif variant in ('pass_merge', 'pass_prune_extra'):
+                # These cleanup policies use full pruning. The local cleanup
+                # must retain the same graph and conditioned events here.
+                for key, value in pass_info.items():
+                    if key.startswith('and_input_redundancy_after_'):
+                        assert info[key] == value, (variant, key, info[key], value)
         else:
             assert 'and_input_redundancy_deleted_input_associations' not in mutation_info(payload), payload
 

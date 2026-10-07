@@ -64,8 +64,11 @@ evidence-conditioned outputs, read-only reports and online rejection.
 The detector tests cover shortened definitions enabling later proofs, lazy
 intersection across alternative sources, and colliding/sparse node IDs without
 merging independent events.
+The `and_input_cleanup` case compares local cleanup with ordinary full pruning,
+enumerates every retained event's random worlds, and checks roots, cascading
+removals, duplicate references, inactive raw adjacency and cache invalidation.
 
-The maintained suite contains 33 tests. The initial unified integration passed
+The maintained suite contains 34 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.
