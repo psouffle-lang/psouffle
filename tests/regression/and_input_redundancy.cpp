@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -24,8 +25,14 @@ void require(bool condition, const std::string& message) {
     }
 }
 
+struct FixtureGraph : WorkingDerivationGraph {
+    void startNodeIdsAt(std::size_t first) {
+        nextNodeId = first;
+    }
+};
+
 struct Fixture {
-    WorkingDerivationGraph graph;
+    FixtureGraph graph;
     souffle::RamDomain nextRuleId = 100;
 
     NodePtr node(const std::string& name) {
@@ -546,6 +553,182 @@ void crossEdgeCertificatesAreRevalidated() {
             "cross-edge deletion reused an outdated one-layer witness");
 }
 
+void shortenedDefinitionEnablesAnotherDeletion() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto c = f.node("C");
+    const auto d = f.node("D");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    const auto target = f.edge({d, x}, y, 0.7);
+    f.edge({a}, x, 0.8);
+    const auto definition = f.edge({c, a}, d);
+    const auto report = detectReadOnly(f.graph);
+    require(hasProof(report, definition, c) && !hasProof(report, target, d),
+            "definition-shrinking fixture has the wrong initial opportunities");
+    verifyEveryProof(f.graph, report);
+    // Initially X guarantees A but does not directly guarantee C. Removing C
+    // from D's own later definition makes D removable from an earlier target,
+    // which must be revisited before declaring the pass finished.
+    verifyActualPass(f, 2);
+    require(definition->getInputs() == std::vector<NodePtr>{a} &&
+                    target->getInputs() == std::vector<NodePtr>{x},
+            "pass stopped before a shortened definition enabled another proof");
+}
+
+void sharedProviderIntersectsEveryAlternative() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto b = f.fact("B");
+    const auto c = f.node("C");
+    const auto d = f.node("D");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    const auto z = f.node("Z");
+    f.edge({a}, c);
+    f.edge({b}, d);
+    f.edge({a, b}, x, 0.8);
+    f.edge({a, b}, x, 0.4);
+    f.edge({a}, x, 0.6);
+    const auto first = f.edge({c, x}, y, 0.7);
+    const auto second = f.edge({d, x}, z, 0.9);
+    const auto report = detectReadOnly(f.graph);
+    require(hasProof(report, first, c) && !hasProof(report, second, d),
+            "shared provider failed to distinguish required and optional premises");
+    // The same provider is queried for two different premises. A cached result
+    // must include every derivation, including the alternative that lacks B.
+    verifyActualPass(f, 1);
+    require(first->getInputs() == std::vector<NodePtr>{x} &&
+                    second->getInputs() == std::vector<NodePtr>{d, x},
+            "shared-provider analysis lost an alternative random derivation");
+}
+
+void repeatedPremiseDoesNotProvideItsOwnWitness() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto q = f.fact("IndependentQ", 0.4);
+    const auto c = f.node("C");
+    const auto y = f.node("Y");
+    f.edge({a, a}, c);
+    const auto target = f.edge({c, q}, y, 0.7);
+    const auto report = detectReadOnly(f.graph);
+    require(!hasProof(report, target, c), "repeated own premise was counted as an independent witness");
+    // C is still the event A. Repeating A in its definition cannot allow an
+    // unrelated random fact Q to justify removing C from C AND Q.
+    verifyActualPass(f, 0);
+}
+
+void unrelatedRecursionDoesNotBlockSafeDeletion() {
+    Fixture f;
+    const auto a = f.fact("A");
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    const auto definition = f.edge({a}, c);
+    const auto source = f.edge({a}, x, 0.8);
+    const auto target = f.edge({c, x}, y, 0.7);
+    WorkingSubgraphView acyclic({a, c, x, y}, {definition, source, target});
+    WorldEvaluator evaluator(acyclic);
+    std::vector<Truth> original;
+    for (std::uint64_t world = 0; world < (std::uint64_t{1} << evaluator.randomEvents); ++world) {
+        original.push_back(evaluator.evaluate(world));
+    }
+    const auto r = f.fact("IndependentCycleSeed", 0.4);
+    const auto u = f.node("RecursiveU");
+    const auto v = f.node("RecursiveV");
+    const auto seed = f.edge({r}, u, 0.3);
+    const auto forward = f.edge({r, v}, u, 0.6);
+    const auto backward = f.edge({u}, v);
+    WorkingSubgraphView recursive({r, u, v}, {seed, forward, backward});
+    const auto cycleSnapshot = snapshot(recursive);
+    WorkingSubgraphView full(f.graph.getNodes(), f.graph.getEdges());
+    const auto identity = eventIdentity(full);
+    const auto stats = eliminateAndInputRedundancy(full, true);
+    require(stats.deletedInputAssociations == 1 && eventIdentity(full) == identity,
+            "unrelated recursion blocked the safe deletion or changed an event");
+    // The disjoint recursive component is unchanged in every random world;
+    // enumerate the complete truth vector of the component that was modified.
+    require(snapshot(recursive) == cycleSnapshot, "pass changed the disjoint recursive component");
+    for (std::uint64_t world = 0; world < original.size(); ++world) {
+        require(original[world] == evaluator.evaluate(world), "safe deletion changed an acyclic world");
+    }
+    require(detectReadOnly(full).proofs.empty(), "mixed recursive graph did not reach the safe fixpoint");
+}
+
+void collidingNodeIdsPreservePointerIdentity() {
+    Fixture f;
+    Fixture otherOwner;
+    const auto a = f.fact("A");
+    const auto q = otherOwner.fact("IndependentQ", 0.4);
+    require(a != q && a->getId() == q->getId(), "fixture did not create distinct nodes with colliding IDs");
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    const auto z = f.node("Z");
+    f.edge({a}, c);
+    f.edge({q}, x, 0.8);
+    const auto unrelated = f.edge({c, x}, y, 0.7);
+    const auto justified = f.edge({c, a}, z, 0.9);
+    auto nodes = f.graph.getNodes();
+    nodes.insert(q);
+    WorkingSubgraphView view(nodes, f.graph.getEdges());
+    const auto report = detectReadOnly(view);
+    require(report.completeDerivations && !hasProof(report, unrelated, c) && hasProof(report, justified, c),
+            "node-ID collision merged independent inputs or hid a real proof");
+    verifyEveryProof(view, report);
+    verifyActualPass(view, 1);
+    require(unrelated->getInputs() == std::vector<NodePtr>{c, x} &&
+                    justified->getInputs() == std::vector<NodePtr>{a},
+            "colliding node IDs changed which occurrence was removed");
+}
+
+void foreignEndpointWithMatchingIdIsIncomplete() {
+    Fixture f;
+    Fixture otherOwner;
+    const auto a = f.fact("A");
+    const auto foreign = otherOwner.fact("Foreign", 0.4);
+    require(a != foreign && a->getId() == foreign->getId(), "foreign endpoint lacks a colliding ID");
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    f.edge({a}, c);
+    f.edge({foreign}, x, 0.8);
+    f.edge({c, x}, y, 0.7);
+    // Foreign is deliberately absent; a matching numeric ID cannot make its
+    // independent fact source part of this supposedly complete snapshot.
+    WorkingSubgraphView view(f.graph.getNodes(), f.graph.getEdges());
+    const auto before = snapshot(view);
+    const auto report = detectReadOnly(view);
+    require(!report.completeDerivations && report.proofs.empty(), "foreign pointer was resolved by numeric ID");
+    require(eliminateAndInputRedundancy(view, true).deletedInputAssociations == 0 && snapshot(view) == before,
+            "mutation accepted a foreign endpoint with a matching ID");
+}
+
+void sparseAndMaximumNodeIdsPreserveEvents() {
+    Fixture f;
+    const auto a = f.fact("A");
+    f.graph.startNodeIdsAt(std::numeric_limits<std::size_t>::max() - 4);
+    const auto q = f.fact("IndependentQ", 0.4);
+    const auto c = f.node("C");
+    const auto x = f.node("X");
+    const auto y = f.node("Y");
+    const auto z = f.node("Z");
+    require(z->getId() == std::numeric_limits<std::size_t>::max(), "fixture did not reach the maximum node ID");
+    f.edge({a}, c);
+    f.edge({q}, x, 0.8);
+    const auto unrelated = f.edge({c, x}, y, 0.7);
+    const auto justified = f.edge({c, a}, z, 0.9);
+    const auto report = detectReadOnly(f.graph);
+    require(report.completeDerivations && !hasProof(report, unrelated, c) && hasProof(report, justified, c),
+            "sparse large IDs merged events or lost a valid endpoint");
+    verifyEveryProof(f.graph, report);
+    verifyActualPass(f, 1);
+    require(unrelated->getInputs() == std::vector<NodePtr>{c, x} &&
+                    justified->getInputs() == std::vector<NodePtr>{a},
+            "sparse large IDs changed which event dependency was removed");
+}
+
 void duplicateOccurrencesPreserveSurvivingDependency() {
     Fixture f;
     const auto a = f.fact("A");
@@ -647,6 +830,13 @@ int main() {
         independentProofsAreNotBatchDeletions();
         multipleDeletionsRefreshBodyAndAdjacencyCaches();
         crossEdgeCertificatesAreRevalidated();
+        shortenedDefinitionEnablesAnotherDeletion();
+        sharedProviderIntersectsEveryAlternative();
+        repeatedPremiseDoesNotProvideItsOwnWitness();
+        unrelatedRecursionDoesNotBlockSafeDeletion();
+        collidingNodeIdsPreservePointerIdentity();
+        foreignEndpointWithMatchingIdIsIncomplete();
+        sparseAndMaximumNodeIdsPreserveEvents();
         duplicateOccurrencesPreserveSurvivingDependency();
         certificateSerialization();
         std::cout << "AND-input redundancy detector and actual world-equivalence checks passed\n";
