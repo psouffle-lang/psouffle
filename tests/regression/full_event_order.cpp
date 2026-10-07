@@ -45,19 +45,23 @@ struct Fixture {
     std::vector<EdgePtr> edges;
     souffle::RamDomain nextRule = 100;
 
-    NodePtr node(const std::string& name) {
-        auto result = graph.createNode(UntypedTuple{name, {}});
+    NodePtr node(const UntypedTuple& tuple) {
+        auto result = graph.createNode(tuple);
         nodes.push_back(result);
         return result;
     }
 
-    NodePtr fact(const std::string& name, double probability) {
-        auto result = node(name);
+    NodePtr node(const std::string& name) { return node(UntypedTuple{name, {}}); }
+
+    NodePtr fact(const UntypedTuple& tuple, double probability) {
+        auto result = node(tuple);
         result->isFact = true;
         result->setOriginalFact();
         result->setProbability(probability);
         return result;
     }
+
+    NodePtr fact(const std::string& name, double probability) { return fact(UntypedTuple{name, {}}, probability); }
 
     EdgePtr edge(const std::vector<NodePtr>& inputs, const NodePtr& output,
             double probability = 1.0, const std::vector<bool>& negative = {}) {
@@ -358,6 +362,7 @@ struct Compilation {
     EdgeFormulas edges;
     std::size_t batchedCycles = 0;
     std::size_t batchedEdges = 0;
+    std::string registrationOrder;
 };
 
 void compile(Compilation& compilation, SubgraphView& view, bool standalone,
@@ -372,6 +377,7 @@ void compile(Compilation& compilation, SubgraphView& view, bool standalone,
     require(stage != nullptr, "missing compilation diagnostics");
     compilation.batchedCycles = std::stoull(stage->getInfo("fc_singleton_batched_cycles"));
     compilation.batchedEdges = std::stoull(stage->getInfo("fc_singleton_batched_edges"));
+    compilation.registrationOrder = stage->getInfo("fc_event_registration_order");
     debugger.endStage();
     debugger.endTurn();
 }
@@ -402,7 +408,10 @@ struct EventWorlds {
             if (!node->isFact) continue;
             int index = -1;
             require(manager.peekVarIndex(*node, index), "compiled fact has no variable identity");
-            result.at(static_cast<std::size_t>(index)) = node->getProbability() == 1.0 ? 1 :
+            // The base initializer retains a p1 index slot but uses True
+            // directly, so that slot need not exist in CUDD's variable pool.
+            if (node->getProbability() == 1.0) continue;
+            result.at(static_cast<std::size_t>(index)) =
                     static_cast<int>((world >> facts.at(node->getSemanticFactId())) & 1);
         }
         for (const auto& [edge, bit] : rules) {
@@ -573,6 +582,65 @@ void prepopulatedFormulaMapsKeepDefaultBehavior() {
     }
 }
 
+void tupleAndSupportOrderPreservesIndependentEvents() {
+    Fixture fixture;
+    const auto z = fixture.fact(UntypedTuple{"EventInput", {100}}, 0.6);
+    const auto a = fixture.fact(UntypedTuple{"EventInput", {2}}, 0.4);
+    const auto alias = fixture.fact(UntypedTuple{"EventInput", {20}}, 0.6);
+    alias->setSemanticFactId(z->getSemanticFactId());
+    const auto zero = fixture.fact(UntypedTuple{"EventInput", {10}}, 0.0);
+    const auto one = fixture.fact(UntypedTuple{"EventInput", {50}}, 1.0);
+    const auto zHead = fixture.node(UntypedTuple{"EventOutput", {100}});
+    const auto aHead = fixture.node(UntypedTuple{"EventOutput", {2}});
+    const auto zRule = fixture.edge({z, a}, zHead, 0.7);
+    zRule->setProbabilisticSupportTokens({makeEdgeSupportToken(5)});
+    const auto first = fixture.edge({a, z}, aHead, 0.2);
+    first->setProbabilisticSupportTokens({makeEdgeSupportToken(40), makeEdgeSupportToken(20)});
+    const auto equal = fixture.edge({a, z}, aHead, 0.3);
+    equal->setProbabilisticSupportTokens(first->getProbabilisticSupportTokens());
+    const auto overlap = fixture.edge({a, alias}, aHead, 0.4);
+    overlap->setProbabilisticSupportTokens({makeEdgeSupportToken(60), makeEdgeSupportToken(20)});
+    const auto firstZero = fixture.edge({a, z}, aHead, 0.0);
+    const auto secondZero = fixture.edge({a, z}, aHead, 0.0);
+    fixture.edge({z, alias}, aHead, 1.0, {false, true});
+    const auto earlierSupport = fixture.edge({a, alias}, aHead, 0.5, {false, true});
+    earlierSupport->setProbabilisticSupportTokens({makeEdgeSupportToken(10)});
+    require(z->getId() < a->getId() && zHead->getId() < aHead->getId(),
+            "tuple-order fixture did not reverse numeric IDs");
+    require(first->getProbabilisticSupportTokens() == equal->getProbabilisticSupportTokens() &&
+                    supportTokensIntersect(first->getProbabilisticSupportTokens(), overlap->getProbabilisticSupportTokens()),
+            "tuple-order fixture lacks equal/overlapping provenance keys");
+    require(firstZero->getProbabilisticSupportTokens().empty() && secondZero->getProbabilisticSupportTokens().empty(),
+            "zero-probability fixture unexpectedly has support keys");
+    auto defaultView = fixture.view(false);
+    auto fullView = fixture.view(true);
+    auto reverseView = fixture.view(false);
+    Compilation reference, candidate, reversed;
+    compile(reference, defaultView, false, {});
+    compile(candidate, fullView, true, {});
+    compile(reversed, reverseView, true, {});
+    require(reference.registrationOrder == "existing" && candidate.registrationOrder == "stable_tuples",
+            "tuple registration escaped its standalone entry point");
+    const auto registered = indices(candidate.manager, fixture, true);
+    require(indices(reversed.manager, fixture, true) == registered, "tuple/support indices depend on view insertion");
+    require(registered.facts.at(a->getSemanticFactId()) == 0 && registered.facts.at(zero->getSemanticFactId()) == 1 &&
+                    registered.facts.at(z->getSemanticFactId()) == 2,
+            "fact tuple order was replaced by numeric or semantic ID order");
+    const std::vector<EdgePtr> expectedRules{firstZero, secondZero, earlierSupport, first, equal, overlap, zRule};
+    for (std::size_t i = 0; i < expectedRules.size(); ++i) {
+        require(registered.rules.at(expectedRules[i]->getId()) == static_cast<int>(i + 3),
+                "rule order ignored head tuple, normalized support, or ID tie");
+    }
+    require(registered.facts.at(one->getSemanticFactId()) == candidate.manager.nextVarIndex_ - 1,
+            "tuple sorting moved the probability-one fact slot");
+    require(candidate.batchedCycles == 2 && candidate.batchedEdges == fixture.edges.size(),
+            "tuple/support fixture did not exercise the wide source batch");
+    compareCompilations("tuple/support order", fixture, reference, candidate, aHead);
+    compareCompilations("tuple/support reverse insertion", fixture, reference, reversed, aHead);
+    const Worlds oracle(fixture, {});
+    checkProbabilities(candidate.manager, fixture, candidate.nodes, oracle, aHead);
+}
+
 }  // namespace
 
 int main() {
@@ -583,6 +651,7 @@ int main() {
         baseFactsAndSeedsKeepDefaultBehavior();
         recursiveSourcesKeepDefaultBehavior();
         prepopulatedFormulaMapsKeepDefaultBehavior();
+        tupleAndSupportOrderPreservesIndependentEvents();
         std::cout << "full event order tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

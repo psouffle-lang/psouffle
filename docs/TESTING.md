@@ -81,6 +81,8 @@ marginals, joint events and positive/negative evidence posteriors. It also check
 the existing default registration and incremental insertion/deletion policies.
 It compares batched singleton compilation with the ordinary compiler and world
 semantics, including shared inputs, signed literals and conservative fallback.
+Tuple/support ordering also checks separate rule identities when support keys
+are equal or overlap, empty supports, and tuples ordered differently from IDs.
 
 The maintained suite contains 38 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a

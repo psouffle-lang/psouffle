@@ -66,6 +66,32 @@ static inline bool stableEdgeOrder(const EdgePtr& lhs, const EdgePtr& rhs) {
     return lhs->toString() < rhs->toString();
 }
 
+// Standalone registration uses existing tuple and normalized support metadata.
+// These keys order variables only; their equality never identifies events.
+static inline bool standaloneEventNodeOrder(const NodePtr& lhs, const NodePtr& rhs) {
+    if (!lhs || !rhs || lhs == rhs) return stableNodeOrder(lhs, rhs);
+    if (!(lhs->getTuple() == rhs->getTuple())) return lhs->getTuple() < rhs->getTuple();
+    if (lhs->getSemanticFactId() != rhs->getSemanticFactId()) {
+        return lhs->getSemanticFactId() < rhs->getSemanticFactId();
+    }
+    return stableNodeOrder(lhs, rhs);
+}
+
+static inline bool standaloneEventEdgeOrder(const EdgePtr& lhs, const EdgePtr& rhs) {
+    if (!lhs || !rhs || lhs == rhs) return stableEdgeOrder(lhs, rhs);
+    const auto& leftHead = lhs->getOutputRef();
+    const auto& rightHead = rhs->getOutputRef();
+    if (!leftHead || !rightHead) {
+        if (leftHead != rightHead) return !leftHead;
+    } else if (!(leftHead->getTuple() == rightHead->getTuple())) {
+        return leftHead->getTuple() < rightHead->getTuple();
+    }
+    const auto& leftSupport = lhs->getProbabilisticSupportTokens();
+    const auto& rightSupport = rhs->getProbabilisticSupportTokens();
+    if (leftSupport != rightSupport) return leftSupport < rightSupport;
+    return stableEdgeOrder(lhs, rhs);
+}
+
 static inline bool incReorderPolicyUsesAuto() {
     return incReorderPolicy == "auto" || incReorderPolicy == "both";
 }
@@ -304,16 +330,18 @@ static inline void maybeRunExplicitIncReorder(
 }
 
 template <typename NodeRange>
-static inline std::vector<NodePtr> collectSortedNodes(const NodeRange& nodes) {
+static inline std::vector<NodePtr> collectSortedNodes(const NodeRange& nodes,
+        bool (*order)(const NodePtr&, const NodePtr&) = stableNodeOrder) {
     std::vector<NodePtr> ordered(nodes.begin(), nodes.end());
-    std::sort(ordered.begin(), ordered.end(), stableNodeOrder);
+    std::sort(ordered.begin(), ordered.end(), order);
     return ordered;
 }
 
 template <typename EdgeRange>
-static inline std::vector<EdgePtr> collectSortedEdges(const EdgeRange& edges) {
+static inline std::vector<EdgePtr> collectSortedEdges(const EdgeRange& edges,
+        bool (*order)(const EdgePtr&, const EdgePtr&) = stableEdgeOrder) {
     std::vector<EdgePtr> ordered(edges.begin(), edges.end());
-    std::sort(ordered.begin(), ordered.end(), stableEdgeOrder);
+    std::sort(ordered.begin(), ordered.end(), order);
     return ordered;
 }
 
@@ -395,8 +423,8 @@ void buildFormulasCyclewiseInternal(
     std::vector<NodePtr> orderedNodes;
     std::vector<EdgePtr> orderedEdges;
     if (orderedRegistration) {
-        orderedNodes = collectSortedNodes(view.getNodes());
-        orderedEdges = collectSortedEdges(view.getEdges());
+        orderedNodes = collectSortedNodes(view.getNodes(), standaloneEventNodeOrder);
+        orderedEdges = collectSortedEdges(view.getEdges(), standaloneEventEdgeOrder);
     }
     setCuddPreConfigTag("full_cyclewise");
     if (orderedRegistration) {
@@ -405,7 +433,7 @@ void buildFormulasCyclewiseInternal(
         formulaManager.preConfig(view);
     }
     setCuddPreConfigTag("");
-    debugger.addInfo("fc_event_registration_order", orderedRegistration ? "stable_ids" : "existing");
+    debugger.addInfo("fc_event_registration_order", orderedRegistration ? "stable_tuples" : "existing");
     auto preConfigMs = toMs(Clock::now() - preStart);
     debugger.logMessage(Level::INFO,
             "preConfig (cache clear + var scan/create + dyn-reorder setup) took " +

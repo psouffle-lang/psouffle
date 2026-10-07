@@ -14,6 +14,7 @@
 #include <vector>
 
 using souffle::problog::AndInputRedundancyReport;
+using souffle::problog::AndInputRedundancyPassStats;
 using souffle::problog::detectAndInputRedundancy;
 using souffle::problog::eliminateAndInputRedundancy;
 
@@ -199,7 +200,7 @@ std::string eventIdentity(const DerivationGraphViewInterface& view) {
     return out.str();
 }
 
-void verifyActualPass(WorkingSubgraphView& view, std::size_t expectedDeletions) {
+AndInputRedundancyPassStats verifyActualPass(WorkingSubgraphView& view, std::size_t expectedDeletions) {
     WorldEvaluator evaluator(view);
     std::vector<Truth> before;
     for (std::uint64_t world = 0; world < (std::uint64_t{1} << evaluator.randomEvents); ++world) {
@@ -230,11 +231,12 @@ void verifyActualPass(WorkingSubgraphView& view, std::size_t expectedDeletions) 
     const auto final = snapshot(view);
     const auto second = eliminateAndInputRedundancy(view, true);
     require(second.deletedInputAssociations == 0 && snapshot(view) == final, "pass is not idempotent");
+    return stats;
 }
 
-void verifyActualPass(Fixture& fixture, std::size_t expectedDeletions) {
+AndInputRedundancyPassStats verifyActualPass(Fixture& fixture, std::size_t expectedDeletions) {
     WorkingSubgraphView view(fixture.graph.getNodes(), fixture.graph.getEdges());
-    verifyActualPass(view, expectedDeletions);
+    return verifyActualPass(view, expectedDeletions);
 }
 
 void requireNoMutation(Fixture& fixture, bool complete = true) {
@@ -297,7 +299,8 @@ void collectiveProofAndEventIdentity() {
     require(report.stats.affectedEdges == 1 && report.stats.distinctRedundantNodes == 1,
             "collective-proof counts are incorrect");
     verifyEveryProof(f.graph, report);
-    verifyActualPass(f, 1);
+    const auto stats = verifyActualPass(f, 1);
+    require(stats.rounds == 1, "unchanged definitions required a redundant terminal detection round");
     require(target->getInputs() == std::vector<NodePtr>{x, z}, "collective deletion did not preserve other input order");
 }
 
@@ -547,7 +550,8 @@ void crossEdgeCertificatesAreRevalidated() {
     require(hasProof(report, source, c) && hasProof(report, target, d), "cross-edge fixture lacks initial proofs");
     // Mutating the earlier source removes C from Must_1(X). The later
     // certificate must be checked against this new body rather than reused.
-    verifyActualPass(f, 1);
+    const auto stats = verifyActualPass(f, 1);
+    require(stats.rounds == 1, "stale negative reproof required another round without a definition change");
     require(source->getInputs() == std::vector<NodePtr>{a} &&
                     target->getInputs() == std::vector<NodePtr>{d, x},
             "cross-edge deletion reused an outdated one-layer witness");
@@ -571,10 +575,42 @@ void shortenedDefinitionEnablesAnotherDeletion() {
     // Initially X guarantees A but does not directly guarantee C. Removing C
     // from D's own later definition makes D removable from an earlier target,
     // which must be revisited before declaring the pass finished.
-    verifyActualPass(f, 2);
+    const auto stats = verifyActualPass(f, 2);
+    require(stats.rounds >= 2, "definition mutation incorrectly certified a fixpoint in its first round");
     require(definition->getInputs() == std::vector<NodePtr>{a} &&
                     target->getInputs() == std::vector<NodePtr>{x},
             "pass stopped before a shortened definition enabled another proof");
+}
+
+void irrelevantDefinitionMutationCertifiesFixpoint() {
+    for (int use = 0; use < 3; ++use) {
+        Fixture f;
+        const auto a = f.fact("A");
+        const auto q = f.fact("IndependentQ", 0.4);
+        const auto c = f.node("C");
+        const auto d = f.node("D");
+        const auto y = f.node("Y");
+        f.edge({a}, c);
+        const auto definition = f.edge({c, a}, d);
+        // D occurs only negatively, in a mixed-sign body, or alone. None is
+        // an eligible target that can gain a proof when D's definition shrinks.
+        const auto target = use == 2 ? f.edge({d}, y, 0.7) :
+                f.edge({d, q}, y, 0.7, use == 0 ? std::vector<bool>{true, false} :
+                                                               std::vector<bool>{false, true});
+        const auto originalInputs = target->getInputs();
+        const auto originalNegations = target->getBodyNegations();
+        const auto report = detectReadOnly(f.graph);
+        require(report.proofs.size() == 1 && hasProof(report, definition, c),
+                "irrelevant-definition fixture has the wrong initial opportunities");
+        verifyEveryProof(f.graph, report);
+        const auto stats = verifyActualPass(f, 1);
+        require(stats.rounds == 1,
+                "definition used only by an ineligible target forced another detection round");
+        require(definition->getInputs() == std::vector<NodePtr>{a} &&
+                        target->getInputs() == originalInputs &&
+                        target->getBodyNegations() == originalNegations,
+                "irrelevant-definition mutation changed its negative or unary consumer");
+    }
 }
 
 void sharedProviderIntersectsEveryAlternative() {
@@ -602,6 +638,51 @@ void sharedProviderIntersectsEveryAlternative() {
     require(first->getInputs() == std::vector<NodePtr>{x} &&
                     second->getInputs() == std::vector<NodePtr>{d, x},
             "shared-provider analysis lost an alternative random derivation");
+}
+
+void duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider() {
+    for (bool wrapEpoch : {false, true}) {
+        Fixture f;
+        const auto a = f.fact("A");
+        const auto b = f.fact("B", 0.4);
+        const auto q = f.fact("IndependentQ", 0.3);
+        const auto c = f.node("C");
+        const auto x = f.node("FirstProvider");
+        const auto z = f.node("UnusedProvider");
+        const auto y = f.node("Y");
+        const auto definition = f.edge({a, a, b, b}, c);
+        const auto firstSource = f.edge({a, b}, x, 0.7);
+        f.edge({a, b, q}, z, 0.8);
+        f.edge({a, b}, z, 0.6);
+        f.edge({a, b, q}, z, 0.5);
+        const auto target = f.edge({c, x, z}, y, 0.9);
+        const auto before = snapshot(f.graph);
+        souffle::problog::detail::AndInputRedundancySnapshot analysis;
+        analysis.initialize(f.graph, true, true, true);
+        if (wrapEpoch) analysis.coverageEpoch = std::numeric_limits<std::size_t>::max() - 1;
+        const auto report = analysis.detect(true);
+        require(report.proofs.size() == 1 && hasProof(report, target, c),
+                "duplicate required premises prevented an otherwise complete proof");
+        const auto& proof = report.proofs.front();
+        require(proof.definition == definition && proof.witnesses.size() == 2,
+                "duplicate premises changed definition identity or certificate cardinality");
+        std::unordered_set<NodePtr> premises;
+        for (const auto& witness : proof.witnesses) {
+            premises.insert(witness.premise);
+            require(witness.provider == x && witness.sourceEdges == std::vector<EdgePtr>{firstSource},
+                    "later alternative provider replaced the first covering certificate");
+        }
+        require(premises == std::unordered_set<NodePtr>{a, b}, "certificate omitted a required event");
+        // Lazy analysis is part of this optimization: the later provider's
+        // complete alternative-source intersection is unnecessary for proof.
+        require(analysis.mustSlots.at(analysis.indexOf(z)) == analysis.none,
+                "complete early coverage still analyzed an unrelated provider");
+        require(snapshot(f.graph) == before, "early-coverage detection changed graph state");
+        verifyEveryProof(f.graph, report);
+        verifyActualPass(f, 1);
+        require(target->getInputs() == std::vector<NodePtr>{x, z},
+                "early coverage changed the retained inputs or independently random provider");
+    }
 }
 
 void repeatedPremiseDoesNotProvideItsOwnWitness() {
@@ -742,7 +823,8 @@ void duplicateOccurrencesPreserveSurvivingDependency() {
     f.edge({a}, c);
     f.edge({a}, x, 0.8);
     const auto target = f.edge({c, c, x}, y, 0.7);
-    verifyActualPass(f, 2);
+    const auto stats = verifyActualPass(f, 2);
+    require(stats.rounds == 1, "duplicate occurrences required a terminal round despite unchanged definitions");
     require(target->getInputs() == std::vector<NodePtr>{x} &&
                     !containsEdge(c->getOutgoingEdges(), target) && containsEdge(x->getOutgoingEdges(), target),
             "duplicate occurrences detached the surviving dependency or retained a deleted one");
@@ -835,7 +917,9 @@ int main() {
         multipleDeletionsRefreshBodyAndAdjacencyCaches();
         crossEdgeCertificatesAreRevalidated();
         shortenedDefinitionEnablesAnotherDeletion();
+        irrelevantDefinitionMutationCertifiesFixpoint();
         sharedProviderIntersectsEveryAlternative();
+        duplicatePremisesKeepFirstCertificateAndSkipUnneededProvider();
         repeatedPremiseDoesNotProvideItsOwnWitness();
         unrelatedRecursionDoesNotBlockSafeDeletion();
         collidingNodeIdsPreservePointerIdentity();

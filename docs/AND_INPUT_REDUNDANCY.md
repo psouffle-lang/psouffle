@@ -47,7 +47,13 @@ cannot create a cycle, and edges involving recursive nodes are never changed.
 Indexed body segments mirror every in-place deletion, and cached `Must_1`
 entries are updated immediately. Later rounds scan only the preselected target
 edges until no opportunities remain, including opportunities exposed by a
-shortened definition. It erases
+shortened definition. The existing detection traversal marks each definition that
+could prove a positive candidate, including currently failing proofs. When no
+successful deletion changes one of these definitions, this information certifies
+the fixpoint without a final target scan:
+candidate premises stay fixed while other inputs and provider `Must_1` sets only
+shrink, so a failed proof cannot become successful. Every deletion still requires
+a current-body proof. It erases
 aligned input/negation entries in the existing `Hyperedge` object, retaining
 edge ID, rule application, probability and probabilistic support. Edge and
 view caches are invalidated, and outgoing adjacency retains a dependency while
@@ -83,8 +89,9 @@ managers have no compiler certificate and use the indexed analysis above.
 Public rule-manager mutations invalidate the certificate. Read-only reports
 continue to build their own grounded analysis.
 
-Before consulting necessary-input sets, the lazy path checks the current last
-premise of the candidate's definition. If its outgoing occurrence count is one,
+When outgoing occurrence counts are available, the proof checks the current
+last premise of the candidate's definition before consulting necessary-input
+sets. If its outgoing occurrence count is one,
 only that definition uses it. Other inputs cannot contain it or require it in
 their own source bodies; only another occurrence of the same candidate can
 prove this deletion. This rejects unsuccessful proofs without constructing
@@ -95,12 +102,24 @@ the view and original graph retain every entity until the analysis ends, before
 cleanup is applied. This avoids repeated shared-ownership copies and releases.
 Targets, mutation candidates and cleanup plans retain their owning references.
 
-Standalone full BDD compilation registers fact and rule variables using the
-same stable node and edge order already used for formula initialization. The
-two stages share their sorted lists. This applies to both SISO and SISO+pass
+Standalone full BDD compilation uses the existing sorting helpers to order
+facts by tuple and rules by their head tuple and normalized support metadata,
+with ID tie breakers. Registration and formula initialization share those
+sorted lists. Support metadata only orders variables; equal or overlapping
+support sets never merge independent rule events. This applies to both SISO and SISO+pass
 execution; online initialization and updates retain their existing entrypoint.
 The ordering changes internal BDD indexes, with each event and weight still
 mapped to its own variable.
+
+Definition preparation skips searching bodies for targets when no eligible
+definition exists. On a certified fresh DAG, it also skips filtering the same
+targets again: no intervening SCC check has changed their definitions or safety.
+Generic and read-only cycle checks retain their complete recursive statistics.
+
+With splitting disabled, SISO reuses its initial or preceding iteration's exact
+random-variable count instead of traversing the unchanged graph again before
+each iteration. It still counts after mutations; splitting modes retain their
+ordinary recount because a split can change the graph between iterations.
 
 The same full compiler also reuses its existing SCC groups to compile a
 nonrecursive singleton head's incoming contributions together and form its OR
@@ -109,8 +128,9 @@ every input or repeatedly sorting and combining all incoming edges. Fact and
 seed heads, recursive groups, unavailable inputs and prepopulated formula maps
 retain the ordinary compilation path.
 
-The indexed proof uses one body traversal and a single stamp epoch, retaining the
-existing lazy `Must_1` cache. Generic cycle analysis first peels acyclic sources using
+The indexed proof marks distinct needed premises and covered premises in the
+existing stamp array, retaining the lazy `Must_1` cache. Once all premises are
+covered, it stops without expanding later providers. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph
 still receives exact SCC analysis, with reverse traversal reusing the source
 and body indexes. Cleanup reuses the same source and body indexes and
@@ -196,7 +216,8 @@ metrics stay blank rather than being reported as zero.
 
 The `AND_INPUT_REDUNDANCY` debugger stage sits after `PRUNING` and before
 `FC_WMC_HYBRID` or plain formula compilation. Its `and_input_redundancy_*`
-counters include deleted input associations, affected edges, detection rounds,
+counters include deleted input associations, affected edges, detection rounds
+(excluding a final scan when unchanged definitions already certify the fixpoint),
 cleaned nodes/hyperedges, graph/body sizes, and detection/mutation/pruning/total
 times. `pruning_ms` includes `cleanup_planning_ms` as well as applying the plan
 or full pruning. `cleanup_strategy` records `none`, `local`, or `full`.

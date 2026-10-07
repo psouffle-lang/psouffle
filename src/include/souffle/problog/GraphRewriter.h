@@ -202,9 +202,15 @@ public:
             }
             auto iterStart = std::chrono::steady_clock::now();
             ++stats.numIterations;
-            auto countBeforeStart = std::chrono::steady_clock::now();
-            size_t iterRandomVarsBefore = countRandomVarsInView(view);
-            double countBeforeMs = toMs(std::chrono::steady_clock::now() - countBeforeStart);
+            // Without splitting, the graph has not changed since the initial
+            // count or the preceding iteration's final count.
+            size_t iterRandomVarsBefore = stats.randomVarsAfter;
+            double countBeforeMs = 0.0;
+            if (flags.splitMode != SplitMode::None) {
+                auto countBeforeStart = std::chrono::steady_clock::now();
+                iterRandomVarsBefore = countRandomVarsInView(view);
+                countBeforeMs = toMs(std::chrono::steady_clock::now() - countBeforeStart);
+            }
             std::unordered_set<NodePtr> iterDirtyNodes;
             std::unordered_set<EdgePtr> iterDirtyEdges;
             auto markDirtyNode = [&](NodePtr n) {

@@ -75,6 +75,9 @@ struct AndInputRedundancySnapshot {
         std::size_t head;
         Range body;
         bool safe = false;
+        // Marked by the existing detection traversal for every possible
+        // candidate, even when its initial proof fails. Bodies only shrink.
+        bool usedAsDefinition = false;
     };
     struct Candidate {
         std::size_t edge;
@@ -238,6 +241,7 @@ struct AndInputRedundancySnapshot {
         // Bodies only shrink, so mutation cannot add a definition or target to
         // this pool: unsupported edges are never edited and sources stay fixed.
         definition.assign(nodes.size(), none);
+        bool anyDefinition = false;
         for (std::size_t node = 0; node < nodes.size(); ++node) {
             const auto incoming = incomingOffsets[node + 1] - incomingOffsets[node];
             maxInDegree = std::max(maxInDegree, incoming);
@@ -249,7 +253,10 @@ struct AndInputRedundancySnapshot {
             const auto edgeId = incomingEdges[incomingOffsets[node]];
             const auto& edge = edges[edgeId];
             if (edge.safe && edge.body.begin != edge.body.end && edge.edge->isDeterministic() &&
-                    edge.edge->getProbabilisticSupportTokens().empty()) definition[node] = edgeId;
+                    edge.edge->getProbabilisticSupportTokens().empty()) {
+                definition[node] = edgeId;
+                anyDefinition = true;
+            }
         }
         auto hasCandidate = [&](const EdgeInfo& edge) {
             for (auto i = edge.body.begin; i < edge.body.end; ++i) {
@@ -257,9 +264,11 @@ struct AndInputRedundancySnapshot {
             }
             return false;
         };
-        for (std::size_t i = 0; i < edges.size(); ++i) {
-            const auto& edge = edges[i];
-            if (edge.safe && edge.body.end - edge.body.begin >= 2 && hasCandidate(edge)) targets.push_back(i);
+        if (anyDefinition) {
+            for (std::size_t i = 0; i < edges.size(); ++i) {
+                const auto& edge = edges[i];
+                if (edge.safe && edge.body.end - edge.body.begin >= 2 && hasCandidate(edge)) targets.push_back(i);
+            }
         }
         // Mutation needs no SCC if there can be no deletion. Read-only reports
         // still compute the complete recursive-node statistic.
@@ -270,9 +279,11 @@ struct AndInputRedundancySnapshot {
             if (definition[node] != none && !edges[definition[node]].safe) definition[node] = none;
             if (definition[node] != none) ++baseStats.eligibleDefinitions;
         }
-        targets.erase(std::remove_if(targets.begin(), targets.end(),
-                              [&](auto edge) { return !edges[edge].safe || !hasCandidate(edges[edge]); }),
-                targets.end());
+        if (!compilerCertifiedFreshDag) {
+            targets.erase(std::remove_if(targets.begin(), targets.end(),
+                                  [&](auto edge) { return !edges[edge].safe || !hasCandidate(edges[edge]); }),
+                    targets.end());
+        }
         std::sort(targets.begin(), targets.end(), [&](auto a, auto b) {
             const auto left = edges[a].edge->getId(), right = edges[b].edge->getId();
             return left != right ? left < right : a < b;
@@ -455,24 +466,48 @@ struct AndInputRedundancySnapshot {
         if (definition[candidate] == none) return false;
         const auto premises = edges[definition[candidate]].body;
         if (premises.begin == premises.end) return false;
-        const auto epoch = nextEpoch(coverageEpoch, coverageMarks);
+        // A sole outgoing occurrence belongs to this current definition. No
+        // other provider can require its private tail premise, except another
+        // occurrence of the candidate itself in this target.
+        if (!outgoingOccurrences.empty() && outgoingOccurrences[bodies[premises.end - 1]] == 1) {
+            bool duplicate = false;
+            for (auto i = edge.body.begin; i < edge.body.end; ++i) {
+                if (i != edge.body.begin + inputIndex && bodies[i] == candidate) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (!duplicate) return false;
+        }
+        // Obtain both stamps before marking needed premises: the second epoch
+        // can wrap and clear the shared array.
+        const auto neededTag = nextEpoch(coverageEpoch, coverageMarks);
+        const auto coveredTag = nextEpoch(coverageEpoch, coverageMarks);
+        std::size_t remaining = 0;
+        for (auto i = premises.begin; i < premises.end; ++i) {
+            const auto premise = bodies[i];
+            if (coverageMarks[premise] != neededTag) {
+                coverageMarks[premise] = neededTag;
+                ++remaining;
+            }
+        }
         if (collectProviders && providers.empty()) providers.resize(nodes.size());
         auto cover = [&](std::size_t premise, std::size_t provider) {
-            if (coverageMarks[premise] == epoch) return;
-            coverageMarks[premise] = epoch;
+            if (coverageMarks[premise] != neededTag) return false;
+            coverageMarks[premise] = coveredTag;
             if (collectProviders) providers[premise] = provider;
+            return --remaining == 0;
         };
         for (auto i = edge.body.begin; i < edge.body.end; ++i) {
             if (i == edge.body.begin + inputIndex) continue;
             const auto other = bodies[i];
-            cover(other, other);
+            if (cover(other, other)) return true;
             const auto must = mustFor(other);
-            for (auto j = must.begin; j < must.end; ++j) cover(mustBodies[j], other);
+            for (auto j = must.begin; j < must.end; ++j) {
+                if (cover(mustBodies[j], other)) return true;
+            }
         }
-        for (auto i = premises.begin; i < premises.end; ++i) {
-            if (coverageMarks[bodies[i]] != epoch) return false;
-        }
-        return true;
+        return false;
     }
 
     AndInputRedundancyReport detect(bool collectWitnesses, std::vector<Candidate>* compact = nullptr) {
@@ -487,7 +522,9 @@ struct AndInputRedundancySnapshot {
             bool affected = false;
             for (std::size_t occurrence = 0; occurrence < edge.body.end - edge.body.begin; ++occurrence) {
                 const auto candidate = bodies[edge.body.begin + occurrence];
-                if (definition[candidate] == none || !prove(target, occurrence, collectWitnesses)) continue;
+                if (definition[candidate] == none) continue;
+                edges[definition[candidate]].usedAsDefinition = true;
+                if (!prove(target, occurrence, collectWitnesses)) continue;
                 ++report.stats.provenInputAssociations;
                 affected = true;
                 if (compact) {
@@ -629,7 +666,8 @@ inline AndInputRedundancyReport detectAndInputRedundancy(
 struct AndInputRedundancyPassStats {
     std::size_t deletedInputAssociations = 0;
     std::size_t affectedEdges = 0;
-    // Includes the final detection round that establishes the fixpoint.
+    // Detection rounds; unchanged definitions can certify the fixpoint without
+    // another scan because removing inputs only weakens candidate coverage.
     std::size_t rounds = 0;
     std::size_t initialInputAssociations = 0;
     std::size_t finalInputAssociations = 0;
@@ -674,6 +712,7 @@ inline AndInputRedundancyPassStats eliminatePreparedSnapshot(WorkingSubgraphView
         if (candidates.empty()) break;
         const auto mutationStart = Clock::now();
         std::size_t deletedThisRound = 0;
+        bool definitionChanged = false;
         // Generation follows the fixed, ID-sorted target pool. Descend indexes
         // within each edge so a successful erase preserves pending occurrences.
         for (std::size_t begin = 0; begin < candidates.size();) {
@@ -684,6 +723,7 @@ inline AndInputRedundancyPassStats eliminatePreparedSnapshot(WorkingSubgraphView
                 if (!snapshot.erase(candidate)) continue;
                 ++deletedThisRound;
                 ++stats.deletedInputAssociations;
+                if (snapshot.edges[candidate.edge].usedAsDefinition) definitionChanged = true;
                 if (!affected[candidate.edge]) {
                     affected[candidate.edge] = 1;
                     ++stats.affectedEdges;
@@ -694,6 +734,14 @@ inline AndInputRedundancyPassStats eliminatePreparedSnapshot(WorkingSubgraphView
         if (deletedThisRound != 0) view.invalidateCaches();
         stats.mutationMs += elapsedMs(mutationStart);
         if (deletedThisRound == 0) break;
+        // All initial positives were removed or failed a current-body reproof.
+        // If all potentially used definitions stayed fixed, target inputs and
+        // provider Must_1 can only shrink, so neither these failures nor initial negatives can
+        // become provable. A shortened definition instead requires another scan.
+        if (!definitionChanged) {
+            stats.remainingInputAssociations = 0;
+            break;
+        }
     }
     stats.finalInputAssociations = snapshot.baseStats.inputAssociations;
     if (cleanup && stats.deletedInputAssociations != 0) {
