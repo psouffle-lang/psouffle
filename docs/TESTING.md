@@ -74,7 +74,13 @@ The `compiler_acyclicity` and `compiler_acyclicity_emission` cases check trusted
 metadata, mutation invalidation, recursive base clauses, aggregate encoding,
 eqrel and reserved aggregate-state namespace exclusions.
 
-The maintained suite contains 37 tests. The initial unified integration passed
+The `full_event_order` case checks stable standalone fact/rule variable mappings
+across different graph-view insertion orders, shared fact aliases, zero/one
+probabilities, seeds and soft reset. An independent random-world oracle checks
+marginals, joint events and positive/negative evidence posteriors. It also checks
+the existing default registration and incremental insertion/deletion policies.
+
+The maintained suite contains 38 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

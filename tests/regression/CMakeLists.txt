@@ -110,6 +110,13 @@ add_test(NAME regression.and_input_fast
 set_tests_properties(regression.and_input_fast PROPERTIES
     LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
 
+add_executable(regression_full_event_order full_event_order.cpp)
+target_link_libraries(regression_full_event_order PRIVATE compiled "${CUDD_LIBRARY}")
+add_test(NAME regression.full_event_order
+    COMMAND regression_full_event_order)
+set_tests_properties(regression.full_event_order PROPERTIES
+    LABELS "regression;full;exact" TIMEOUT 60)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression
@@ -118,5 +125,5 @@ if (NOT TARGET check-regression)
         COMMENT "Run maintained full and incremental artifact regression tests"
     )
     add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup
-        regression_compiler_acyclicity regression_and_input_fast)
+        regression_compiler_acyclicity regression_and_input_fast regression_full_event_order)
 endif()

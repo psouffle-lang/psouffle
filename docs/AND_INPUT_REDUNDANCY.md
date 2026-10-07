@@ -95,6 +95,13 @@ the view and original graph retain every entity until the analysis ends, before
 cleanup is applied. This avoids repeated shared-ownership copies and releases.
 Targets, mutation candidates and cleanup plans retain their owning references.
 
+Standalone full BDD compilation registers fact and rule variables using the
+same stable node and edge order already used for formula initialization. The
+two stages share their sorted lists. This applies to both SISO and SISO+pass
+execution; online initialization and updates retain their existing entrypoint.
+The ordering changes internal BDD indexes, with each event and weight still
+mapped to its own variable.
+
 The indexed proof uses one body traversal and a single stamp epoch, retaining the
 existing lazy `Must_1` cache. Generic cycle analysis first peels acyclic sources using
 the forward adjacency. A fully peeled DAG needs no SCC DFS; any residual graph

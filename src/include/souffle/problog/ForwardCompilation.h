@@ -367,7 +367,8 @@ void buildFormulasCyclewiseInternal(
     const std::unordered_set<NodePtr>& seedTrueNodes = {},
     std::vector<double>* roundTimingsMs = nullptr,
     const std::function<void(const FcHeartbeatSnapshot&)>& heartbeatCallback = nullptr,
-    std::size_t heartbeatIntervalMs = 5000
+    std::size_t heartbeatIntervalMs = 5000,
+    bool standaloneFull = false
 ) {
      FunctionTimer timer("Build Formulas Cyclewise using DAG + Depth");
      const bool fcProfile = fcProfileEnabled;
@@ -383,9 +384,27 @@ void buildFormulasCyclewiseInternal(
      std::size_t detEdges = 0;
      std::size_t nonDetEdges = 0;
     auto preStart = Clock::now();
-     setCuddPreConfigTag("full_cyclewise");
-     formulaManager.preConfig(view);
-     setCuddPreConfigTag("");
+    WeightedBDDManager* orderedManager = nullptr;
+    if constexpr (std::is_same_v<FormulaNodeRef, BddNodeRef>) {
+        if (standaloneFull) {
+            orderedManager = dynamic_cast<WeightedBDDManager*>(&formulaManager);
+        }
+    }
+    const bool orderedRegistration = orderedManager != nullptr;
+    std::vector<NodePtr> orderedNodes;
+    std::vector<EdgePtr> orderedEdges;
+    if (orderedRegistration) {
+        orderedNodes = collectSortedNodes(view.getNodes());
+        orderedEdges = collectSortedEdges(view.getEdges());
+    }
+    setCuddPreConfigTag("full_cyclewise");
+    if (orderedRegistration) {
+        orderedManager->preConfigOrdered(view, orderedNodes, orderedEdges);
+    } else {
+        formulaManager.preConfig(view);
+    }
+    setCuddPreConfigTag("");
+    debugger.addInfo("fc_event_registration_order", orderedRegistration ? "stable_ids" : "existing");
     auto preConfigMs = toMs(Clock::now() - preStart);
     debugger.logMessage(Level::INFO,
             "preConfig (cache clear + var scan/create + dyn-reorder setup) took " +
@@ -400,7 +419,7 @@ void buildFormulasCyclewiseInternal(
     std::map<EdgePtr, FormulaNodeRef> baseEdgeFormulas;
     size_t round = 0;
     // 1. Initialize formulas
-    for (const auto& node : collectSortedNodes(view.getNodes())) {
+    auto initializeNode = [&](const NodePtr& node) {
         if (seedTrueNodes.count(node)) {
             FormulaNodeRef var = formulaManager.getTrue();
             nodeFormulas[node] = var;
@@ -416,10 +435,14 @@ void buildFormulasCyclewiseInternal(
             nodeFormulas[node] = var;
             baseNodeFormulas[node] = var;
         }
-
+    };
+    if (orderedRegistration) {
+        for (const auto& node : orderedNodes) initializeNode(node);
+    } else {
+        for (const auto& node : collectSortedNodes(view.getNodes())) initializeNode(node);
     }
 
-    for (const auto& edge : collectSortedEdges(view.getEdges())) {
+    auto initializeEdge = [&](const EdgePtr& edge) {
         int idx = edge->isDeterministic() ? -1 : formulaManager.getVarIndex(*edge);
         if (edge->isDeterministic()) {
             ++detEdges;
@@ -434,6 +457,15 @@ void buildFormulasCyclewiseInternal(
             formulaManager.setVariableWeight(idx, edge->getProbability(), 1 - edge->getProbability());
         }
         baseEdgeFormulas[edge] = f;
+    };
+    if (orderedRegistration) {
+        for (const auto& edge : orderedEdges) initializeEdge(edge);
+        // Drop registration ranges before SCC iteration; retained formulas and
+        // the view already own all entities needed by compilation.
+        std::vector<NodePtr>{}.swap(orderedNodes);
+        std::vector<EdgePtr>{}.swap(orderedEdges);
+    } else {
+        for (const auto& edge : collectSortedEdges(view.getEdges())) initializeEdge(edge);
     }
     auto baseInitMs = toMs(Clock::now() - baseStart);
 
@@ -726,6 +758,23 @@ void buildFormulasCyclewise(
 ) {
     buildFormulasCyclewiseInternal(view, formulaManager, nodeFormulas, edgeFormulas, seedTrueNodes,
             roundTimingsMs, heartbeatCallback, heartbeatIntervalMs);
+}
+
+// Standalone full execution opts into canonical CUDD event registration;
+// online initialization, recomputation and deltas retain the ordinary wrapper.
+template<typename FormulaNodeRef>
+void buildFormulasCyclewiseStandaloneFull(
+    DerivationGraphViewInterface& view,
+    FormulaManager<FormulaNodeRef>& formulaManager,
+    std::map<NodePtr, FormulaNodeRef>& nodeFormulas,
+    std::map<EdgePtr, FormulaNodeRef>& edgeFormulas,
+    const std::unordered_set<NodePtr>& seedTrueNodes = {},
+    std::vector<double>* roundTimingsMs = nullptr,
+    const std::function<void(const FcHeartbeatSnapshot&)>& heartbeatCallback = nullptr,
+    std::size_t heartbeatIntervalMs = 5000
+) {
+    buildFormulasCyclewiseInternal(view, formulaManager, nodeFormulas, edgeFormulas, seedTrueNodes,
+            roundTimingsMs, heartbeatCallback, heartbeatIntervalMs, true);
 }
 
 struct ComponentSubgraph {

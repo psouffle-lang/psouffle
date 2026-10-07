@@ -1245,7 +1245,7 @@ static void runBddPipeline(
                 SubgraphView subview(std::move(slow.comp.nodes), std::move(slow.comp.edges));
 
                 auto buildStart = std::chrono::steady_clock::now();
-                buildFormulasCyclewise(subview, *bddManager, compNodeFormulas, compEdgeFormulas);
+                buildFormulasCyclewiseStandaloneFull(subview, *bddManager, compNodeFormulas, compEdgeFormulas);
                 auto buildMsComp = std::chrono::duration_cast<std::chrono::milliseconds>(
                                            std::chrono::steady_clock::now() - buildStart)
                                            .count();
@@ -1414,7 +1414,7 @@ static void runBddPipeline(
                 fcStage->logMessage(Level::INFO, "manager_init_ms=" + std::to_string(initMs));
             }
             auto t0 = std::chrono::steady_clock::now();
-            buildFormulasCyclewise(view, *bddManager, nodeFormulas, edgeFormulas, seedTrueNodes);
+            buildFormulasCyclewiseStandaloneFull(view, *bddManager, nodeFormulas, edgeFormulas, seedTrueNodes);
             auto t1 = std::chrono::steady_clock::now();
             std::cout << "[pipeline] BDD formula build took "
                       << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count()
