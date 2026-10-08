@@ -3036,11 +3036,11 @@ void runPipeline(
         debugger.startStage(StageKind::PRIVATE_FACTOR_REWRITE);
         // The complete residual view certifies active definitions and factor
         // ownership. This is the final graph rewrite before solving that view;
-        // unrelated owner history need not be reclaimed. Plan both passes in
-        // one index and commit only their affected objects after a hit.
+        // choose complete cleanup for dense retirements and local cleanup for
+        // sparse retirements. Both passes share one index and one commit.
         auto privateFactors = rewritePrivateFactors(*graph, view,
                 opt.isLocalSeriesContractionEnabled(), opt.isTerminalQueryFactorsEnabled(), true, true,
-                WorkingDerivationGraph::OwnerCommitMode::TerminalView);
+                WorkingDerivationGraph::OwnerCommitMode::FinalView);
         const auto& shared = privateFactors.stats;
         const auto addShared = [&](const std::string& key, auto value) {
             debugger.addInfo("private_factor_" + key, std::to_string(value));

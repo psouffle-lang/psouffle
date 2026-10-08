@@ -80,7 +80,8 @@ struct PrivateFactorRewriteResult {
 // that index, then commit once. A pipeline-certified residual view can retire
 // inactive owner history at that final commit. Standalone callers fail closed
 // if a retiring node has unknown owner sources or consumers outside the view.
-// TerminalView is reserved for the final standalone-full solve: it preserves
+// FinalView and TerminalView are reserved for the final standalone-full solve.
+// FinalView chooses complete cleanup for dense retirements; TerminalView keeps
 // unrelated history and prevents a later owner prune from reviving that history.
 inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& graph,
         WorkingSubgraphView& view, bool enableSeries, bool enableTerminal,
@@ -90,8 +91,8 @@ inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& 
     constexpr auto none = Snapshot::none;
     using Clock = std::chrono::steady_clock;
     const auto start = Clock::now();
-    if (ownerMode == WorkingDerivationGraph::OwnerCommitMode::TerminalView && !certifiedActiveView) {
-        throw std::logic_error("Terminal-view rewrite requires a certified final full-inference view");
+    if (ownerMode != WorkingDerivationGraph::OwnerCommitMode::CompleteOwner && !certifiedActiveView) {
+        throw std::logic_error("Final-view rewrite requires a certified final full-inference view");
     }
     const auto elapsed = [](Clock::time_point from) {
         return std::chrono::duration<double, std::milli>(Clock::now() - from).count();
@@ -484,7 +485,7 @@ inline PrivateFactorRewriteResult rewritePrivateFactors(WorkingDerivationGraph& 
     stats.touchedOwnerNodes = committed.stats.touchedOwnerNodes;
     stats.ownerNodesAfter = graph.getNodes().size();
     stats.ownerEdgesAfter = graph.getEdges().size();
-    stats.terminalViewCommits = ownerMode == WorkingDerivationGraph::OwnerCommitMode::TerminalView ? 1 : 0;
+    stats.terminalViewCommits = committed.stats.terminalViewCommits;
     stats.retirementBatches = 1;
     for (const auto& parent : terminal.promotedOutputRoots) {
         if (view.getNodes().count(parent)) parent->needOutput = true;

@@ -763,6 +763,51 @@ void terminalViewRejectsInvalidCommitAtomically(bool omittedEvidence) {
             "invalid terminal-view commit changed adjacency, aliases, flags or edge ids");
 }
 
+void adaptiveFinalViewCommit(bool sparse) {
+    Fixture f;
+    const auto a = f.fact("A"), query = f.node("Q"), history = f.node("History");
+    const auto source = f.edge({a}, query, 0.7);
+    f.edge({a}, history)->pruned = true;
+    history->pruned = true;
+    NodePtr secondHistory;
+    if (sparse) {
+        secondHistory = f.node("SecondHistory");
+        secondHistory->pruned = true;
+        f.edge({a}, secondHistory)->pruned = true;
+    }
+    query->setQuery();
+    WorkingSubgraphView view({a, query}, {source});
+    const Worlds worlds(view);
+    const auto result = rewritePrivateFactors(f.graph, view, false, true, true, true,
+            OwnerCommitMode::FinalView);
+    sharedWork(result, 0);
+    // One retirement out of four is exactly the local threshold; one out of
+    // three exceeds it. Inspect the actual chosen branch, not the requested enum.
+    require(result.stats.retiredActiveNodes == 1 && result.stats.ownerNodesBefore == (sparse ? 4U : 3U) &&
+                    result.stats.terminalViewCommits == (sparse ? 1U : 0U),
+            "FinalView chose the wrong retirement-density branch or reported the requested mode");
+    if (sparse) {
+        require(f.graph.findNode(history->getTuple()) == history &&
+                        f.graph.findNode(secondHistory->getTuple()) == secondHistory &&
+                        f.graph.getNodes().size() == 3 && f.graph.getEdges().size() == 2,
+                "sparse FinalView discarded unrelated owner history");
+    } else {
+        require(f.graph.getNodes() == view.getNodes() && f.graph.getEdges() == view.getEdges() &&
+                        !f.graph.findNode(history->getTuple()),
+                "dense FinalView did not synchronize complete ownership");
+    }
+    auto probabilities = worlds.verify(view);
+    evaluateTerminalQueryFactors(result.terminal, probabilities);
+    close(probabilities.at(query), worlds.conditional(query, {}), "adaptive commit changed the deferred output");
+    bool pruneRejected = false;
+    try {
+        f.graph.prune(std::vector<std::string>{"A"});
+    } catch (const std::logic_error&) {
+        pruneRejected = true;
+    }
+    require(pruneRejected == sparse, "adaptive owner-prune contract does not match the actual commit branch");
+}
+
 }  // namespace
 
 int main() {
@@ -786,6 +831,8 @@ int main() {
         terminalViewCommitsOnlyAffectedHistory(true);
         terminalViewRejectsInvalidCommitAtomically(false);
         terminalViewRejectsInvalidCommitAtomically(true);
+        adaptiveFinalViewCommit(true);
+        adaptiveFinalViewCommit(false);
         std::cout << "private factor fused rewrite regression passed\n";
         return 0;
     } catch (const std::exception& error) {

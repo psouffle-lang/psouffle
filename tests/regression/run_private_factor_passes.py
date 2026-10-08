@@ -91,7 +91,15 @@ def check_passes(output, flags, *, require_hits=False):
     hits = int(stage.get('local_series_contractions', 0)) + int(
         stage.get('terminal_query_factored_queries', 0))
     assert int(stage['private_factor_retirement_batches']) == int(hits > 0), stage
-    assert int(stage['private_factor_terminal_view_commits']) == int(hits > 0), stage
+    local_commit = int(stage['private_factor_terminal_view_commits'])
+    assert local_commit in (0, 1) and local_commit <= int(hits > 0), stage
+    if local_commit:
+        assert int(stage['private_factor_owner_edges_examined']) == int(
+            stage['private_factor_owner_edges_before']), stage
+    elif hits:
+        final_prefix = 'terminal_query' if TERMINAL in flags else 'local_series'
+        assert int(stage['private_factor_owner_nodes_after']) == int(stage[final_prefix + '_after_nodes']), stage
+        assert int(stage['private_factor_owner_edges_after']) == int(stage[final_prefix + '_after_edges']), stage
     assert int(stage['private_factor_owner_nodes_before']) - int(
         stage['private_factor_retired_owner_nodes']) == int(stage['private_factor_owner_nodes_after']), stage
     assert int(stage['private_factor_owner_edges_before']) - int(

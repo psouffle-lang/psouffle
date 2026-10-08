@@ -2325,8 +2325,9 @@ public:
         size_t removedOwnerEdges = 0;
         size_t ownerEdgesExamined = 0;
         size_t touchedOwnerNodes = 0;
+        size_t terminalViewCommits = 0;
     };
-    enum class OwnerCommitMode { CompleteOwner, TerminalView };
+    enum class OwnerCommitMode { CompleteOwner, TerminalView, FinalView };
     struct RewriteEdgeSpec {
         std::vector<NodePtr> inputs;
         NodePtr output;
@@ -2348,6 +2349,8 @@ public:
     // ordinary callers preserve that history and require full owned closure.
     // TerminalView retains unrelated history for the final full-inference view.
     // It requires a complete view and forbids subsequent owner pruning.
+    // FinalView selects complete ownership for dense node retirements, otherwise
+    // it uses TerminalView. Both final modes require a complete active view.
     RewriteViewCommitResult commitRewriteView(WorkingSubgraphView& view,
             const std::vector<NodePtr>& retiredActiveNodes, const std::vector<EdgePtr>& retiredActiveEdges,
             const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs, bool completeActiveDerivations = false,
@@ -2654,6 +2657,13 @@ inline WorkingDerivationGraph::RewriteViewCommitResult WorkingDerivationGraph::c
         WorkingSubgraphView& view, const std::vector<NodePtr>& retiredActiveNodes,
         const std::vector<EdgePtr>& retiredActiveEdges, const std::vector<RewriteEdgeSpec>& insertedEdgeSpecs,
         bool completeActiveDerivations, OwnerCommitMode mode) {
+    if (mode == OwnerCommitMode::FinalView) {
+        if (!completeActiveDerivations) {
+            throw std::logic_error("Final rewrite commit requires a complete active view");
+        }
+        mode = retiredActiveNodes.size() > nodes.size() / 4 ?
+                OwnerCommitMode::CompleteOwner : OwnerCommitMode::TerminalView;
+    }
     if (mode == OwnerCommitMode::TerminalView && !completeActiveDerivations) {
         throw std::logic_error("Terminal rewrite commit requires a complete active view");
     }
@@ -2837,6 +2847,7 @@ inline WorkingDerivationGraph::RewriteViewCommitResult WorkingDerivationGraph::c
         stats.removedEdges = retiredActiveEdges.size();
         stats.removedOwnerNodes = retiredNodes.size();
         stats.removedOwnerEdges = retiredOwnerEdges.size();
+        stats.terminalViewCommits = 1;
         for (auto& [node, staged] : stagedAdjacency) {
             node->getIncomingEdges().swap(staged.incoming);
             node->getOutgoingEdges().swap(staged.outgoing);
