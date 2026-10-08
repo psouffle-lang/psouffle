@@ -16,8 +16,6 @@
   after pruning and before SISO, proof certificates and Symbolization benchmarks.
 - [DETERMINISTIC_EVENT_ALIASES.md](DETERMINISTIC_EVENT_ALIASES.md): proven copy
   event merging, retained query names, duplicate inputs and exact aggregate semantics.
-- [LOCAL_PRIVATE_FACTORS.md](LOCAL_PRIVATE_FACTORS.md): private multi-input
-  series contraction and deferred terminal marginal queries after SISO.
 - [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
   and experiment automation.
 - [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental

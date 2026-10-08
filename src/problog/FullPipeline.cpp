@@ -10,11 +10,9 @@
 #include "souffle/problog/GraphRewriter.h"
 #include "souffle/problog/ImplicitSplitRewrite.h"
 #include "souffle/problog/LiftedWmc.h"
-#include "souffle/problog/PrivateFactorRewrite.h"
 #include "souffle/problog/PipelineComponents.h"
 #include "souffle/problog/QueryManager.h"
 #include "souffle/problog/RuleManager.h"
-#include "souffle/problog/TerminalQueryFactors.h"
 #include "souffle/problog/debug/Debugger.h"
 #include "souffle/problog/formula/CuddManager.h"
 #ifdef SOUFFLE_HAVE_SDD
@@ -895,8 +893,7 @@ static void runBddPipeline(
         SubgraphView& view,
         const std::vector<std::pair<UntypedTuple, bool>>& evidences,
         StageInfo* rewriteHybridStage,
-        const DeterministicEventAliasResult& eventAliases,
-        const TerminalQueryFactorResult& terminalQueries) {
+        const DeterministicEventAliasResult& eventAliases) {
     Debugger& debugger = Debugger::getInstance();
 
     std::map<NodePtr, BddNodeRef> nodeFormulas;
@@ -1516,7 +1513,6 @@ static void runBddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            evaluateTerminalQueryFactors(terminalQueries, probResult);
             dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
                     eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1702,7 +1698,6 @@ static void runBddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            evaluateTerminalQueryFactors(terminalQueries, probResult);
             dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
                     eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1726,9 +1721,7 @@ static void runSddPipeline(
         DerivationGraph& graph,
         SubgraphView& view,
         const std::vector<std::pair<UntypedTuple, bool>>& evidences,
-        StageInfo* rewriteHybridStage,
-        const DeterministicEventAliasResult& eventAliases,
-        const TerminalQueryFactorResult& terminalQueries) {
+        StageInfo* rewriteHybridStage) {
     Debugger& debugger = Debugger::getInstance();
 
     std::map<NodePtr, SddNodeRef> nodeFormulas;
@@ -2160,7 +2153,6 @@ static void runSddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            evaluateTerminalQueryFactors(terminalQueries, probResult);
             dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
                     eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2271,7 +2263,6 @@ static void runSddPipeline(
             debugger.endStage();
             debugger.startStage(StageKind::IO_DUMP);
             auto tDumpStart = std::chrono::steady_clock::now();
-            evaluateTerminalQueryFactors(terminalQueries, probResult);
             dumpProbabilities(probResult, opt.getOutputFileDir(), "facts",
                     eventAliases.outputAliases, eventAliases.promotedOutputRoots);
             auto tDumpMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2319,14 +2310,12 @@ void runPipeline(
     std::map<std::string, double> liftedProbabilities;
     std::unordered_set<std::string> liftedOutputs;
     auto concreteOutputs = program.getOutputRelations();
-    const bool concretePassEnabled = opt.isAndInputRedundancyEnabled() || opt.isDeterministicEventAliasesEnabled() ||
-            opt.isLocalSeriesContractionEnabled() || opt.isTerminalQueryFactorsEnabled();
+    const bool concretePassEnabled = opt.isAndInputRedundancyEnabled() || opt.isDeterministicEventAliasesEnabled();
     if (opt.isLiftedWmcEnabled() && concretePassEnabled) {
         // An explicitly requested concrete graph pass must precede fastpaths.
         // Retain concrete provenance instead of returning from pointwise lift.
         debugger.addInfo("lifted_handled", "false");
-        debugger.addInfo("lifted_reason", (opt.isLocalSeriesContractionEnabled() || opt.isTerminalQueryFactorsEnabled())
-                ? "private_factor_pass_requires_concrete_graph" : opt.isDeterministicEventAliasesEnabled()
+        debugger.addInfo("lifted_reason", opt.isDeterministicEventAliasesEnabled()
                 ? "deterministic_event_aliases_requires_concrete_graph"
                 : "and_input_redundancy_requires_concrete_graph");
     }
@@ -3023,114 +3012,20 @@ void runPipeline(
                     rewriteFinalSummary, postAndInputWorkspace.get(), activeViewCertificate, true);
             postAndInputWorkspace.reset();
         }
+        if (opt.isDumpDotEnabled()) {
+            view.dumpDot(makeOutputPath(opt, "rewrite_final.dot"));
+        }
+        if (opt.isDumpJsonEnabled()) {
+            view.dumpJson(makeOutputPath(opt, "rewrite_final.json"));
+        }
     } else if (opt.isRewriteEnabled() && opt.isDerivationOnly()) {
         std::cout << "[pipeline] derivation-only mode; skip rewrite" << std::endl;
     }
 
-    TerminalQueryFactorResult terminalQueries;
-    if (opt.isLocalSeriesContractionEnabled() || opt.isTerminalQueryFactorsEnabled()) {
-        if (rewriteHybridStage) {
-            debugger.endStage();
-            rewriteHybridStage = nullptr;
-        }
-        debugger.startStage(StageKind::PRIVATE_FACTOR_REWRITE);
-        // The complete residual view certifies active definitions and factor
-        // ownership. This is the final graph rewrite before solving that view;
-        // choose complete cleanup for dense retirements and local cleanup for
-        // sparse retirements. Both passes share one index and one commit.
-        auto privateFactors = rewritePrivateFactors(*graph, view,
-                opt.isLocalSeriesContractionEnabled(), opt.isTerminalQueryFactorsEnabled(), true, true,
-                WorkingDerivationGraph::OwnerCommitMode::FinalView);
-        const auto& shared = privateFactors.stats;
-        const auto addShared = [&](const std::string& key, auto value) {
-            debugger.addInfo("private_factor_" + key, std::to_string(value));
-        };
-        addShared("collection_passes", shared.collectionPasses);
-        addShared("scc_passes", shared.sccPasses);
-        addShared("support_passes", shared.supportPasses);
-        addShared("retirement_batches", shared.retirementBatches);
-        addShared("virtual_compound_edges", shared.virtualCompoundEdges);
-        addShared("materialized_compound_edges", shared.materializedCompoundEdges);
-        addShared("terminal_virtual_sources", shared.terminalVirtualSources);
-        addShared("retired_active_nodes", shared.retiredActiveNodes);
-        addShared("retired_active_edges", shared.retiredActiveEdges);
-        addShared("retired_owner_nodes", shared.removedOwnerNodes);
-        addShared("retired_owner_edges", shared.removedOwnerEdges);
-        addShared("zero_hit_owner_commits", shared.zeroHitOwnerCommits);
-        addShared("owner_nodes_before", shared.ownerNodesBefore);
-        addShared("owner_edges_before", shared.ownerEdgesBefore);
-        addShared("owner_nodes_after", shared.ownerNodesAfter);
-        addShared("owner_edges_after", shared.ownerEdgesAfter);
-        addShared("owner_edges_examined", shared.ownerEdgesExamined);
-        addShared("touched_owner_nodes", shared.touchedOwnerNodes);
-        addShared("terminal_view_commits", shared.terminalViewCommits);
-        addShared("preparation_ms", shared.preparationMs);
-        addShared("series_plan_ms", shared.seriesPlanMs);
-        addShared("terminal_plan_ms", shared.terminalPlanMs);
-        addShared("mutation_ms", shared.mutationMs);
-        addShared("owner_commit_ms", shared.ownerCommitMs);
-        addShared("total_ms", shared.totalMs);
-        if (opt.isLocalSeriesContractionEnabled()) {
-            const auto& stats = privateFactors.series.stats;
-            debugger.addInfo("local_series_candidates", std::to_string(stats.candidates));
-            debugger.addInfo("local_series_contractions", std::to_string(stats.contractions));
-            debugger.addInfo("local_series_removed_nodes", std::to_string(stats.removedNodes));
-            debugger.addInfo("local_series_removed_edges", std::to_string(stats.removedEdges));
-            debugger.addInfo("local_series_added_edges", std::to_string(stats.addedEdges));
-            debugger.addInfo("local_series_duplicate_inputs_removed", std::to_string(stats.duplicateInputsRemoved));
-            debugger.addInfo("local_series_rule_variables_removed", std::to_string(stats.ruleVariablesRemoved));
-            debugger.addInfo("local_series_initial_input_associations", std::to_string(stats.inputAssociationsBefore));
-            debugger.addInfo("local_series_final_input_associations", std::to_string(stats.inputAssociationsAfter));
-            debugger.addInfo("local_series_support_owners", std::to_string(stats.supportOwners));
-            debugger.addInfo("local_series_support_tokens", std::to_string(stats.supportTokens));
-            debugger.addInfo("local_series_unknown_random_events", std::to_string(stats.unknownRandomEvents));
-            debugger.addInfo("local_series_recursive_nodes", std::to_string(stats.recursiveNodes));
-            debugger.addInfo("local_series_rejected_private_support", std::to_string(stats.rejectedPrivateSupport));
-            debugger.addInfo("local_series_rejected_owner_uses", std::to_string(stats.rejectedOwnerUses));
-            debugger.addInfo("local_series_rejected_work_budget", std::to_string(stats.rejectedWorkBudget));
-            debugger.addInfo("local_series_body_occurrences_analyzed", std::to_string(stats.bodyOccurrencesAnalyzed));
-            debugger.addInfo("local_series_analysis_ms", std::to_string(stats.analysisMs));
-            debugger.addInfo("local_series_mutation_ms", std::to_string(stats.mutationMs));
-            debugger.addInfo("local_series_total_ms", std::to_string(stats.totalMs));
-            debugger.addInfo("local_series_after_nodes", std::to_string(shared.nodesAfterSeries));
-            debugger.addInfo("local_series_after_edges", std::to_string(shared.edgesAfterSeries));
-            debugger.addInfo("local_series_after_input_associations", std::to_string(shared.inputAssociationsAfterSeries));
-            std::cout << "[local-series-contraction] contractions=" << stats.contractions << '\n';
-        }
-        if (opt.isTerminalQueryFactorsEnabled()) {
-            terminalQueries = std::move(privateFactors.terminal);
-            eventAliases.promotedOutputRoots.insert(eventAliases.promotedOutputRoots.end(),
-                    terminalQueries.promotedOutputRoots.begin(), terminalQueries.promotedOutputRoots.end());
-            const auto& stats = terminalQueries.stats;
-            debugger.addInfo("terminal_query_candidates", std::to_string(stats.candidateQueries));
-            debugger.addInfo("terminal_query_factored_queries", std::to_string(stats.factoredQueries));
-            debugger.addInfo("terminal_query_factored_output_queries", std::to_string(stats.factoredOutputQueries));
-            debugger.addInfo("terminal_query_hidden_chain_steps", std::to_string(stats.hiddenChainSteps));
-            debugger.addInfo("terminal_query_removed_nodes", std::to_string(stats.removedNodes));
-            debugger.addInfo("terminal_query_removed_edges", std::to_string(stats.removedEdges));
-            debugger.addInfo("terminal_query_promoted_roots", std::to_string(stats.promotedRoots));
-            debugger.addInfo("terminal_query_skipped_support_overlap", std::to_string(stats.skippedSupportOverlap));
-            debugger.addInfo("terminal_query_skipped_missing_support", std::to_string(stats.skippedMissingSupport));
-            debugger.addInfo("terminal_query_skipped_recursive", std::to_string(stats.skippedRecursive));
-            debugger.addInfo("terminal_query_skipped_owner_history", std::to_string(stats.skippedOwnerHistory));
-            debugger.addInfo("terminal_query_analysis_ms", std::to_string(stats.analysisMs));
-            debugger.addInfo("terminal_query_mutation_ms", std::to_string(stats.mutationMs));
-            debugger.addInfo("terminal_query_total_ms", std::to_string(stats.totalMs));
-            debugger.addInfo("terminal_query_after_nodes", std::to_string(shared.nodesAfter));
-            debugger.addInfo("terminal_query_after_edges", std::to_string(shared.edgesAfter));
-            debugger.addInfo("terminal_query_after_input_associations", std::to_string(shared.inputAssociationsAfter));
-            std::cout << "[terminal-query-factors] factored_queries=" << stats.factoredQueries << '\n';
-        }
-        debugger.endStage();
-    }
-    if (opt.isRewriteEnabled() && !opt.isDerivationOnly()) {
-        if (opt.isDumpDotEnabled()) view.dumpDot(makeOutputPath(opt, "rewrite_final.dot"));
-        if (opt.isDumpJsonEnabled()) view.dumpJson(makeOutputPath(opt, "rewrite_final.json"));
-    }
     precomputedTupleProbResult.insert(liftedProbabilities.begin(), liftedProbabilities.end());
     if (program.getKnowledge() == souffle::Knowledge::BDD) {
         runBddPipeline(opt, program, ruleManager, queryManager, *graph, view, graphEvidences,
-                rewriteHybridStage, eventAliases, terminalQueries);
+                rewriteHybridStage, eventAliases);
     } else {
         std::cerr << "Unknown knowledge representation" << std::endl;
     }

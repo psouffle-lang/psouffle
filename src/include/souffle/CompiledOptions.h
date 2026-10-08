@@ -595,8 +595,6 @@ protected:
     bool and_input_redundancy = false;  // exact standalone full input elimination
     bool and_input_redundancy_after_siso = false;
     bool deterministic_event_aliases = false;
-    bool local_series_contraction = false;
-    bool terminal_query_factors = false;
     bool dred_profile = false;  // enable detailed DRed profiling
     bool inc_profile = false;  // enable incremental stage profiling
     bool fc_profile = false;  // enable detailed forward-compilation profiling
@@ -666,10 +664,6 @@ public:
     void setAndInputRedundancyEnabled(bool enabled) { and_input_redundancy = enabled; }
     bool isDeterministicEventAliasesEnabled() const { return deterministic_event_aliases; }
     void setDeterministicEventAliasesEnabled(bool enabled) { deterministic_event_aliases = enabled; }
-    bool isLocalSeriesContractionEnabled() const { return local_series_contraction; }
-    void setLocalSeriesContractionEnabled(bool enabled) { local_series_contraction = enabled; }
-    bool isTerminalQueryFactorsEnabled() const { return terminal_query_factors; }
-    void setTerminalQueryFactorsEnabled(bool enabled) { terminal_query_factors = enabled; }
     bool isAndInputRedundancyAfterSiso() const { return and_input_redundancy_after_siso; }
     bool setAndInputRedundancyPlacement(const std::string& placement) {
         if (placement == "before-siso") and_input_redundancy_after_siso = false;
@@ -983,8 +977,6 @@ public:
                 {"and-input-redundancy", false, nullptr, 1053},
                 {"and-input-redundancy-placement", true, nullptr, 1054},
                 {"deterministic-event-aliases", false, nullptr, 1055},
-                {"local-series-contraction", false, nullptr, 1056},
-                {"terminal-query-factors", false, nullptr, 1057},
                 // the terminal option -- needs to be null
                 {nullptr, false, nullptr, 0}};
 
@@ -1155,8 +1147,6 @@ public:
                 case 1051: lifted_wmc = true; break;
                 case 1053: and_input_redundancy = true; break;
                 case 1055: deterministic_event_aliases = true; break;
-                case 1056: local_series_contraction = true; break;
-                case 1057: terminal_query_factors = true; break;
                 case 1054:
                     if (!setAndInputRedundancyPlacement(optarg)) {
                         std::cerr << "--and-input-redundancy-placement expects before-siso or after-siso\n";
@@ -1214,10 +1204,6 @@ public:
             std::cerr << "--deterministic-event-aliases requires standalone full inference\n";
             ok = false;
         }
-        if ((local_series_contraction || terminal_query_factors) && (online_execution || derivation_only)) {
-            std::cerr << "--local-series-contraction and --terminal-query-factors require standalone full inference\n";
-            ok = false;
-        }
         if (and_input_redundancy_after_siso &&
                 (!and_input_redundancy || !enable_rewrite || derivation_only || online_execution)) {
             std::cerr << "--and-input-redundancy-placement=after-siso requires --and-input-redundancy and standalone --rewrite with inference\n";
@@ -1256,8 +1242,6 @@ private:
         std::cerr << "    --rewrite                    -- Rewrite standalone full inference\n";
         std::cerr << "    --and-input-redundancy       -- Eliminate proven redundant AND inputs\n";
         std::cerr << "    --deterministic-event-aliases -- Merge proven copy events, retaining output names\n";
-        std::cerr << "    --local-series-contraction  -- Contract private series factors with extra body inputs\n";
-        std::cerr << "    --terminal-query-factors    -- Evaluate private terminal query factors after inference\n";
         std::cerr << "    --and-input-redundancy-placement=before-siso|after-siso -- Default: before-siso\n";
         std::cerr << "                                    after-siso requires both pass and rewrite; excludes --derv-only\n";
         std::cerr << "    --explicit-rewrite           -- Force graph rewrite\n";

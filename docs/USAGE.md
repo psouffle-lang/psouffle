@@ -196,14 +196,6 @@ Public generated runtime options for this branch:
   with inference and excludes `--derv-only`. It uses the residual active graph
   after SISO and before component solving.
   The compiler accepts the option to bake the same placement default.
-- `--local-series-contraction`: contract unique private intermediate definitions
-  into their sole consumer, allowing multi-input bodies. Runs after enabled SISO;
-  only private rule factors are multiplied, preserving external correlations.
-- `--terminal-query-factors`: defer eligible terminal unary marginal outputs to
-  conditional parent probabilities after enabled SISO. Original names are retained;
-  observed or consumed query events are kept in the core. Both new flags are
-  independent, off by default, available as compiler defaults, and reject online
-  and derivation-only execution. See [semantics and diagnostics](LOCAL_PRIVATE_FACTORS.md).
 
 - `-F, --facts, --input-dir <DIR>`: fact directory.
 - `-D, --output, --output-dir <DIR>`: output directory.

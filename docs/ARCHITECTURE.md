@@ -26,23 +26,6 @@ or aggregate records. Conditional results are copied to aliases only after
 inference. Online and derivation-only execution reject this option. See
 [event-alias semantics](DETERMINISTIC_EVENT_ALIASES.md).
 
-`--local-series-contraction` and `--terminal-query-factors` run independently
-after enabled SISO and AND passes. The first substitutes a private intermediate
-definition into its sole consumer, retaining all correlated external inputs.
-The second defers terminal unary marginal queries until conditional parent
-probabilities are available. Both share one active graph collection, signed source
-and consumer indexes, SCC analysis and global primitive support ownership.
-Terminal factoring consumes the virtual series result before edge materialization.
-A successful rewrite commits the active view and affected owner objects once.
-This final solve uses `FinalView`: the existing retirement count selects complete
-owner synchronization for dense rewrites and `TerminalView` cleanup for sparse
-rewrites, without another analysis traversal. The local mode preserves unrelated
-owner history and rejects subsequent owner pruning; zero hits leave the owner
-unchanged. Generic owner synchronization and standalone helper contracts remain
-unchanged.
-Original output names survive through explicit records. Online and graph-only
-execution reject both flags. See [private-factor semantics](LOCAL_PRIVATE_FACTORS.md).
-
 The local correctness comparison is `full` versus `inc-naive` or `inc-regional`.
 `full` is the exact recomputation oracle; incremental modes must produce
 matching tuple keys and probabilities on the same delta stream.
