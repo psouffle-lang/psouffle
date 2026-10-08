@@ -55,7 +55,36 @@ checks ProbLog BDD/SDD availability, VProbLog loader/help output, and Scallop
 exact inference plus the patched bitwise-and function. These tool checks do
 not run paper benchmarks.
 
-The maintained suite contains 32 tests. The initial unified integration passed
+The `and_input_redundancy` case checks individually certified deletions and the
+actual mutated graph against every random world on small graphs, conservative
+rejection cases, graph/event identity, cache invalidation, duplicate adjacency,
+stale proof updates and certificate serialization. The execution contract also
+checks pass placement after pruning and before SISO/fastpaths, correlated
+evidence-conditioned outputs, read-only reports and online rejection.
+The detector tests cover shortened definitions enabling later proofs, lazy
+intersection across alternative sources, and colliding/sparse node IDs without
+merging independent events.
+The `and_input_cleanup` case compares local cleanup with ordinary full pruning,
+enumerates every retained event's random worlds, and checks roots, cascading
+removals, duplicate references, inactive raw adjacency and cache invalidation.
+The `and_input_fast` case independently enumerates worlds for the compiler DAG
+path, checks the same event identities, current-body proofs and cleanup roots,
+and exercises conservative fallback when its certificate is incomplete.
+The `compiler_acyclicity` and `compiler_acyclicity_emission` cases check trusted
+metadata, mutation invalidation, recursive base clauses, aggregate encoding,
+eqrel and reserved aggregate-state namespace exclusions.
+
+The `full_event_order` case checks stable standalone fact/rule variable mappings
+across different graph-view insertion orders, shared fact aliases, zero/one
+probabilities, seeds and soft reset. An independent random-world oracle checks
+marginals, joint events and positive/negative evidence posteriors. It also checks
+the existing default registration and incremental insertion/deletion policies.
+It compares batched singleton compilation with the ordinary compiler and world
+semantics, including shared inputs, signed literals and conservative fallback.
+Tuple/support ordering also checks separate rule identities when support keys
+are equal or overlap, empty supports, and tuples ordered differently from IDs.
+
+The maintained suite contains 38 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

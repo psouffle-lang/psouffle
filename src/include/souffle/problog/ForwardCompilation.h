@@ -66,6 +66,32 @@ static inline bool stableEdgeOrder(const EdgePtr& lhs, const EdgePtr& rhs) {
     return lhs->toString() < rhs->toString();
 }
 
+// Standalone registration uses existing tuple and normalized support metadata.
+// These keys order variables only; their equality never identifies events.
+static inline bool standaloneEventNodeOrder(const NodePtr& lhs, const NodePtr& rhs) {
+    if (!lhs || !rhs || lhs == rhs) return stableNodeOrder(lhs, rhs);
+    if (!(lhs->getTuple() == rhs->getTuple())) return lhs->getTuple() < rhs->getTuple();
+    if (lhs->getSemanticFactId() != rhs->getSemanticFactId()) {
+        return lhs->getSemanticFactId() < rhs->getSemanticFactId();
+    }
+    return stableNodeOrder(lhs, rhs);
+}
+
+static inline bool standaloneEventEdgeOrder(const EdgePtr& lhs, const EdgePtr& rhs) {
+    if (!lhs || !rhs || lhs == rhs) return stableEdgeOrder(lhs, rhs);
+    const auto& leftHead = lhs->getOutputRef();
+    const auto& rightHead = rhs->getOutputRef();
+    if (!leftHead || !rightHead) {
+        if (leftHead != rightHead) return !leftHead;
+    } else if (!(leftHead->getTuple() == rightHead->getTuple())) {
+        return leftHead->getTuple() < rightHead->getTuple();
+    }
+    const auto& leftSupport = lhs->getProbabilisticSupportTokens();
+    const auto& rightSupport = rhs->getProbabilisticSupportTokens();
+    if (leftSupport != rightSupport) return leftSupport < rightSupport;
+    return stableEdgeOrder(lhs, rhs);
+}
+
 static inline bool incReorderPolicyUsesAuto() {
     return incReorderPolicy == "auto" || incReorderPolicy == "both";
 }
@@ -304,16 +330,18 @@ static inline void maybeRunExplicitIncReorder(
 }
 
 template <typename NodeRange>
-static inline std::vector<NodePtr> collectSortedNodes(const NodeRange& nodes) {
+static inline std::vector<NodePtr> collectSortedNodes(const NodeRange& nodes,
+        bool (*order)(const NodePtr&, const NodePtr&) = stableNodeOrder) {
     std::vector<NodePtr> ordered(nodes.begin(), nodes.end());
-    std::sort(ordered.begin(), ordered.end(), stableNodeOrder);
+    std::sort(ordered.begin(), ordered.end(), order);
     return ordered;
 }
 
 template <typename EdgeRange>
-static inline std::vector<EdgePtr> collectSortedEdges(const EdgeRange& edges) {
+static inline std::vector<EdgePtr> collectSortedEdges(const EdgeRange& edges,
+        bool (*order)(const EdgePtr&, const EdgePtr&) = stableEdgeOrder) {
     std::vector<EdgePtr> ordered(edges.begin(), edges.end());
-    std::sort(ordered.begin(), ordered.end(), stableEdgeOrder);
+    std::sort(ordered.begin(), ordered.end(), order);
     return ordered;
 }
 
@@ -367,8 +395,10 @@ void buildFormulasCyclewiseInternal(
     const std::unordered_set<NodePtr>& seedTrueNodes = {},
     std::vector<double>* roundTimingsMs = nullptr,
     const std::function<void(const FcHeartbeatSnapshot&)>& heartbeatCallback = nullptr,
-    std::size_t heartbeatIntervalMs = 5000
+    std::size_t heartbeatIntervalMs = 5000,
+    bool standaloneFull = false
 ) {
+    const bool freshFormulaMaps = nodeFormulas.empty() && edgeFormulas.empty();
      FunctionTimer timer("Build Formulas Cyclewise using DAG + Depth");
      const bool fcProfile = fcProfileEnabled;
      using Clock = std::chrono::steady_clock;
@@ -383,9 +413,27 @@ void buildFormulasCyclewiseInternal(
      std::size_t detEdges = 0;
      std::size_t nonDetEdges = 0;
     auto preStart = Clock::now();
-     setCuddPreConfigTag("full_cyclewise");
-     formulaManager.preConfig(view);
-     setCuddPreConfigTag("");
+    WeightedBDDManager* orderedManager = nullptr;
+    if constexpr (std::is_same_v<FormulaNodeRef, BddNodeRef>) {
+        if (standaloneFull) {
+            orderedManager = dynamic_cast<WeightedBDDManager*>(&formulaManager);
+        }
+    }
+    const bool orderedRegistration = orderedManager != nullptr;
+    std::vector<NodePtr> orderedNodes;
+    std::vector<EdgePtr> orderedEdges;
+    if (orderedRegistration) {
+        orderedNodes = collectSortedNodes(view.getNodes(), standaloneEventNodeOrder);
+        orderedEdges = collectSortedEdges(view.getEdges(), standaloneEventEdgeOrder);
+    }
+    setCuddPreConfigTag("full_cyclewise");
+    if (orderedRegistration) {
+        orderedManager->preConfigOrdered(view, orderedNodes, orderedEdges);
+    } else {
+        formulaManager.preConfig(view);
+    }
+    setCuddPreConfigTag("");
+    debugger.addInfo("fc_event_registration_order", orderedRegistration ? "stable_tuples" : "existing");
     auto preConfigMs = toMs(Clock::now() - preStart);
     debugger.logMessage(Level::INFO,
             "preConfig (cache clear + var scan/create + dyn-reorder setup) took " +
@@ -400,7 +448,7 @@ void buildFormulasCyclewiseInternal(
     std::map<EdgePtr, FormulaNodeRef> baseEdgeFormulas;
     size_t round = 0;
     // 1. Initialize formulas
-    for (const auto& node : collectSortedNodes(view.getNodes())) {
+    auto initializeNode = [&](const NodePtr& node) {
         if (seedTrueNodes.count(node)) {
             FormulaNodeRef var = formulaManager.getTrue();
             nodeFormulas[node] = var;
@@ -416,10 +464,14 @@ void buildFormulasCyclewiseInternal(
             nodeFormulas[node] = var;
             baseNodeFormulas[node] = var;
         }
-
+    };
+    if (orderedRegistration) {
+        for (const auto& node : orderedNodes) initializeNode(node);
+    } else {
+        for (const auto& node : collectSortedNodes(view.getNodes())) initializeNode(node);
     }
 
-    for (const auto& edge : collectSortedEdges(view.getEdges())) {
+    auto initializeEdge = [&](const EdgePtr& edge) {
         int idx = edge->isDeterministic() ? -1 : formulaManager.getVarIndex(*edge);
         if (edge->isDeterministic()) {
             ++detEdges;
@@ -434,6 +486,15 @@ void buildFormulasCyclewiseInternal(
             formulaManager.setVariableWeight(idx, edge->getProbability(), 1 - edge->getProbability());
         }
         baseEdgeFormulas[edge] = f;
+    };
+    if (orderedRegistration) {
+        for (const auto& edge : orderedEdges) initializeEdge(edge);
+        // Drop registration ranges before SCC iteration; retained formulas and
+        // the view already own all entities needed by compilation.
+        std::vector<NodePtr>{}.swap(orderedNodes);
+        std::vector<EdgePtr>{}.swap(orderedEdges);
+    } else {
+        for (const auto& edge : collectSortedEdges(view.getEdges())) initializeEdge(edge);
     }
     auto baseInitMs = toMs(Clock::now() - baseStart);
 
@@ -442,6 +503,8 @@ void buildFormulasCyclewiseInternal(
     auto lastHeartbeat = overallStart;
     const std::size_t totalCycles = depGraph.nodeCycles.size();
     std::size_t completedCycles = 0;
+    std::size_t singletonBatchedCycles = 0;
+    std::size_t singletonBatchedEdges = 0;
     std::vector<size_t> remainingInDegrees = depGraph.inDegrees;
     std::vector<bool> visited(depGraph.nodeCycles.size(), false);
     std::queue<size_t> ready;
@@ -483,12 +546,114 @@ void buildFormulasCyclewiseInternal(
         visited[cid] = true;
 
         const auto& cycleEdges = depGraph.edgeCycles[cid];
+        const auto orderedCycleEdges = collectSortedEdges(cycleEdges);
+        bool batched = false;
+        if (freshFormulaMaps && orderedRegistration && depGraph.nodeCycles[cid].size() == 1 &&
+                !orderedCycleEdges.empty()) {
+            const NodePtr head = *depGraph.nodeCycles[cid].begin();
+            if (!head->isFact && !seedTrueNodes.count(head)) {
+                // The ready SCC has final predecessor formulas. A singleton
+                // without self inputs can publish all its sources together;
+                // keep maps untouched until every source has been computed.
+                std::vector<FormulaNodeRef> sources;
+                sources.reserve(orderedCycleEdges.size());
+                bool complete = true;
+                const std::size_t firstTiming = roundTimingsMs ? roundTimingsMs->size() : 0;
+                for (const auto& edge : orderedCycleEdges) {
+                    const auto roundStart = Clock::now();
+                    ++round;
+                    if ((round & 0x1ffU) == 0U) {
+                        maybeEmitHeartbeat(cid, orderedCycleEdges.size() - sources.size(), false);
+                    }
+                    formulaManager.dumpProfilingStatistics();
+                    if (fcProfile) ++stats.edge_processed;
+                    // CDG edges belong to this view and remain unchanged
+                    // throughout compilation. Borrow the aligned body ranges.
+                    const auto& body = edge->getInputs();
+                    const auto& negations = edge->getBodyNegations();
+                    std::vector<FormulaNodeRef> inputs;
+                    inputs.reserve(body.size() + 1);
+                    inputs.push_back(baseEdgeFormulas.at(edge));
+                    for (std::size_t i = 0; i < body.size(); ++i) {
+                        if (body[i] == head) {
+                            complete = false;
+                            break;
+                        }
+                        FormulaNodeRef lit;
+                        bool available;
+                        if (fcProfile) {
+                            const auto litStart = Clock::now();
+                            available = fcInputFormulaLiteral(
+                                    formulaManager, nodeFormulas, body[i], negations[i], lit);
+                            ++stats.input_literal_calls;
+                            stats.input_literal_ms += toMs(Clock::now() - litStart);
+                            if (!available) ++stats.input_literal_missing;
+                        } else {
+                            available = fcInputFormulaLiteral(
+                                    formulaManager, nodeFormulas, body[i], negations[i], lit);
+                        }
+                        if (!available) {
+                            complete = false;
+                            break;
+                        }
+                        inputs.push_back(lit);
+                    }
+                    if (complete) {
+                        if (inputs.size() == 1) {
+                            sources.push_back(inputs[0]);
+                        } else if (fcProfile) {
+                            const auto andStart = Clock::now();
+                            sources.push_back(formulaManager.makeAnd(inputs));
+                            ++stats.make_and_calls;
+                            stats.make_and_ms += toMs(Clock::now() - andStart);
+                        } else {
+                            sources.push_back(formulaManager.makeAnd(inputs));
+                        }
+                    }
+                    if (roundTimingsMs) {
+                        roundTimingsMs->push_back(toMs(Clock::now() - roundStart));
+                    }
+                    if (!complete) break;
+                }
+                if (complete) {
+                    const auto publishStart = Clock::now();
+                    FormulaNodeRef headFormula;
+                    if (sources.size() == 1) {
+                        headFormula = sources[0];
+                    } else if (fcProfile) {
+                        const auto orStart = Clock::now();
+                        headFormula = formulaManager.makeOr(sources);
+                        ++stats.make_or_calls;
+                        stats.make_or_ms += toMs(Clock::now() - orStart);
+                    } else {
+                        headFormula = formulaManager.makeOr(sources);
+                    }
+                    for (std::size_t i = 0; i < orderedCycleEdges.size(); ++i) {
+                        edgeFormulas[orderedCycleEdges[i]] = sources[i];
+                    }
+                    nodeFormulas[head] = headFormula;
+                    if (fcProfile) {
+                        stats.edge_updated += sources.size();
+                        ++stats.node_recomputed;
+                        ++stats.node_updated;
+                    }
+                    if (roundTimingsMs && roundTimingsMs->size() > firstTiming) {
+                        roundTimingsMs->back() += toMs(Clock::now() - publishStart);
+                    }
+                    ++singletonBatchedCycles;
+                    singletonBatchedEdges += sources.size();
+                    batched = true;
+                }
+            }
+        }
         std::priority_queue<PrioritizedEdge> worklist;
         std::set<EdgePtr> inWorklist;
 
-        for (auto edge : collectSortedEdges(cycleEdges)) {
-            worklist.push({edge, depGraph.edgeDepthsGlobal.at(edge), static_cast<int>(edge->getId())});
-            inWorklist.insert(edge);
+        if (!batched) {
+            for (const auto& edge : orderedCycleEdges) {
+                worklist.push({edge, depGraph.edgeDepthsGlobal.at(edge), static_cast<int>(edge->getId())});
+                inWorklist.insert(edge);
+            }
         }
         maybeEmitHeartbeat(cid, worklist.size(), false);
 
@@ -517,20 +682,22 @@ void buildFormulasCyclewiseInternal(
             bool allAvailable = true;
             {
                 std::vector<FormulaNodeRef> inputs = { baseEdgeFormulas[edge] };
-                for (size_t i = 0; i < view.getInputs(edge).size(); ++i) {
-                    NodePtr input = view.getInputs(edge)[i];
+                const auto body = view.getInputs(edge);
+                const auto negations = view.getBodyNegations(edge);
+                for (size_t i = 0; i < body.size(); ++i) {
+                    NodePtr input = body[i];
                     FormulaNodeRef lit;
                     bool ok = true;
                     if (fcProfile) {
                         auto litStart = Clock::now();
-                        ok = fcInputFormulaLiteral(formulaManager, nodeFormulas, input, view.getBodyNegations(edge)[i], lit);
+                        ok = fcInputFormulaLiteral(formulaManager, nodeFormulas, input, negations[i], lit);
                         stats.input_literal_calls++;
                         stats.input_literal_ms += toMs(Clock::now() - litStart);
                         if (!ok) {
                             stats.input_literal_missing++;
                         }
                     } else {
-                        ok = fcInputFormulaLiteral(formulaManager, nodeFormulas, input, view.getBodyNegations(edge)[i], lit);
+                        ok = fcInputFormulaLiteral(formulaManager, nodeFormulas, input, negations[i], lit);
                     }
                     if (!ok) {
                         allAvailable = false;
@@ -674,6 +841,8 @@ void buildFormulasCyclewiseInternal(
     debugger.addInfo("fc_lite_nondet_edges", std::to_string(nonDetEdges));
     debugger.addInfo("fc_lite_node_formulas", std::to_string(nodeFormulas.size()));
     debugger.addInfo("fc_lite_edge_formulas", std::to_string(edgeFormulas.size()));
+    debugger.addInfo("fc_singleton_batched_cycles", std::to_string(singletonBatchedCycles));
+    debugger.addInfo("fc_singleton_batched_edges", std::to_string(singletonBatchedEdges));
     if (DerivationGraphViewInterface::isVerboseEnabled()) {
         std::cout << "[buildFormulasCyclewise] timings(ms): total=" << overallMs
                   << " preConfig=" << preConfigMs
@@ -726,6 +895,23 @@ void buildFormulasCyclewise(
 ) {
     buildFormulasCyclewiseInternal(view, formulaManager, nodeFormulas, edgeFormulas, seedTrueNodes,
             roundTimingsMs, heartbeatCallback, heartbeatIntervalMs);
+}
+
+// Standalone full execution opts into canonical CUDD event registration;
+// online initialization, recomputation and deltas retain the ordinary wrapper.
+template<typename FormulaNodeRef>
+void buildFormulasCyclewiseStandaloneFull(
+    DerivationGraphViewInterface& view,
+    FormulaManager<FormulaNodeRef>& formulaManager,
+    std::map<NodePtr, FormulaNodeRef>& nodeFormulas,
+    std::map<EdgePtr, FormulaNodeRef>& edgeFormulas,
+    const std::unordered_set<NodePtr>& seedTrueNodes = {},
+    std::vector<double>* roundTimingsMs = nullptr,
+    const std::function<void(const FcHeartbeatSnapshot&)>& heartbeatCallback = nullptr,
+    std::size_t heartbeatIntervalMs = 5000
+) {
+    buildFormulasCyclewiseInternal(view, formulaManager, nodeFormulas, edgeFormulas, seedTrueNodes,
+            roundTimingsMs, heartbeatCallback, heartbeatIntervalMs, true);
 }
 
 struct ComponentSubgraph {

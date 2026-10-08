@@ -799,6 +799,10 @@ private:
         if (key == "dump") {
             const std::string value = args.size() > 1 ? args[1] : std::string();
             const std::string normalized = souffle::normalizeFlagToken(value);
+            if (normalized == "and-redundancy") {
+                std::cout << "dump and-redundancy requires standalone full execution" << std::endl;
+                return true;
+            }
             if (normalized == "json-before-graph") {
                 std::cout << "dump json-before-graph is only evaluated during startup graph construction"
                           << std::endl;

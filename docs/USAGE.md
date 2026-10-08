@@ -171,7 +171,7 @@ Public compiler options for this branch:
 - `-D, --output-dir <DIR>`: default output directory.
 - `-o, --dl-program <FILE>`: generated executable.
 - `--setmode=<MODE>`: default runtime mode, one of `inc-naive`, `inc-regional`, `full`.
-- `--dump=<json|json-before-graph|json-before-prune|dot|stat>`: bake default graph/stat dumps.
+- `--dump=<json|json-before-graph|json-before-prune|dot|stat|and-redundancy>`: bake default graph/stat dumps.
 - `--profile-stage=<dred|inc|fc|wmc|inc-delete|inc-regional|dep-graph>`: bake default profiling stages.
 - `--log-file=<FILE>`: default debugger log filename.
 - `-v, --verbose`: bake informational runtime diagnostics on by default.
@@ -183,10 +183,24 @@ Inherited Souffle options such as `--jobs`, `--include-dir`, `--profile`,
 
 Public generated runtime options for this branch:
 
+- `--and-input-redundancy`: opt-in standalone full AND-input elimination after
+  initial pruning and before SISO/graph fastpaths. Re-pruning preserves query
+  and evidence roots. The compiler accepts it to bake the same default. It can
+  run alone or with `--rewrite`; online execution rejects it.
+- `--deterministic-event-aliases`: merge structurally proven deterministic copy
+  events before AND-input elimination and SISO, retaining query names and using
+  one representative for inference. Independent and off by default; online and
+  derivation-only execution reject it. See [proof and output semantics](DETERMINISTIC_EVENT_ALIASES.md).
+- `--and-input-redundancy-placement=<before-siso|after-siso>`: select where the
+  enabled pass runs; default `before-siso`. `after-siso` also requires rewrite
+  with inference and excludes `--derv-only`. It uses the residual active graph
+  after SISO and before component solving.
+  The compiler accepts the option to bake the same placement default.
+
 - `-F, --facts, --input-dir <DIR>`: fact directory.
 - `-D, --output, --output-dir <DIR>`: output directory.
 - `-m, --setmode=<MODE>`: turn mode, one of `inc-naive`, `inc-regional`, `full`.
-- `--dump=<json|json-before-graph|json-before-prune|dot|stat>`: default-off graph/stat dumps.
+- `--dump=<json|json-before-graph|json-before-prune|dot|stat|and-redundancy>`: default-off graph/stat dumps.
 - `--profile-stage=<dred|inc|fc|wmc|inc-delete|inc-regional|dep-graph>`: default-off profiling output.
 - `--inc-reorder-policy=<default|off|pressure|auto|explicit|both>`: incremental
   CUDD reordering policy. The branch default is `pressure`.
@@ -255,6 +269,11 @@ and `stat` is a broad diagnostic dump: graph counters, `graph-*.json`, SEM/DRed
 summaries, and regional scope console diagnostics for `inc-regional`. When
 enabled before startup graph construction, `stat` also writes
 deterministic-relation analysis files.
+
+`and-redundancy` enables a standalone-only, read-only detector after pruning
+and again after an actual rewrite. It writes independent AND-input redundancy
+certificates and counts; it performs no removals. See the
+[audit guide](AND_INPUT_REDUNDANCY.md) for eligibility, measurements and commands.
 
 ## Diagnostic Counts
 

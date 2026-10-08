@@ -784,8 +784,13 @@ void Synthesiser::emitRules (std::ostream& out) {
         }
     }
 
+    // Aggregate replay uses this runtime-only relation. A user declaration can
+    // collide with those states, invalidating the compiler DAG certificate.
+    const bool compilerRecursionMetadata = eqrelNames.empty() &&
+            newAstProgram->getRelation(ast::QualifiedName::fromString("__agg_sum_state")) == nullptr;
     out << "ruleManager = RuleManager({" << join(ruleNames, ", ") << "}"
-        << ", {" << join(eqrelNames, ", ") << "});" << std::endl;
+        << ", {" << join(eqrelNames, ", ") << "}, "
+        << (compilerRecursionMetadata ? "true" : "false") << ");" << std::endl;
         // out << "std::cout << ruleManager.toString();\n";
     const auto& queries = this->newAstProgram->getProbQueries();
     std::vector<std::string> queryNames;
@@ -4754,6 +4759,12 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
          << (glb.config().has("explicit-rewrite") ? "true" : "false") << ", "
          << (glb.config().has("implicit-rewrite") ? "true" : "false") << ");\n";
     hook << "opt.setDerivationOnly(" << (glb.config().has("derv-only") ? "true" : "false") << ");\n";
+    hook << "opt.setAndInputRedundancyEnabled("
+         << (glb.config().has("and-input-redundancy") ? "true" : "false") << ");\n";
+    hook << "opt.setDeterministicEventAliasesEnabled("
+         << (glb.config().has("deterministic-event-aliases") ? "true" : "false") << ");\n";
+    hook << "opt.setAndInputRedundancyPlacement(\""
+         << glb.config().get("and-input-redundancy-placement") << "\");\n";
     hook << "opt.setLiftedWmcEnabled(" << (glb.config().has("lifted-wmc") ? "true" : "false") << ");\n";
     hook << "opt.setLiftedWmcThreshold(" << glb.config().get("lifted-threshold") << "ULL);\n";
     hook << "opt.setLogFileName(R\"("
@@ -4767,6 +4778,8 @@ void Synthesiser::generateCode(GenDb& db, const std::string& id, bool& withShare
          << (glb.config().has("dumpjson-before-prune") ? "true" : "false") << ");\n";
     hook << "opt.setDumpDotEnabled(" << (glb.config().has("dumpdot") ? "true" : "false") << ");\n";
     hook << "opt.setDumpStatEnabled(" << (glb.config().has("dumpstat") ? "true" : "false") << ");\n";
+    hook << "opt.setDumpAndRedundancyEnabled("
+         << (glb.config().has("dump-and-redundancy") ? "true" : "false") << ");\n";
     hook << "opt.setVerboseEnabled(" << (glb.config().has("verbose") ? "true" : "false") << ");\n";
     hook << "opt.setProfileStageToken(\"dred\", "
          << (glb.config().has("dred-profile") ? "true" : "false") << ");\n";

@@ -579,10 +579,12 @@ def parse_souffle_stage_data(log_path: Path) -> Tuple[Dict[str, float], Dict[str
             continue
         val = stage.get("time_seconds")
         if isinstance(val, (int, float)):
-            stage_times[name] = float(val)
+            stage_times[name] = stage_times.get(name, 0.0) + float(val)
         info = stage.get("info")
         if isinstance(info, dict):
-            stage_infos[name] = {str(k): str(v) for k, v in info.items()}
+            # Post-SISO AND execution separates rewrite and FC/WMC into two
+            # hybrid stages. Retain both sets of fields; later values win ties.
+            stage_infos.setdefault(name, {}).update({str(k): str(v) for k, v in info.items()})
     return stage_times, stage_infos
 
 

@@ -6,6 +6,26 @@ component solving. Online inference builds a plain baseline graph, accepts
 insert/delete turns, and writes probabilities after each commit. Online full
 recomputation always uses the original graph.
 
+The opt-in `--and-input-redundancy` pass runs on the complete standalone working
+graph after initial pruning by default. With
+`--and-input-redundancy-placement=after-siso` and `--rewrite`, it runs after
+SISO reaches its fixpoint. It deletes locally proven redundant
+AND inputs in place, re-proves after each deletion, and reaches a fixpoint.
+Query/evidence-aware cleanup then removes unreachable definitions before
+graph fastpaths run. The post-SISO placement uses only active derivations
+and never re-prunes the original owner graph. See
+[the pass and audit guide](AND_INPUT_REDUNDANCY.md).
+
+`--deterministic-event-aliases` independently contracts unique deterministic
+copy definitions after initial pruning, before the AND pass and SISO. Regular
+backward pruning collects a source/body index shared by alias and AND analysis;
+alias mutation rebases that index before AND checks rather than rescanning the graph. It
+retains query names through explicit output bindings, substitutes equal events
+in consumers and removes repeated Boolean inputs without combining rule events
+or aggregate records. Conditional results are copied to aliases only after
+inference. Online and derivation-only execution reject this option. See
+[event-alias semantics](DETERMINISTIC_EVENT_ALIASES.md).
+
 The local correctness comparison is `full` versus `inc-naive` or `inc-regional`.
 `full` is the exact recomputation oracle; incremental modes must produce
 matching tuple keys and probabilities on the same delta stream.

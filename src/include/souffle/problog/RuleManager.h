@@ -10,7 +10,8 @@
 
 class RuleManager {
 public:
-    RuleManager(std::vector<Rule> rules, std::vector<std::string> eqrelRelations = {});
+    RuleManager(std::vector<Rule> rules, std::vector<std::string> eqrelRelations = {},
+            bool compilerRecursionMetadata = false);
     void addRule(Rule rule);
     const Rule* getRule(std::size_t ruleId) const;
     std::vector<const Rule*> getRulesForPredicate(const std::string& predicate) const;
@@ -20,6 +21,9 @@ public:
     bool hasRule(std::size_t ruleId) const;
     std::size_t size() const;
     std::string toString() const;
+    // Only compiler-emitted metadata can attest the original rule dependency
+    // graph. Callers must also establish fresh, unchanged graph provenance.
+    bool hasCompilerAcyclicityCertificate() const;
     bool isRecursive(std::size_t ruleId) const {
         return getRule(ruleId)->isRecursive();
     }
@@ -30,6 +34,7 @@ public:
         return eqrelRelations.count(predicate) != 0;
      }
     void addEqrelRelation(const std::string& predicate) {
+        compilerRecursionMetadataTrusted = false;
         eqrelRelations.insert(predicate);
     }
 
@@ -37,6 +42,7 @@ private:
     std::unordered_map<std::size_t, Rule> rules;
     std::unordered_map<std::string, std::unordered_set<std::size_t>> predicateToRules;
     std::unordered_set<std::string> eqrelRelations;
+    bool compilerRecursionMetadataTrusted = false;
 };
 
 extern RuleManager ruleManager;

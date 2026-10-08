@@ -12,6 +12,7 @@
 #include "souffle/problog/RuleManager.h"
 #include "souffle/problog/QueryManager.h"
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <queue>
 #include <sstream>
@@ -68,6 +69,17 @@ struct CycleDependencyGraph;
 using NodePtr = std::shared_ptr<Node>;
 using EdgePtr = std::shared_ptr<Hyperedge>;
 using SupportToken = std::uint64_t;
+
+// Optional collection during regular query/evidence backward traversal. The
+// observer receives each surviving node, edge and body occurrence once; it does
+// not change reachability or mutate the graph while its sources are collected.
+struct BackwardTraversalObserver {
+    virtual ~BackwardTraversalObserver() = default;
+    virtual void node(const NodePtr&) = 0;
+    virtual void beginEdge(const EdgePtr&) = 0;
+    virtual void input(const NodePtr&, bool negative) = 0;
+    virtual void endEdge() = 0;
+};
 
 inline constexpr SupportToken kEdgeSupportTokenMask = SupportToken{1} << 63;
 
@@ -266,6 +278,7 @@ public:
         return *cachedSortedInputs;
     }
     NodePtr getOutput() const { return output; }
+    const NodePtr& getOutputRef() const { return output; }
     size_t getId() const { return id; }
     const Rule* getRule() const { return rule; }
     const std::vector<bool>& getBodyNegations() const { return bodyNegations; }
@@ -398,6 +411,104 @@ public:
         cachedSortedBodyNegations.reset();
         cachedEdgeKey.reset();
         cachedSelfDependency.reset();
+    }
+
+    // Apply a certified event-alias map in one body traversal. The caller owns
+    // adjacency updates; signs, rule applications and random events stay intact.
+    size_t replaceInputs(const std::unordered_map<NodePtr, NodePtr>& replacements) {
+        size_t changed = 0;
+        for (auto& input : inputs) {
+            const auto replacement = replacements.find(input);
+            if (replacement != replacements.end()) {
+                input = replacement->second;
+                ++changed;
+            }
+        }
+        if (changed != 0) {
+            cachedSortedInputs.reset();
+            cachedSortedBodyNegations.reset();
+            cachedEdgeKey.reset();
+            cachedSelfDependency.reset();
+        }
+        return changed;
+    }
+
+    // The alias owner has detached all old adjacency before this call. Compact
+    // equal signed literals while replacing endpoints, rather than allocating a
+    // hash table and erasing body positions separately for every small edge.
+    std::pair<size_t, size_t> replaceInputsAndDeduplicate(
+            const std::unordered_map<NodePtr, NodePtr>& replacements,
+            std::unordered_map<const Node*, unsigned char>& longBodySigns) {
+        if (inputs.size() != bodyNegations.size()) {
+            return {replaceInputs(replacements), 0};
+        }
+        const bool smallBody = inputs.size() <= 8;
+        if (!smallBody) longBodySigns.clear();
+        size_t changed = 0;
+        size_t kept = 0;
+        const size_t oldSize = inputs.size();
+        for (size_t i = 0; i < oldSize; ++i) {
+            auto& input = inputs[i];
+            const auto replacement = replacements.find(input);
+            if (replacement != replacements.end()) {
+                input = replacement->second;
+                ++changed;
+            }
+            const bool negated = bodyNegations[i];
+            bool duplicate = false;
+            if (smallBody) {
+                for (size_t j = 0; j < kept; ++j) {
+                    if (inputs[j] == input && bodyNegations[j] == negated) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+            } else {
+                const unsigned char sign = negated ? 2 : 1;
+                auto& seen = longBodySigns[input.get()];
+                duplicate = (seen & sign) != 0;
+                seen |= sign;
+            }
+            if (duplicate) continue;
+            if (kept != i) {
+                inputs[kept] = std::move(input);
+                bodyNegations[kept] = negated;
+            }
+            ++kept;
+        }
+        const size_t duplicates = oldSize - kept;
+        inputs.resize(kept);
+        bodyNegations.resize(kept);
+        if (changed != 0 || duplicates != 0) {
+            cachedSortedInputs.reset();
+            cachedSortedBodyNegations.reset();
+            cachedEdgeKey.reset();
+            cachedSelfDependency.reset();
+        }
+        return {changed, duplicates};
+    }
+
+    // Remove one certified AND-input occurrence without replacing its rule event.
+    // The caller owns the proof and must invalidate every graph/view cache that
+    // observes this edge. Keep at least one input and preserve negation alignment.
+    bool eraseInputOccurrence(size_t inputIndex) {
+        if (inputs.size() <= 1 || inputIndex >= inputs.size() || bodyNegations.size() != inputs.size()) {
+            return false;
+        }
+        const auto removed = inputs[inputIndex];
+        inputs.erase(inputs.begin() + inputIndex);
+        bodyNegations.erase(bodyNegations.begin() + inputIndex);
+        if (removed && std::find(inputs.begin(), inputs.end(), removed) == inputs.end()) {
+            auto& outgoing = removed->outgoingEdges;
+            outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
+                                   [&](const EdgePtr& edge) { return edge.get() == this; }),
+                    outgoing.end());
+        }
+        cachedSortedInputs.reset();
+        cachedSortedBodyNegations.reset();
+        cachedEdgeKey.reset();
+        cachedSelfDependency.reset();
+        return true;
     }
 
 private:
@@ -1137,12 +1248,15 @@ protected:
 
 class WorkingSubgraphView : public SubgraphView, public virtual WorkingDerivationGraphViewInterface {
 public:
+    enum class EvidenceRoots { Discover, Complete };
+
     WorkingSubgraphView(std::unordered_set<NodePtr> nodes,
                     std::unordered_set<EdgePtr> edges,
-            std::vector<NodePtr> evidenceNodes = {})
+            std::vector<NodePtr> evidenceNodes = {},
+            EvidenceRoots evidenceRoots = EvidenceRoots::Discover)
             : SubgraphView(std::move(nodes), std::move(edges)),
             evidenceNodes_(std::move(evidenceNodes)) {
-            if (evidenceNodes_.empty()) {
+            if (evidenceNodes_.empty() && evidenceRoots == EvidenceRoots::Discover) {
                 for (const auto& node : nodes_) {
                     if (node && node->hasEvidence()) {
                         evidenceNodes_.push_back(node);
@@ -1185,6 +1299,21 @@ public:
 
     const std::vector<NodePtr>& getEvidenceNodes() const {
         return evidenceNodes_;
+    }
+
+    // Apply a certified cleanup plan that preserves every query/evidence root.
+    void applyPruning(const std::vector<NodePtr>& nodes, const std::vector<EdgePtr>& edges) {
+        for (const auto& edge : edges) {
+            if (edges_.erase(edge) != 0) {
+                edge->pruned = true;
+            }
+        }
+        for (const auto& node : nodes) {
+            if (nodes_.erase(node) != 0) {
+                node->pruned = true;
+            }
+        }
+        invalidateCaches();
     }
 
 protected:
@@ -2164,11 +2293,39 @@ void Node::addOutgoingEdge(EdgePtr edge) {
 
 class WorkingDerivationGraph : public DerivationGraph, virtual public WorkingDerivationGraphViewInterface {
 public:
+    struct EventAliasMutationStats {
+        size_t inputReplacements = 0;
+        size_t duplicateInputsRemoved = 0;
+        size_t activeInputReplacements = 0;
+        size_t activeDuplicateInputsRemoved = 0;
+        size_t removedNodes = 0;
+        size_t removedEdges = 0;
+        size_t removedOwnerEdges = 0;
+    };
     // Constructors
     WorkingDerivationGraph() : DerivationGraph() {}
     WorkingDerivationGraph(const RuleManager* rm) : DerivationGraph(rm) {}
-    WorkingSubgraphView prune(const std::vector<souffle::Relation*>& outputRelations);
-    WorkingSubgraphView prune(const std::vector<std::string>& outputRelations);
+    WorkingSubgraphView prune(const std::vector<souffle::Relation*>& outputRelations,
+            BackwardTraversalObserver* observer = nullptr);
+    WorkingSubgraphView prune(const std::vector<std::string>& outputRelations,
+            BackwardTraversalObserver* observer = nullptr);
+
+    // Consume an event-equality certificate. Roots must be surviving active
+    // nodes and every alias must have no other active source. Update the owner
+    // as well as the view so a later owner prune cannot revive alias definitions.
+    EventAliasMutationStats applyEventAliases(WorkingSubgraphView& view,
+            const std::vector<std::pair<NodePtr, NodePtr>>& aliases);
+
+    // Restore a certified original name after an implicit rewrite replaces the
+    // graph owner. The caller resolves its representative in this new owner;
+    // registering the name does not rewrite any event or graph endpoint.
+    void bindEventAliasTuple(const UntypedTuple& aliasTuple, const NodePtr& currentRoot) {
+        if (!currentRoot || !nodes.count(currentRoot)) {
+            throw std::logic_error("Event-alias binding requires an owned representative");
+        }
+        tupleToNodeMap[aliasTuple] = currentRoot;
+        existingTuples.insert(aliasTuple);
+    }
 
     static WorkingDerivationGraph* createFrom(const std::unordered_map<UntypedTuple, std::unordered_set<RuleApplication>*>& ruleApps, const RuleManager& ruleManager, const QueryManager& queryManager, const std::unordered_map<UntypedTuple, double>& fact_prob = {}, const std::vector<std::pair<UntypedTuple,bool>>& evidences = {}) {
         FunctionTimer timer(" creating derivation graph ");
@@ -2242,16 +2399,148 @@ public:
     }
 };
 
-WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Relation*>& outputRelations) {
+inline WorkingDerivationGraph::EventAliasMutationStats WorkingDerivationGraph::applyEventAliases(
+        WorkingSubgraphView& view, const std::vector<std::pair<NodePtr, NodePtr>>& aliases) {
+    EventAliasMutationStats stats;
+    if (aliases.empty()) return stats;
+    std::unordered_map<NodePtr, NodePtr> replacements;
+    replacements.reserve(aliases.size());
+    for (const auto& [alias, root] : aliases) {
+        if (!alias || !root || alias == root || !nodes.count(alias) || !nodes.count(root) ||
+                !view.getNodes().count(alias) || !view.getNodes().count(root) ||
+                !replacements.emplace(alias, root).second) {
+            throw std::logic_error("Invalid deterministic event-alias certificate");
+        }
+    }
+    for (const auto& [alias, root] : aliases) {
+        if (replacements.count(root) || (alias->hasEvidence() && root->hasEvidence() &&
+                alias->getEvidenceValue() != root->getEvidenceValue())) {
+            throw std::logic_error("Noncanonical deterministic event-alias certificate");
+        }
+    }
+
+    std::unordered_set<EdgePtr> retiredSources, consumers;
+    retiredSources.reserve(aliases.size());
+    consumers.reserve(aliases.size());
+    for (const auto& [alias, root] : aliases) {
+        for (const auto& edge : alias->getIncomingEdges()) {
+            if (edge && edge->getOutputRef() == alias) retiredSources.insert(edge);
+        }
+    }
+    // Sources being retired do not need endpoint mutation or consumer ordering.
+    // Copy chains otherwise put nearly every removed definition in both sets.
+    for (const auto& [alias, root] : aliases) {
+        for (const auto& edge : alias->getOutgoingEdges()) {
+            if (edge && !retiredSources.count(edge)) consumers.insert(edge);
+        }
+    }
+    std::vector<EdgePtr> orderedConsumers(consumers.begin(), consumers.end());
+    std::sort(orderedConsumers.begin(), orderedConsumers.end(), [](const EdgePtr& a, const EdgePtr& b) {
+        if (a->getId() != b->getId()) return a->getId() < b->getId();
+        return std::less<const Hyperedge*>{}(a.get(), b.get());
+    });
+    std::unordered_set<EdgePtr> changedEdges;
+    changedEdges.reserve(retiredSources.size() + consumers.size());
+    changedEdges.insert(retiredSources.begin(), retiredSources.end());
+    std::unordered_set<NodePtr> touchedInputs;
+    touchedInputs.reserve(aliases.size() + consumers.size());
+    for (const auto& [alias, root] : aliases) touchedInputs.insert(root);
+    for (const auto& edge : retiredSources) {
+        touchedInputs.insert(edge->getInputs().begin(), edge->getInputs().end());
+    }
+    orderedConsumers.erase(std::remove_if(orderedConsumers.begin(), orderedConsumers.end(),
+            [&](const EdgePtr& edge) {
+                const auto& inputs = edge->getInputs();
+                const bool changed = std::any_of(inputs.begin(), inputs.end(),
+                        [&](const NodePtr& input) { return replacements.count(input) != 0; });
+                if (changed) {
+                    changedEdges.insert(edge);
+                    touchedInputs.insert(inputs.begin(), inputs.end());
+                }
+                return !changed;
+            }), orderedConsumers.end());
+    // Filter each affected node once. Per-edge filtering would be quadratic
+    // when many aliases share one high-fanout representative.
+    for (const auto& input : touchedInputs) {
+        if (!input) continue;
+        auto& outgoing = input->getOutgoingEdges();
+        outgoing.erase(std::remove_if(outgoing.begin(), outgoing.end(),
+                [&](const EdgePtr& edge) { return changedEdges.count(edge) != 0; }), outgoing.end());
+    }
+    std::unordered_map<const Node*, unsigned char> longBodySigns;
+    for (const auto& edge : orderedConsumers) {
+        const bool active = view.getEdges().count(edge) != 0;
+        const auto [changed, duplicates] = edge->replaceInputsAndDeduplicate(replacements, longBodySigns);
+        stats.inputReplacements += changed;
+        stats.duplicateInputsRemoved += duplicates;
+        if (active) stats.activeInputReplacements += changed;
+        if (active) stats.activeDuplicateInputsRemoved += duplicates;
+        const auto& inputs = edge->getInputs();
+        // Rebuild exactly one raw reference per surviving body occurrence,
+        // including opposite-sign uses of the same event.
+        for (const auto& input : inputs) {
+            if (input) input->addOutgoingEdge(edge);
+        }
+    }
+    for (const auto& edge : retiredSources) {
+        // Every retired source has an alias head; those incoming vectors are
+        // cleared once below rather than filtered once per definition.
+        stats.removedEdges += view.mutableEdges().erase(edge);
+        stats.removedOwnerEdges += edges.erase(edge);
+        edge->pruned = true;
+    }
+    // Existing tuple/representative bindings may already point at an alias.
+    // Redirect those bindings too; each original output name remains resolvable.
+    for (auto& [tuple, node] : tupleToNodeMap) {
+        const auto replacement = replacements.find(node);
+        if (replacement != replacements.end()) node = replacement->second;
+    }
+    for (auto& [id, node] : nodeRepMap) {
+        const auto replacement = replacements.find(node);
+        if (replacement != replacements.end()) node = replacement->second;
+    }
+    nodeRepMap.reserve(nodeRepMap.size() + aliases.size());
+    for (auto it = edgeKeyToEdgeMap.begin(); it != edgeKeyToEdgeMap.end();) {
+        if (retiredSources.count(it->second)) it = edgeKeyToEdgeMap.erase(it);
+        else ++it;
+    }
+    for (const auto& [alias, root] : aliases) {
+        root->needOutput = root->needOutput || alias->needOutput;
+        root->isQuery = root->isQuery || alias->isQuery;
+        if (alias->hasEvidence()) root->setEvidence(alias->getEvidenceValue());
+        setRepresentative(alias, root);
+        // Its original tuple and any earlier names were redirected in the
+        // single tuple-map traversal above; avoid another ordered lookup here.
+        alias->getIncomingEdges().clear();
+        alias->getOutgoingEdges().clear();
+        alias->pruned = true;
+        stats.removedNodes += view.mutableNodes().erase(alias);
+        nodes.erase(alias);
+    }
+    std::vector<NodePtr> evidenceNodes;
+    for (const auto& node : view.getNodes()) {
+        if (node->hasEvidence()) evidenceNodes.push_back(node);
+    }
+    // Preserve active membership exactly; do not reconstruct it from raw owner
+    // adjacency, which can also contain retired rewrite sources.
+    view = WorkingSubgraphView(std::move(view.mutableNodes()), std::move(view.mutableEdges()),
+            std::move(evidenceNodes), WorkingSubgraphView::EvidenceRoots::Complete);
+    invalidateCaches();
+    return stats;
+}
+
+WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<souffle::Relation*>& outputRelations,
+        BackwardTraversalObserver* observer) {
     std::vector<std::string> outputRelationNames;
     outputRelationNames.reserve(outputRelations.size());
     for (const auto* rel : outputRelations) {
         outputRelationNames.push_back(rel->getName());
     }
-    return prune(outputRelationNames);
+    return prune(outputRelationNames, observer);
 }
 
-WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>& outputRelations) {
+WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>& outputRelations,
+        BackwardTraversalObserver* observer) {
     FunctionTimer totalTimer("prune working graph");
     const bool profileEnabled = fcProfileEnabled;
     using Clock = std::chrono::steady_clock;
@@ -2286,6 +2575,7 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
                 liveNodes.insert(node);
                 workQueue.push(node);
                 node->setQuery();
+                if (observer) observer->node(node);
             }
             if (node->hasEvidence()) {
                 evidenceNodes.push_back(node);
@@ -2302,6 +2592,7 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
         for (const auto& node : evidenceNodes) {
             if (liveNodes.insert(node).second) {
                 workQueue.push(node);
+                if (observer) observer->node(node);
             }
         }
 
@@ -2315,12 +2606,21 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
                 if (edge->hasSelfDependency()) {
                     continue;
                 }
-                liveEdges.insert(edge);
+                if (!liveEdges.insert(edge).second) continue;
+                if (observer) observer->beginEdge(edge);
+                std::size_t inputIndex = 0;
                 for (const auto& inputNode : edge->getInputs()) {
                     if (liveNodes.insert(inputNode).second) {
                         workQueue.push(inputNode);
+                        if (observer) observer->node(inputNode);
                     }
+                    if (observer) {
+                        const auto& signs = edge->getBodyNegations();
+                        observer->input(inputNode, inputIndex < signs.size() && signs[inputIndex]);
+                    }
+                    ++inputIndex;
                 }
+                if (observer) observer->endEdge();
             }
         }
         if (profileEnabled) {
@@ -2355,6 +2655,14 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
         FunctionTimer scopeTimer("prune: canonical cleanup");
         if (mergeBiImpEnabled) {
             mergeBiImpEquivalences(liveNodes, liveEdges);
+            // Merging may move evidence to a representative and remove the
+            // original observed node. Return only the current live roots.
+            evidenceNodes.clear();
+            for (const auto& node : liveNodes) {
+                if (node->hasEvidence()) {
+                    evidenceNodes.push_back(node);
+                }
+            }
         }
         removeSelfLoopEdges(liveNodes, liveEdges);
         if (profileEnabled) {
@@ -2364,7 +2672,10 @@ WorkingSubgraphView WorkingDerivationGraph::prune(const std::vector<std::string>
 
     const size_t liveNodeCount = liveNodes.size();
     const size_t liveEdgeCount = liveEdges.size();
-    WorkingSubgraphView view(std::move(liveNodes), std::move(liveEdges), std::move(evidenceNodes));
+    // The full pruning scan already collected every surviving evidence root,
+    // including the confirmed-empty case. Other view callers still discover.
+    WorkingSubgraphView view(std::move(liveNodes), std::move(liveEdges), std::move(evidenceNodes),
+            WorkingSubgraphView::EvidenceRoots::Complete);
     view.dumpWorkingStatistics(std::cout);
 
     if (profileEnabled) {
@@ -3802,12 +4113,17 @@ inline std::unordered_map<NodePtr, double> probResult;
 
 void dumpProbabilities(
     std::unordered_map<NodePtr, double>& nodeProbabilities, const std::string& outputDir = "./output/",
-          const std::string& fileName = "facts") {
+          const std::string& fileName = "facts",
+          const std::vector<std::pair<NodePtr, NodePtr>>& outputAliases = {},
+          const std::vector<NodePtr>& hiddenOutputRoots = {}) {
     std::ofstream outputFile(souffle::joinOutputPath(outputDir, fileName + ".prob"));
     outputFile << std::setprecision(8);
     std::map<std::string, double> tupleProbabilities;
     std::vector<NodePtr> sortedNodes;
     std::unordered_set<NodePtr> seen;
+    std::unordered_set<NodePtr> hiddenRoots(hiddenOutputRoots.begin(), hiddenOutputRoots.end());
+    std::unordered_set<std::string> hiddenTuples;
+    for (const auto& root : hiddenOutputRoots) hiddenTuples.insert(root->getTuple().toString());
     for (const auto& [node, prob] : nodeProbabilities) {
         if (seen.insert(node).second) {
             sortedNodes.push_back(node);
@@ -3830,12 +4146,31 @@ void dumpProbabilities(
             }
             prob = itPre->second;
         }
-        if (node->needOutput || precomputedProbResult.count(node)) {
+        if (!hiddenRoots.count(node) && !hiddenTuples.count(node->getTuple().toString()) &&
+                (node->needOutput || precomputedProbResult.count(node))) {
             tupleProbabilities.emplace(node->getTuple().toString(), prob);
         }
     }
     for (const auto& [tupleStr, prob] : precomputedTupleProbResult) {
-        tupleProbabilities.emplace(tupleStr, prob);
+        if (!hiddenTuples.count(tupleStr)) tupleProbabilities.emplace(tupleStr, prob);
+    }
+    for (const auto& [alias, root] : outputAliases) {
+        double probability;
+        const auto current = nodeProbabilities.find(root);
+        const auto precomputed = precomputedProbResult.find(root);
+        if (current != nodeProbabilities.end()) probability = current->second;
+        else if (precomputed != precomputedProbResult.end()) probability = precomputed->second;
+        else {
+            const auto tuple = precomputedTupleProbResult.find(root->getTuple().toString());
+            if (tuple == precomputedTupleProbResult.end()) {
+                throw std::runtime_error("Missing event-alias output probability for " +
+                        alias->getTuple().toString());
+            }
+            probability = tuple->second;
+        }
+        // Conditional inference is complete here. Override any old marginal
+        // recovered by another rewrite path with the representative's result.
+        tupleProbabilities[alias->getTuple().toString()] = probability;
     }
     for (const auto& [tupleStr, prob] : tupleProbabilities) {
         outputFile << tupleStr << " : " << prob << std::endl;

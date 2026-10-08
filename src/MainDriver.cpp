@@ -645,6 +645,12 @@ std::vector<MainOption> getMainOptions() {
           "Default the generated binary to online execution."},
       {"rewrite", nextOptChar++, "", "", false,
           "Enable rewrite by default for standalone full inference."},
+      {"and-input-redundancy", nextOptChar++, "", "", false,
+          "Eliminate proven redundant AND inputs at the selected placement (default: before SISO)."},
+      {"and-input-redundancy-placement", nextOptChar++, "before-siso|after-siso", "before-siso", false,
+          "Place AND-input elimination before SISO (default) or after rewrite; after requires both flags and excludes --derv-only."},
+      {"deterministic-event-aliases", nextOptChar++, "", "", false,
+          "Merge proven deterministic copy events before input elimination and rewrite, retaining output names."},
       {"explicit-rewrite", nextOptChar++, "", "", false,
           "Force graph rewrite for standalone full inference."},
       {"implicit-rewrite", nextOptChar++, "", "", false,
@@ -741,6 +747,20 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     if (online && rewrite) {
         throw std::runtime_error("Rewrite is supported only in standalone full execution");
     }
+    if (online && config.has("and-input-redundancy")) {
+        throw std::runtime_error("--and-input-redundancy requires standalone full execution");
+    }
+    if (config.has("deterministic-event-aliases") && (online || config.has("derv-only"))) {
+        throw std::runtime_error("--deterministic-event-aliases requires standalone full inference");
+    }
+    const auto& andInputPlacement = config.get("and-input-redundancy-placement");
+    if (andInputPlacement != "before-siso" && andInputPlacement != "after-siso") {
+        throw std::runtime_error("--and-input-redundancy-placement expects before-siso or after-siso");
+    }
+    if (andInputPlacement == "after-siso" &&
+            (!config.has("and-input-redundancy") || !rewrite || config.has("derv-only") || online)) {
+        throw std::runtime_error("--and-input-redundancy-placement=after-siso requires --and-input-redundancy and standalone --rewrite with inference");
+    }
     if (online && config.has("lifted-wmc")) {
         throw std::runtime_error("--lifted-wmc requires standalone full execution");
     }
@@ -778,7 +798,10 @@ void canonicalizeForkRuntimeDefaults(MainConfig& config) {
     applyListAliasToBackingFlags(config, "dump",
             {{"json", "dumpjson"}, {"json-before-graph", "dumpjson-before-graph"},
                     {"json-before-prune", "dumpjson-before-prune"}, {"dot", "dumpdot"},
-                    {"stat", "dumpstat"}});
+                    {"stat", "dumpstat"}, {"and-redundancy", "dump-and-redundancy"}});
+    if (online && config.has("dump-and-redundancy")) {
+        throw std::runtime_error("--dump=and-redundancy requires standalone full execution");
+    }
     applyListAliasToBackingFlags(config, "profile-stage",
             {{"dred", "dred-profile"}, {"inc", "inc-profile"}, {"fc", "fc-profile"},
                     {"wmc", "profile-wmc"}, {"inc-delete", "profile-inc-delete"},

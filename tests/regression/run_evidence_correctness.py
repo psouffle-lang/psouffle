@@ -16,6 +16,8 @@ MODES = {
     'explicit': ['--explicit-rewrite'],
     'implicit': ['--implicit-rewrite'],
     'auto': ['--rewrite'],
+    'and': ['--and-input-redundancy'],
+    'and_rewrite': ['--and-input-redundancy', '--rewrite'],
     'prune': ['--implicit-rewrite', '--prune-extra'],
     'lift': ['--lifted-wmc', '--lifted-threshold=0', '--rewrite'],
 }

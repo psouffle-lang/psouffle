@@ -194,7 +194,7 @@ inline const char* incrementalModeHelpText() {
 }
 
 inline const char* dumpKindsOptionSyntax() {
-    return "[ json | json-before-graph | json-before-prune | dot | stat ]";
+    return "[ json | json-before-graph | json-before-prune | dot | stat | and-redundancy ]";
 }
 
 inline const char* profileStageOptionSyntax() {
@@ -399,7 +399,7 @@ inline bool parseDumpKindToken(const std::string& token, std::string& kind,
         std::string* canonicalToken = nullptr) {
     const std::string value = normalizeFlagToken(token);
     if (value == "json" || value == "json-before-graph" || value == "json-before-prune" ||
-            value == "dot" || value == "stat") {
+            value == "dot" || value == "stat" || value == "and-redundancy") {
         kind = value;
         if (canonicalToken) {
             *canonicalToken = value;
@@ -591,6 +591,10 @@ protected:
     bool dump_json_before_prune = false;  // dump derivation graph JSON before prune
     bool dump_dot = false;  // dump derivation graph DOT after prune
     bool dump_stat = false;  // dump derivation graph stats after prune
+    bool dump_and_redundancy = false;  // read-only standalone full AND-input certificates
+    bool and_input_redundancy = false;  // exact standalone full input elimination
+    bool and_input_redundancy_after_siso = false;
+    bool deterministic_event_aliases = false;
     bool dred_profile = false;  // enable detailed DRed profiling
     bool inc_profile = false;  // enable incremental stage profiling
     bool fc_profile = false;  // enable detailed forward-compilation profiling
@@ -656,6 +660,17 @@ public:
     }
     bool isOnlineExecution() const { return online_execution; }
     bool isRewriteEnabled() const { return enable_rewrite; }
+    bool isAndInputRedundancyEnabled() const { return and_input_redundancy; }
+    void setAndInputRedundancyEnabled(bool enabled) { and_input_redundancy = enabled; }
+    bool isDeterministicEventAliasesEnabled() const { return deterministic_event_aliases; }
+    void setDeterministicEventAliasesEnabled(bool enabled) { deterministic_event_aliases = enabled; }
+    bool isAndInputRedundancyAfterSiso() const { return and_input_redundancy_after_siso; }
+    bool setAndInputRedundancyPlacement(const std::string& placement) {
+        if (placement == "before-siso") and_input_redundancy_after_siso = false;
+        else if (placement == "after-siso") and_input_redundancy_after_siso = true;
+        else return false;
+        return true;
+    }
     bool isGraphRewriteForced() const { return force_graph_rewrite; }
     bool isImplicitRewriteForced() const { return force_implicit_rewrite; }
     void setRewriteDefaults(bool rewrite, bool explicitRewrite, bool implicitRewrite) {
@@ -769,6 +784,8 @@ public:
     void setDumpStatEnabled(bool enabled) {
         dump_stat = enabled;
     }
+    bool isDumpAndRedundancyEnabled() const { return dump_and_redundancy; }
+    void setDumpAndRedundancyEnabled(bool enabled) { dump_and_redundancy = enabled; }
     bool setDumpKindToken(const std::string& token, bool enabled) {
         std::string kind;
         if (!parseDumpKindToken(token, kind)) {
@@ -784,6 +801,8 @@ public:
             dump_dot = enabled;
         } else if (kind == "stat") {
             dump_stat = enabled;
+        } else if (kind == "and-redundancy") {
+            dump_and_redundancy = enabled;
         }
         return true;
     }
@@ -878,6 +897,7 @@ public:
         if (dump_json_before_prune) kinds.push_back("json-before-prune");
         if (dump_dot) kinds.push_back("dot");
         if (dump_stat) kinds.push_back("stat");
+        if (dump_and_redundancy) kinds.push_back("and-redundancy");
         return kinds;
     }
     std::vector<std::string> getEnabledProfileStages() const {
@@ -954,6 +974,9 @@ public:
                 {"prune-extra", false, nullptr, 1050},
                 {"lifted-wmc", false, nullptr, 1051},
                 {"lifted-threshold", true, nullptr, 1052},
+                {"and-input-redundancy", false, nullptr, 1053},
+                {"and-input-redundancy-placement", true, nullptr, 1054},
+                {"deterministic-event-aliases", false, nullptr, 1055},
                 // the terminal option -- needs to be null
                 {nullptr, false, nullptr, 0}};
 
@@ -1122,6 +1145,14 @@ public:
                 case 'e': merge_bi_imp = true; break;
                 case 1050: prune_extra = true; break;
                 case 1051: lifted_wmc = true; break;
+                case 1053: and_input_redundancy = true; break;
+                case 1055: deterministic_event_aliases = true; break;
+                case 1054:
+                    if (!setAndInputRedundancyPlacement(optarg)) {
+                        std::cerr << "--and-input-redundancy-placement expects before-siso or after-siso\n";
+                        ok = false;
+                    }
+                    break;
                 case 1052:
                     if (!parseLiftedThreshold(optarg, lifted_threshold)) {
                         std::cerr << "Invalid value for --lifted-threshold: " << optarg << '\n';
@@ -1161,6 +1192,23 @@ public:
             std::cerr << "--lifted-wmc requires standalone full execution\n";
             ok = false;
         }
+        if (online_execution && dump_and_redundancy) {
+            std::cerr << "--dump=and-redundancy requires standalone full execution\n";
+            ok = false;
+        }
+        if (online_execution && and_input_redundancy) {
+            std::cerr << "--and-input-redundancy requires standalone full execution\n";
+            ok = false;
+        }
+        if (deterministic_event_aliases && (online_execution || derivation_only)) {
+            std::cerr << "--deterministic-event-aliases requires standalone full inference\n";
+            ok = false;
+        }
+        if (and_input_redundancy_after_siso &&
+                (!and_input_redundancy || !enable_rewrite || derivation_only || online_execution)) {
+            std::cerr << "--and-input-redundancy-placement=after-siso requires --and-input-redundancy and standalone --rewrite with inference\n";
+            ok = false;
+        }
         if (online_execution && (derivation_only || merge_bi_imp || prune_extra)) {
             std::cerr << "--derv-only, --merge-bi-imp, and --prune-extra require standalone full execution\n";
             ok = false;
@@ -1192,6 +1240,10 @@ private:
         std::cerr << "    --full-only                  -- Run standalone full inference and exit (default)\n";
         std::cerr << "    --inc-only, --online         -- Run an online session with a plain full baseline\n";
         std::cerr << "    --rewrite                    -- Rewrite standalone full inference\n";
+        std::cerr << "    --and-input-redundancy       -- Eliminate proven redundant AND inputs\n";
+        std::cerr << "    --deterministic-event-aliases -- Merge proven copy events, retaining output names\n";
+        std::cerr << "    --and-input-redundancy-placement=before-siso|after-siso -- Default: before-siso\n";
+        std::cerr << "                                    after-siso requires both pass and rewrite; excludes --derv-only\n";
         std::cerr << "    --explicit-rewrite           -- Force graph rewrite\n";
         std::cerr << "    --implicit-rewrite           -- Force implicit split rewrite\n";
         std::cerr << "    --lifted-wmc                 -- Enable the exact pointwise fastpath\n";

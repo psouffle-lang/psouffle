@@ -2,16 +2,19 @@
 
 RuleManager ruleManager({});
 
-RuleManager::RuleManager(std::vector<Rule> rules, std::vector<std::string> eqrelRelations) {
+RuleManager::RuleManager(std::vector<Rule> rules, std::vector<std::string> eqrelRelations,
+        bool compilerRecursionMetadata) {
     for (const auto& rel : eqrelRelations) {
         addEqrelRelation(rel);
     }
     for (auto& rule : rules) {
         addRule(std::move(rule));
     }
+    compilerRecursionMetadataTrusted = compilerRecursionMetadata;
 }
 
 void RuleManager::addRule(Rule rule) {
+    compilerRecursionMetadataTrusted = false;
     auto ruleId = rule.getRuleId();
     const std::string& headPredicate = rule.getHead().getRelation();
     predicateToRules[headPredicate].insert(ruleId);
@@ -59,6 +62,7 @@ std::vector<const Rule*> RuleManager::getAllRules() const {
 }
 
 bool RuleManager::removeRule(std::size_t ruleId) {
+    compilerRecursionMetadataTrusted = false;
     auto it = rules.find(ruleId);
     if (it == rules.end()) {
         return false;
@@ -79,6 +83,18 @@ bool RuleManager::hasRule(std::size_t ruleId) const {
 
 std::size_t RuleManager::size() const {
     return rules.size();
+}
+
+bool RuleManager::hasCompilerAcyclicityCertificate() const {
+    if (!compilerRecursionMetadataTrusted || !eqrelRelations.empty()) return false;
+    const auto maxEncodedIndex = static_cast<std::size_t>(souffle::MAX_RAM_SIGNED);
+    for (const auto& [ruleId, rule] : rules) {
+        if (rule.isRecursive() || rule.isInRecursiveStratum() || rule.isEqrel() ||
+                ruleId > maxEncodedIndex) return false;
+        const auto aggregateCount = rule.getAggregates().size();
+        if (aggregateCount != 0 && aggregateCount - 1 > maxEncodedIndex) return false;
+    }
+    return true;
 }
 
 std::string RuleManager::toString() const {

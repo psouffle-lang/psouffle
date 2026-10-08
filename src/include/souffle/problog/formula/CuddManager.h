@@ -408,6 +408,20 @@ public:
         }
     }
     void preConfig(DerivationGraphViewInterface& view) override {
+        preConfigImpl(view, nullptr, nullptr);
+    }
+
+    // Standalone full compilation supplies complete ordered ranges from this
+    // view to both event registration and formula initialization. Online
+    // callers keep the ordinary whole-view/delta policy above.
+    void preConfigOrdered(DerivationGraphViewInterface& view, const std::vector<NodePtr>& nodes,
+            const std::vector<EdgePtr>& edges) {
+        preConfigImpl(view, &nodes, &edges);
+    }
+
+private:
+    void preConfigImpl(DerivationGraphViewInterface& view, const std::vector<NodePtr>* orderedNodes,
+            const std::vector<EdgePtr>* orderedEdges) {
         static size_t iteration = 0;
         using namespace std::chrono;
         auto toMs = [](auto d) { return duration<double, std::milli>(d).count(); };
@@ -462,30 +476,8 @@ public:
                 (!incView->getDeltaInsertNodes().empty() || !incView->getDeltaInsertEdges().empty() ||
                         !incView->getDeltaDeleteNodes().empty() || !incView->getDeltaDeleteEdges().empty());
         auto factStart = steady_clock::now();
-        if (incView != nullptr && hasDelta) {
-            for (const auto& node : incView->getDeltaInsertNodes()) {
-                    if (node->isFact && node->getProbability() < 1.0) {
-                        int idx = getVarIndex(*node);
-                        if (profileCreate) {
-                            if (variableRegistry.find(idx) != variableRegistry.end()) {
-                                ++factVarHits;
-                            } else {
-                                ++factVarMisses;
-                            }
-                        }
-                        if (profileCreate) {
-                            auto cvStart = steady_clock::now();
-                            createVar(idx, *node);
-                            recordCreate(toMs(steady_clock::now() - cvStart),
-                                    factCreateMs, factCreateMaxMs, factCreateCount, factCreateSlow);
-                        } else {
-                            createVar(idx, *node);
-                        }
-                        ++factVars;
-                    }
-            }
-        } else {
-            for (const auto& node : view.getNodes()) {
+        auto prepareFacts = [&](const auto& nodes) {
+            for (const auto& node : nodes) {
                 if (node->isFact && node->getProbability() < 1.0) {
                     int idx = getVarIndex(*node);
                     if (profileCreate) {
@@ -506,12 +498,19 @@ public:
                     ++factVars;
                 }
             }
+        };
+        if (orderedNodes) {
+            prepareFacts(*orderedNodes);
+        } else if (incView != nullptr && hasDelta) {
+            prepareFacts(incView->getDeltaInsertNodes());
+        } else {
+            prepareFacts(view.getNodes());
         }
         double factMs = toMs(steady_clock::now() - factStart);
 
         auto edgeStart = steady_clock::now();
-        if (incView != nullptr && hasDelta) {
-            for (const auto& edge : incView->getDeltaInsertEdges()) {
+        auto prepareEdges = [&](const auto& edges) {
+            for (const auto& edge : edges) {
                 if (!edge->isDeterministic()) {
                     int idx = getVarIndex(*edge);
                     if (profileCreate) {
@@ -532,28 +531,13 @@ public:
                     ++edgeVars;
                 }
             }
+        };
+        if (orderedEdges) {
+            prepareEdges(*orderedEdges);
+        } else if (incView != nullptr && hasDelta) {
+            prepareEdges(incView->getDeltaInsertEdges());
         } else {
-            for (const auto& edge : view.getEdges()) {
-                if (!edge->isDeterministic()) {
-                    int idx = getVarIndex(*edge);
-                    if (profileCreate) {
-                        if (variableRegistry.find(idx) != variableRegistry.end()) {
-                            ++edgeVarHits;
-                        } else {
-                            ++edgeVarMisses;
-                        }
-                    }
-                    if (profileCreate) {
-                        auto cvStart = steady_clock::now();
-                        createVar(idx, *edge);
-                        recordCreate(toMs(steady_clock::now() - cvStart),
-                                edgeCreateMs, edgeCreateMaxMs, edgeCreateCount, edgeCreateSlow);
-                    } else {
-                        createVar(idx, *edge);
-                    }
-                    ++edgeVars;
-                }
-            }
+            prepareEdges(view.getEdges());
         }
         double edgeMs = toMs(steady_clock::now() - edgeStart);
         auto newCuddVarSize = Cudd_ReadSize(manager.get());
@@ -642,6 +626,7 @@ public:
         }
     }
 
+public:
     // Basic BDD operations
     BddNodeRef createVar(int index) override;
     BddNodeRef createVar(int index, const Node& node) override;

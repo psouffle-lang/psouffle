@@ -75,6 +75,55 @@ add_test(NAME regression.evidence_correctness
 set_tests_properties(regression.evidence_correctness PROPERTIES
     LABELS "regression;full;evidence" TIMEOUT 900)
 
+add_executable(regression_and_input_redundancy and_input_redundancy.cpp)
+target_link_libraries(regression_and_input_redundancy PRIVATE compiled)
+add_test(NAME regression.and_input_redundancy
+    COMMAND regression_and_input_redundancy)
+set_tests_properties(regression.and_input_redundancy PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
+
+add_executable(regression_and_input_cleanup and_input_cleanup.cpp)
+target_link_libraries(regression_and_input_cleanup PRIVATE compiled)
+add_test(NAME regression.and_input_cleanup
+    COMMAND regression_and_input_cleanup)
+set_tests_properties(regression.and_input_cleanup PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
+
+add_executable(regression_compiler_acyclicity compiler_acyclicity.cpp)
+target_link_libraries(regression_compiler_acyclicity PRIVATE compiled)
+add_test(NAME regression.compiler_acyclicity
+    COMMAND regression_compiler_acyclicity)
+set_tests_properties(regression.compiler_acyclicity PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
+
+add_test(NAME regression.compiler_acyclicity_emission
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/run_compiler_acyclicity.py"
+        --souffle-bin "$<TARGET_FILE:souffle>"
+        --work-root "${CMAKE_CURRENT_BINARY_DIR}")
+set_tests_properties(regression.compiler_acyclicity_emission PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 300)
+
+add_executable(regression_and_input_fast and_input_fast.cpp)
+target_link_libraries(regression_and_input_fast PRIVATE compiled)
+add_test(NAME regression.and_input_fast
+    COMMAND regression_and_input_fast)
+set_tests_properties(regression.and_input_fast PROPERTIES
+    LABELS "regression;full;and_input_redundancy" TIMEOUT 60)
+
+add_executable(regression_full_event_order full_event_order.cpp)
+target_link_libraries(regression_full_event_order PRIVATE compiled "${CUDD_LIBRARY}")
+add_test(NAME regression.full_event_order
+    COMMAND regression_full_event_order)
+set_tests_properties(regression.full_event_order PROPERTIES
+    LABELS "regression;full;exact" TIMEOUT 60)
+
+add_executable(regression_deterministic_event_aliases deterministic_event_aliases.cpp)
+target_link_libraries(regression_deterministic_event_aliases PRIVATE compiled)
+add_test(NAME regression.deterministic_event_aliases
+    COMMAND regression_deterministic_event_aliases)
+set_tests_properties(regression.deterministic_event_aliases PROPERTIES
+    LABELS "regression;full;exact" TIMEOUT 60)
+
 if (NOT TARGET check-regression)
     add_custom_target(check-regression
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --progress -L regression
@@ -82,5 +131,7 @@ if (NOT TARGET check-regression)
         USES_TERMINAL
         COMMENT "Run maintained full and incremental artifact regression tests"
     )
-    add_dependencies(check-regression souffle)
+    add_dependencies(check-regression souffle regression_and_input_redundancy regression_and_input_cleanup
+        regression_compiler_acyclicity regression_and_input_fast regression_full_event_order
+        regression_deterministic_event_aliases)
 endif()

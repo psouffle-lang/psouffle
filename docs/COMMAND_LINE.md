@@ -62,6 +62,9 @@ Execution selection and generated runtime defaults:
 | `-d`, `--derv-only` | Default to standalone derivation-graph construction without probability inference. Off by default. |
 | `--det-opt` | Compatibility flag for deterministic-relation analysis, which is already enabled. |
 | `--dump=LIST` | Bake a default set of graph/statistic dumps; none enabled by default. |
+| `--and-input-redundancy` | Enable exact AND-input elimination after pruning and before SISO/graph fastpaths. Off by default; standalone full only. |
+| `--and-input-redundancy-placement=<before-siso\|after-siso>` | Bake the pass placement; default `before-siso`. `after-siso` requires the pass and rewrite with inference. |
+| `--deterministic-event-aliases` | Merge proven copy events before AND-input elimination and SISO, retaining all output names. Off by default; standalone full inference only. |
 | `--profile-stage=LIST` | Bake default pipeline diagnostic stages; none enabled by default. These diagnostics can be used without `-p`. |
 | `--log-file=FILE` | Set the generated runtime's debugger log base name; default `log.txt`. |
 | `-v`, `--verbose` | Enable compiler diagnostics and default runtime informational diagnostics to on. Off by default. |
@@ -95,6 +98,9 @@ dump kinds. There is no `--no-rewrite` flag to undo a baked rewrite default;
 | `--prune-extra` | Enable extra pruning of outputless graph components; off by default, standalone full only. |
 | `-Z`, `--det-opt` | Compatibility flag; deterministic-relation analysis is already enabled. |
 | `--dump=LIST` | Enable selected graph/statistic outputs; off by default unless baked at compilation. |
+| `--and-input-redundancy` | Delete individually proven redundant AND inputs after pruning, re-prune query/evidence roots, then run ordinary SISO/graph fastpaths. Independent of `--rewrite`; off by default. |
+| `--and-input-redundancy-placement=<before-siso\|after-siso>` | Select the enabled pass's order. `after-siso` runs on the residual active graph before component solving, requires rewrite, and excludes `--derv-only`. Default: `before-siso`. |
+| `--deterministic-event-aliases` | Merge proven copy events after initial pruning, retaining original query names. May run alone or before AND-input elimination and SISO; rejects online and `--derv-only`. Off by default. |
 | `--profile-stage=LIST` | Enable selected pipeline diagnostics; off by default unless baked at compilation. |
 | `-l FILE`, `--logfile=FILE`, `--log-file=FILE` | Override the debugger JSON log base name. Logs are written in the runtime output directory with a timestamped filename. |
 | `-v`, `--verbose` | Enable informational runtime diagnostics. |
@@ -140,11 +146,16 @@ between commits; see [docs/USAGE.md](USAGE.md#online-cli).
 `--dump` and `--profile-stage` accept comma-separated lists, such as
 `--dump=dot,json,stat` and `--profile-stage=fc,wmc`.
 
+`--dump=and-redundancy` enables the read-only AND-input opportunity audit before
+and after rewrite in standalone full execution. It is rejected for online
+execution. See [certificates and audit commands](AND_INPUT_REDUNDANCY.md).
+
 | Dump kind | Output |
 | --- | --- |
 | `json` | Derivation-graph JSON after pruning. |
 | `dot` | Graphviz DOT graphs. |
 | `stat` | Graph counters and additional diagnostic/statistic outputs. |
+| `and-redundancy` | Read-only standalone full AND-input proof reports before/after actual rewrite. |
 | `json-before-graph` | Online startup rule applications before graph materialization. |
 | `json-before-prune` | Online graphs before pruning. |
 
