@@ -3,3 +3,8 @@
 /full/out/
 /inc/benchmarks/side_channel/runs/*
 !/inc/benchmarks/side_channel/runs/README.md
+/problog/runs/
+/problog/remaining-runs/
+/problog/out/
+/problog/artifact_smoke-*/
+/problog/smoke-*/

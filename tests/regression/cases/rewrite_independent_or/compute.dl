@@ -1,0 +1,11 @@
+// Reduced from the reconstructed Fierens 2015 WebKB benchmark.
+// No individual random source is necessary for the OR to be true.
+.decl event(id:symbol)
+.input event
+.decl occurrence(p:symbol, id:symbol)
+.input occurrence
+.decl local(p:symbol)
+local(P) :- occurrence(P,I), event(I).
+.decl answer(p:symbol)
+answer(P) :- local(P).
+.output answer

@@ -16,6 +16,8 @@
   after pruning and before SISO, proof certificates and Symbolization benchmarks.
 - [DETERMINISTIC_EVENT_ALIASES.md](DETERMINISTIC_EVENT_ALIASES.md): proven copy
   event merging, retained query names, duplicate inputs and exact aggregate semantics.
+- [PERFORMANCE_REVIEW.md](PERFORMANCE_REVIEW.md): dated pipeline performance
+  audit, measurements, and validation limits.
 - [../evaluation/README.md](../evaluation/README.md): bundled paper benchmarks
   and experiment automation.
 - [../evaluation/inc/README.md](../evaluation/inc/README.md): incremental
@@ -23,6 +25,10 @@
 - [../evaluation/inc/benchmarks/side_channel/docs/INDEX.md](../evaluation/inc/benchmarks/side_channel/docs/INDEX.md): incremental benchmark documentation index.
 - [../evaluation/full/README.md](../evaluation/full/README.md): full/rewrite
   experiments, competitor inputs, and conversion/analysis scripts.
+- [../evaluation/problog/README.md](../evaluation/problog/README.md): imported
+  Genes/Smokers and reconstructed Smokers/cancer, Grid and WebKB benchmark
+  programs; fixed settings, provenance, exact conversion validation, run
+  commands, reproduction limits and Alzheimer acquisition status.
 - Full benchmark descriptions: [side-channel](../evaluation/full/side_channel/README.md),
   [taint](../evaluation/full/taint/README.md), and
   [symbolization](../evaluation/full/symbolization/README.md).

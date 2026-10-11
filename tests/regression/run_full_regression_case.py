@@ -430,6 +430,23 @@ def case_rewrite_dispatch_equiv(souffle_bin: Path, work_root: Path) -> None:
     )
 
 
+def case_rewrite_independent_or(souffle_bin: Path, work_root: Path) -> None:
+    case_dir = prepare_case_workspace("rewrite_independent_or", work_root)
+    compute, inputs, _ = compile_compute(
+        souffle_bin=souffle_bin, case_dir=case_dir, compile_args=["--full-only"])
+    expected = {'answer("ordinary")': 1 - 0.8 * 0.7 * 0.6,
+                'answer("learned")': 1 - (1 - 0.9999915422526915) *
+                (1 - 0.017349493805951216) * (1 - 0.017349493805951122)}
+    for mode, flags in (("plain", []), ("rewrite", ["--rewrite"])):
+        output = case_dir / mode
+        run_exact_once(compute_bin=compute, input_dir=inputs, output_dir=output, extra_args=flags)
+        actual = parse_prob_file(output / "facts.prob")
+        if set(actual) != set(expected) or any(
+                not math.isclose(actual[key], value, abs_tol=1e-8, rel_tol=0)
+                for key, value in expected.items()):
+            raise CaseFailure(f"independent OR {mode}: expected={expected}, actual={actual}")
+
+
 def case_exact_det_modes(souffle_bin: Path, work_root: Path) -> None:
     case_dir = prepare_case_workspace("exact_det_modes", work_root)
     input_dir = case_dir / "input"
@@ -860,6 +877,7 @@ def case_dump_outputs_contract(souffle_bin: Path, work_root: Path) -> None:
 CASES = {
     "smoke_exact_inference": case_smoke_exact_inference,
     "rewrite_dispatch_equiv": case_rewrite_dispatch_equiv,
+    "rewrite_independent_or": case_rewrite_independent_or,
     "problog_string_roundtrip": case_problog_string_roundtrip,
     "problog_symbol_aggregate_roundtrip": case_problog_symbol_aggregate_roundtrip,
     "problog_fact_prob_alignment": case_problog_fact_prob_alignment,

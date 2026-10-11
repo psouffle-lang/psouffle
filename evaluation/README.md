@@ -11,6 +11,13 @@ below from the repository root. The runners use `build/src/souffle` by default;
 | CAV 2026 incremental | [inc/](inc/README.md) | P13–P20, default update scripts, and the upstream provisional A1–A11 synthetic suite | `inc/benchmarks/side_channel/artifact/run_artifact_experiment.py` |
 | FMCAD 2026 full/rewrite | [full/](full/README.md) | 19 side-channel cases, 15 Android taint cases, and 16 DDisasm symbolization cases | `full/FMCAD.py` |
 
+Additional [ProbLog literature benchmarks](problog/README.md) contain 141 fixed
+cases in paired `.pl` / `.dl` formats: 50 Genes queries, 70 imported
+Smokers/asthma networks, three reconstructed Smokers/cancer instances, 15 grid
+queries and three WebKB instances. Facts and probabilities are embedded;
+conversion scripts are removed. The README records settings, provenance,
+validation, reconstruction limits and the missing Alzheimer data.
+
 The Python runners require Python 3.10+ and use the standard library. PSouffle
 experiments require the built compiler. Full engine comparisons additionally
 require the selected external engines: ProbLog, VProbLog (`vlog`), or Scallop

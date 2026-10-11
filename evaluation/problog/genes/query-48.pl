@@ -1,0 +1,4 @@
+% Benchmark setting: {"case":"48","family":"genes","independent_events":20715,"input_rows":{"mgc_q":1,"pd_edge":5568,"pp_edge":15147},"input_sha256":{"event.facts":"0e69d1e258bb355a919b6a91396c15fa2fd389362d920c939e9e989d386f2fff","event.prob":"6204128cac5093fc950c6d4df57f8bd253a84d97132bc20afd73bc28e355f333","mgc_q.facts":"b2b2ed634a39b7a70600cacc56d67fbe721ce8efdc2a9804badd2a0acfc18f4c","pd_edge.facts":"9e0a085c41a3d669acf6cc991de3202ecca408f2c87b3aa1c3652ee728b0b6a8","pp_edge.facts":"2f3486bb3e4d0339a7376a8eba639011f61841fa0cacb31ce051e4eecac5b44d"},"original_compute_dl_sha256":"7df786efb113dfb57dfeb1bc6c60c15b0ac91cca1e522e9c1a7b466c7746cc18","original_compute_pl_sha256":"d0a63f4f40b90ae1c425e10e8c8e5397fc6c74a1e09e11f1e08606a59d09c1a9","outputs":["q"],"semantics":"exact; no depth bound"}
+:- consult('network.pl').
+mgc_q('CMD1','LEU4').
+query(q(_,_)).

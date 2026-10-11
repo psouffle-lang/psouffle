@@ -737,10 +737,38 @@ void deterministicSisoExposesSafePostPassOpportunity() {
     precomputedProbResult.clear();
 }
 
+void independentSourcesPreserveDisjunctionProbability() {
+    Fixture fixture;
+    const auto a = fixture.fact("OrA", 0.2);
+    const auto b = fixture.fact("OrB", 0.3);
+    const auto c = fixture.fact("OrC", 0.4);
+    const auto head = fixture.node("OrHead");
+    head->setQuery();
+    fixture.edge({a}, head);
+    fixture.edge({b}, head);
+    fixture.edge({c}, head);
+    const Worlds worlds(fixture, {});
+    WorkingSubgraphView active(fixture.graph.getNodes(), fixture.graph.getEdges());
+    souffle::problog::RewriteFeatureFlags flags;
+    flags.splitMode = souffle::problog::SplitMode::None;
+    debugger.startTurn("FULL");
+    debugger.startStage(StageKind::FC_WMC_HYBRID);
+    souffle::problog::GraphRewriter{}.rewriteUntilFixpoint(fixture.graph, active, false, flags);
+    debugger.endStage();
+    debugger.endTurn();
+    Compilation result;
+    compile(result, active, true, {});
+    const double actual = precomputedProbResult.count(head) ? precomputedProbResult.at(head) :
+            result.manager.computeWeightedModelCount(result.nodes.at(head));
+    close(actual, worlds.probability({{head, true}}), "independent OR after rewrite");
+    precomputedProbResult.clear();
+}
+
 }  // namespace
 
 int main() {
     try {
+        independentSourcesPreserveDisjunctionProbability();
         deterministicSisoExposesSafePostPassOpportunity();
         standaloneOrderPreservesEventsAndProbabilities();
         preConfigPreservesDefaultAndDeltaPolicies();

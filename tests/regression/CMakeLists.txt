@@ -45,7 +45,7 @@ function(add_full_regression_case case_id)
         LABELS "regression;full;${case_id}" TIMEOUT 300)
 endfunction()
 
-foreach(case_id smoke_exact_inference rewrite_dispatch_equiv
+foreach(case_id smoke_exact_inference rewrite_dispatch_equiv rewrite_independent_or
         problog_string_roundtrip problog_symbol_aggregate_roundtrip
         problog_fact_prob_alignment problog_large_numeric_tuple_roundtrip
         problog_query_named_variable_equality problog_constraint_variable_equality_chain

@@ -22,6 +22,18 @@
 /*.log
 /*.tsv
 
+# Crash dumps
+/core
+core.[0-9]*
+*.core
+*.dmp
+wsl-crash-*
+wsl-crashes/
+
+# Windows download metadata
+Zone.Identifier
+*:Zone.Identifier*
+
 # Local benchmark/checkouts
 /problog-benchmark/
 /side_channel_inc/
@@ -30,10 +42,17 @@
 
 # Editor/cache
 /.cache/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .idea/
 .vscode/
 *.swp
+*.swo
 *~
 .DS_Store
 __pycache__/
 *.pyc
+*.pyo

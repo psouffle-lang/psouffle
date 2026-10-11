@@ -126,6 +126,23 @@ def main():
                 lambda w: (w[0] or w[1]) == value, nullary_queries)
             check(binary, facts, expected)
 
+    # A three-node cycle has only one spontaneous source. Blocking a node
+    # observes the conjunction of the two propagation edges, not a partial body.
+    binary, facts = compile_program('three_node_cycle',
+        '.decl event(id:number)\n.input event\n'
+        '.decl label(p:number)\nlabel(0) :- event(0).\n'
+        'label(0) :- event(1),label(2).\n'
+        'label(1) :- event(2),label(0).\n'
+        'label(2) :- event(3),label(1).\n'
+        '.decl answer(p:number)\n.output answer\n'
+        'answer(0) :- label(0).\nanswer(1) :- label(1).\n'
+        'evidence(label(2),false).\n',
+        {'event': ('0\n1\n2\n3\n', '0.2\n0.4\n0.4\n0.4\n')})
+    expected = posterior([0.2, 0.4, 0.4, 0.4],
+        lambda w: not (w[0] and w[2] and w[3]),
+        {'answer(0)': lambda w: w[0], 'answer(1)': lambda w: w[0] and w[2]})
+    check(binary, facts, expected)
+
     for value in (True, False):
         binary, facts = compile_program('nullary_witness_' + str(value).lower(),
             '.decl a(x:number)\n.input a\n.output a\nquery(a(_)).\n'

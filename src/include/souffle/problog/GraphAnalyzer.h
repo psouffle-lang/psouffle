@@ -402,6 +402,38 @@ private:
                 }
             }
         }
+        // Replacing the region by entry & summary requires exit => entry.
+        // Local source facts can otherwise prove exit even when entry is false
+        // (for example, three independent facts feeding an OR). Check an
+        // overapproximation with entry blocked and every other fact enabled.
+        // Negated inputs are allowed unconditionally, so rejection is
+        // conservative even for regions containing signed literals.
+        if (!entry->isFact || entry->getProbability() != 1.0) {
+            NodeSet possible;
+            for (NodePtr node : regionNodes) {
+                if (node != entry && node->isFact) possible.insert(node);
+            }
+            bool changed = true;
+            while (changed) {
+                changed = false;
+                for (EdgePtr edge : regionEdges) {
+                    NodePtr output = g.getOutput(edge);
+                    if (!output || output == entry || possible.count(output)) continue;
+                    const auto& inputs = edge->getInputs();
+                    const auto& negations = edge->getBodyNegations();
+                    bool enabled = true;
+                    for (size_t i = 0; i < inputs.size(); ++i) {
+                        if (i < negations.size() && negations[i]) continue;
+                        if (!possible.count(inputs[i])) {
+                            enabled = false;
+                            break;
+                        }
+                    }
+                    if (enabled) changed |= possible.insert(output).second;
+                }
+            }
+            if (possible.count(exit)) return invalid;
+        }
         if (opts.requireGeneralRandomVariable &&
                 !hasInternalRandomVariable(regionNodes, regionEdges, entry, exit)) {
             return invalid;

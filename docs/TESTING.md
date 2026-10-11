@@ -43,7 +43,8 @@ worlds on tiny inputs under plain, explicit, implicit, automatic rewrite,
 extra pruning, and lifted fallback. It covers unqueried observation relations,
 deterministic and nullary observation roots, zero-weight facts and rules,
 nullary disjunctions, distinct witnesses and recursive proofs,
-shared events and distinct probabilistic rules with identical bodies,
+shared events, a three-node cycle with a single spontaneous source,
+and distinct probabilistic rules with identical bodies,
 negative and absent observations,
 disconnected evidence components, contradictory observations, a positive
 `P(E)=1e-400`, typed input-only programs, and source diagnostics for invalid
@@ -84,7 +85,11 @@ semantics, including shared inputs, signed literals and conservative fallback.
 Tuple/support ordering also checks separate rule identities when support keys
 are equal or overlap, empty supports, and tuples ordered differently from IDs.
 
-The maintained suite contains 38 tests. The initial unified integration passed
+The `rewrite_independent_or` case checks three independent proofs of the same
+output, including probabilities learned from a small WebKB fixture. A general
+SISO summary must not select an entry that the output can bypass.
+
+The maintained suite contains 40 tests. The initial unified integration passed
 all 30 pre-lift regression tests on 2026-10-05 after a
 Release build with `cmake --build build -j2` and
 `ctest --test-dir build -L regression --output-on-failure --progress -j2`.

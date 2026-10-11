@@ -545,6 +545,14 @@ void buildFormulasCyclewiseInternal(
         if (visited[cid]) continue;
         visited[cid] = true;
 
+        // Positive recursion starts at bottom. An unavailable cyclic input
+        // must not stall ahead of its base proof or be omitted from a body
+        // when the defensive stall limit is reached.
+        for (const auto& node : depGraph.nodeCycles[cid]) {
+            if (!nodeFormulas.count(node)) {
+                nodeFormulas[node] = formulaManager.getFalse();
+            }
+        }
         const auto& cycleEdges = depGraph.edgeCycles[cid];
         const auto orderedCycleEdges = collectSortedEdges(cycleEdges);
         bool batched = false;
